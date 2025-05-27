@@ -20,7 +20,7 @@ def get_common_file_path():
     """Get file path for common dictionary"""
     if not os.path.exists(COMMON_DICT_FILE):
         # Create empty common dictionary if not exists
-        df = pd.DataFrame(columns=["word", "translation", "priority"])
+        df = pd.DataFrame(columns=["word", "translation", "priority", "article"])
         df.to_csv(COMMON_DICT_FILE, index=False, encoding='utf-8-sig')
     return COMMON_DICT_FILE, "common"
 
@@ -30,12 +30,22 @@ def get_dataframe(chat_id):
     
     if dict_type == "common":
         file_path, _ = get_common_file_path()
+        print(f"Debug: Using common dictionary: {file_path}")
     else:
         file_path, _ = get_user_file_path(chat_id)
+        print(f"Debug: Using personal dictionary: {file_path}")
         
     if not file_path:
         return None
-    return pd.read_csv(file_path, encoding='utf-8-sig')
+        
+    df = pd.read_csv(file_path, encoding='utf-8-sig')
+    
+    # Ensure 'article' column exists
+    if 'article' not in df.columns:
+        df['article'] = ''
+        save_dataframe(chat_id, df, file_path.split('_')[0])
+        
+    return df
 
 def save_dataframe(chat_id, df, language):
     """Save dataframe to appropriate file"""
@@ -43,7 +53,9 @@ def save_dataframe(chat_id, df, language):
     
     if dict_type == "common":
         file_path = COMMON_DICT_FILE
+        print(f"Debug: Saving to common dictionary: {file_path}")
     else:
         file_path = f"{language}_words_{chat_id}.csv"
+        print(f"Debug: Saving to personal dictionary: {file_path}")
         
     df.to_csv(file_path, index=False, encoding='utf-8-sig')

@@ -62,10 +62,14 @@ def main_menu_keyboard(chat_id=None):
     keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
     keyboard.add("➕ Додати нове слово", "📖 Вчити нові слова", "🔄 Повторити")
     
-    # Add dictionary selector button
+    # Визначаємо, який словник активний
     dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
-    button_text = "🌐 Загальний словник" if dict_type == "personal" else "👤 Персональний словник"
-    keyboard.add(button_text)
+    
+    # Додаємо кнопки з відповідними маркерами
+    if dict_type == "personal":
+        keyboard.add("👤 Персональний словник ✓", "🌐 Загальний словник")
+    else:
+        keyboard.add("👤 Персональний словник", "🌐 Загальний словник ✓")
     
     return keyboard
 

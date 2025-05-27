@@ -1,40 +1,39 @@
 import sqlite3
 import os
 
-ARTICLE_MAP = {1: "der", 2: "die", 3: "das", 4: "die (plural)"}
+def get_article_by_mask(cur, article_mask):
+    """Fetch the article from the articles table using article_mask."""
+    cur.execute("SELECT word FROM articles WHERE _id = ?", (article_mask,))
+    result = cur.fetchone()
+    return result[0] if result else "unknown"
 
-# Отримуємо абсолютний шлях до файлу nouns.sqlite
-db_path = os.path.join(os.path.dirname(__file__), 'nouns.sqlite')
+def search_word(word):
+    db_path = os.path.join(os.path.dirname(__file__), 'nouns.sqlite')
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
 
-conn = sqlite3.connect(db_path)
-cur = conn.cursor()
-tables = ["noun_0", "noun_1", "noun_2"]
+    # Search in declensions table (singular and plural)
+    cur.execute("""
+        SELECT word, article_mask, plural_word, plural_article_mask 
+        FROM declensions 
+        WHERE word = ? OR plural_word = ?
+    """, (word, word))
+    result = cur.fetchone()
+    if result:
+        singular, singular_mask, plural, plural_mask = result
+        if word == singular:
+            article = get_article_by_mask(cur, singular_mask)
+            print(f"Found in declensions (singular): {article} {singular}")
+        elif word == plural:
+            article = get_article_by_mask(cur, plural_mask)
+            print(f"Found in declensions (plural): {article} {plural}")
+        conn.close()
+        return
 
-search_word = input("Enter German noun: ").strip()
-
-found = False
-for table in tables:
-    # Розширений запит: шукаємо всі записи, де слово схоже на введене
-    cur.execute(
-        f"""
-        SELECT word, search_term, article_mask 
-        FROM {table} 
-        WHERE word LIKE ? COLLATE NOCASE OR search_term LIKE ? COLLATE NOCASE;
-        """,
-        (f"%{search_word}%", f"%{search_word}%")
-    )
-    results = cur.fetchall()
-    if results:
-        print(f"--- Results from {table} ---")
-        for word, search_term, mask in results:
-            article = ARTICLE_MAP.get(mask, "?")
-            if article == "die (plural)":
-                print(f"Word: {article} {word}")
-            else:
-                print(f"Word: {article} {word}")
-        found = True
-
-if not found:
+    # If no match found
     print("Word not found in any table.")
+    conn.close()
 
-conn.close()
+if __name__ == "__main__":
+    word = input("Enter a German noun: ").strip()
+    search_word(word)
