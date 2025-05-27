@@ -125,14 +125,14 @@ def handle_translation(message):
         clear_state(message.chat.id)
         return
     
+    # Use a proper language code (default to Ukrainian for common dict)
     if dict_type == "personal":
         file_path, language = get_user_file_path(message.chat.id)
         if not file_path:
             bot.send_message(message.chat.id, "❌ Мову перекладу не обрано. Спробуйте /start.")
             return
     else:
-        from storage import get_common_file_path
-        _, language = get_common_file_path()
+        language = "uk"  # Default language for common dictionary
     
     translation = translator.translate(word, src="de", dest=language).text
     
