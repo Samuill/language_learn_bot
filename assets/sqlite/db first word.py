@@ -1,8 +1,8 @@
 import sqlite3
-
+import os
 ARTICLE_MAP = {1: "der", 2: "die", 3: "das"}
-
-conn = sqlite3.connect(r'.\assets\sqlite\nouns.sqlite')
+db_path = os.path.join(os.path.dirname(__file__), 'nouns.sqlite')
+conn = sqlite3.connect(db_path)
 cur = conn.cursor()
 tables = ["noun_0", "noun_1", "noun_2"]
 
