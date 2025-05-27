@@ -73,11 +73,17 @@ def save_word(chat_id, translation=None):
             common_path, _ = get_common_file_path()
             df.to_csv(common_path, index=False, encoding='utf-8-sig')
             print(f"Debug: Directly saved to common dictionary: {common_path}")
+            
+            # Викликаємо clear_state з збереженням типу словника для адміна
+            clear_state(chat_id, preserve_dict_type=True)
         else:
             # Для звичайних користувачів використовуємо стандартну функцію
             save_dataframe(chat_id, df, language)
-            
-    clear_state(chat_id)
+            clear_state(chat_id)
+    else:
+        # Якщо не додавали нові рядки, просто очищуємо стан
+        preserve_dict_type = (chat_id == ADMIN_ID and dict_type == "common")
+        clear_state(chat_id, preserve_dict_type=preserve_dict_type)
 
 def start_activity(chat_id, mode):
     """Start learning or repetition activity"""

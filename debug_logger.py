@@ -5,6 +5,7 @@ import json
 from datetime import datetime
 import inspect
 import telebot
+from config import ADMIN_ID  # Додано імпорт ADMIN_ID
 
 # Create logs directory if it doesn't exist
 LOGS_DIR = "logs"
@@ -123,7 +124,7 @@ def log_dict_operation(chat_id, operation, dict_type, path, success=True):
     """Log dictionary operations with more detail"""
     timestamp = get_timestamp()
     
-    is_admin = chat_id == ADMIN_ID
+    is_admin = chat_id == ADMIN_ID  # Тепер ADMIN_ID буде визначений
     admin_text = " (ADMIN)" if is_admin else ""
     
     # Create log entry

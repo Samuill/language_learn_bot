@@ -1,1 +1,2 @@
 [2025-05-27 23:17:31.082] ERROR: invalid destination language | Context: Critical error in main loop
+[2025-05-28 00:19:53.407] ERROR: HTTPSConnectionPool(host='api.telegram.org', port=443): Read timed out. (read timeout=25) | Context: Critical error in main loop

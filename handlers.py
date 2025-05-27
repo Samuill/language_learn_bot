@@ -3,7 +3,7 @@ import random
 import telebot
 import pandas as pd
 import os
-from config import bot, translator, user_state, ADMIN_ID, DEBUG_MODE
+from config import bot, translator, user_state, ADMIN_ID, DEBUG_MODE, scheduler
 from utils import clear_state, track_activity, main_menu_keyboard, main_menu_cancel, language_selection_keyboard
 from storage import get_dataframe, save_dataframe, get_user_file_path, get_common_file_path
 from dictionary import save_word, toggle_dictionary, start_activity
@@ -404,7 +404,7 @@ def test_fire(message):
 def stop_bot(message):
     if message.from_user.id == ADMIN_ID:
         bot.stop_polling()
-        scheduler.shutdown(wait=False)
+        scheduler.shutdown(wait=False)  # Тепер scheduler буде визначений
         print("Бот зупинено!")
         exit(0)
 
