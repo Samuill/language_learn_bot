@@ -469,22 +469,6 @@ def handle_answer(call):
     save_dataframe(chat_id, df, get_user_file_path(chat_id)[1])
 
 
-# @bot.message_handler(commands=['fire'])
-# def test_fire(message):
-#     if message.from_user.id == YOUR_ADMIN_ID:  # Додайте свій ID
-#         send_reminder()
-#         bot.reply_to(message, "Нагадування відправлено!")
-
-# @bot.message_handler(commands=['stop'])
-# def stop_bot(message):
-#     if message.from_user.id == YOUR_ADMIN_ID:
-#         bot.stop_polling()
-#         scheduler.shutdown()
-#         os._exit(0)
-
-
-
-
 @bot.message_handler(commands=['fire'])
 def test_fire(message):
     if message.from_user.id == 476376623:
@@ -502,16 +486,10 @@ def stop_bot(message):
         print("Бот зупинено!")
         exit(0)
 
-if __name__ == '__main__':
-    if not scheduler.running:  # Перевіряємо, чи він ще не запущений
+if __name__ == "__main__":
+    try:
         scheduler.start()
-    
-    while True:
-        try:
-            bot.polling(none_stop=True, interval=1)
-        except requests.exceptions.ConnectionError:
-            print("Помилка з'єднання. Повторна спроба через 5 секунд...")
-            time.sleep(5)
-        except Exception as e:
-            print(f"Критична помилка: {e}")
-            time.sleep(5)
+        bot.polling(none_stop=True)
+    except KeyboardInterrupt:
+        print("Зупиняємо бота...")
+        scheduler.shutdown()
