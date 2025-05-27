@@ -1,0 +1,84 @@
+@import "common.css";
+
+p {
+    margin-top: 0px;
+    margin-bottom: 0px;
+}
+
+.app-name {
+    font-size: 200%;
+	font-weight: bold;
+	text-align: center;
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+.highlight-in-text {
+	font-weight: bold;
+    color: orange;
+}
+
+.version {
+	text-align: center;
+}
+
+.pro-features-unlocked {
+    margin-top: 10px;
+	text-align: center;
+	font-weight: bold;
+}
+
+.centered-text {
+	text-align: center;
+}
+
+.support {
+	text-align: center;
+}
+
+.td_language {
+    text-align: right;
+    padding-right: 7px;
+}
+
+.td_translator {
+    text-align: left;
+}
+
+.button-wrapper {
+	text-align: center;
+	margin-bottom: 3px;
+}
+
+
+.support-button {
+    padding:5px 18px;
+    border-radius:12px; 
+    color:#000; font-weight:bold; 
+    text-align:center; 
+    text-decoration: none; 
+    border: 2px solid rgb(160,160,160); 
+    background-color:rgb(208,208,208);
+    background: -webkit-linear-gradient(top, rgb(238, 238, 238), rgb(129, 131, 134));
+}
+
+.button {
+  width: 90%;
+  margin: auto;
+  padding: 9px 5px 9px 5px;
+  border: solid rgb(62, 68, 76) 3px;
+  border-radius: 12px;
+  background: rgb(180, 180, 180); 
+  background: -webkit-linear-gradient(top, rgb(238, 238, 238), rgb(129, 131, 134));
+}
+
+.button-text {
+    margin: auto;
+    font-size: 135%;
+    font-weight: bold;
+    color: rgb(60, 64, 68);
+}
+
+svg.center {
+  vertical-align: middle;
+}
