@@ -4,7 +4,8 @@ import telebot
 from googletrans import Translator
 from apscheduler.schedulers.background import BackgroundScheduler
 
-TOKEN = "7616425414:AAFaZCuYss9UyNSXm_MJCd42rLjAKNWy0Mc"
+# TOKEN = "7616425414:AAFaZCuYss9UyNSXm_MJCd42rLjAKNWy0Mc"
+TOKEN = "7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw"
 ADMIN_ID = 476376623  # ID адміністратора
 
 # Глобальні об'єкти
