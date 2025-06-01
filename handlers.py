@@ -21,7 +21,15 @@ def start_learning(chat_id, df):
     words = df.sample(min(10, len(df)))
     
     translations = words['translation'].tolist()
-    de_words = words['word'].tolist()
+    
+    # Формуємо німецькі слова з артиклями, якщо вони є
+    de_words = []
+    for _, row in words.iterrows():
+        if pd.notna(row['article']) and row['article'] != '':
+            de_words.append(f"{row['article']} {row['word']}")
+        else:
+            de_words.append(row['word'])
+    
     random.shuffle(translations)
     random.shuffle(de_words)
     
@@ -32,11 +40,13 @@ def start_learning(chat_id, df):
             telebot.types.InlineKeyboardButton(de, callback_data=f'de_{de}')
         )
     
+    # Зберігаємо пари з артиклями для звірки
     user_state[chat_id] = {
-        "pairs": list(zip(words['translation'], words['word'])),
+        "pairs": list(zip(words['translation'], de_words)),
         "selected_tr": None,
         "message_id": None,
-        "dict_type": dict_type
+        "dict_type": dict_type,
+        "original_words": words  # Зберігаємо оригінальні дані для доступу до артиклів
     }
     
     sent_message = bot.send_message(chat_id, "🔍 Оберіть пару слів:", reply_markup=markup)
@@ -59,6 +69,11 @@ def start_repetition(chat_id, df):
             translations[0] = word['translation']
         random.shuffle(translations)
         
+        # Формуємо слово з артиклем для відображення
+        display_word = word['word']
+        if pd.notna(word['article']) and word['article'] != '':
+            display_word = f"{word['article']} {word['word']}"
+        
         markup = telebot.types.InlineKeyboardMarkup()
         for tr in translations:
             markup.add(telebot.types.InlineKeyboardButton(
@@ -66,7 +81,7 @@ def start_repetition(chat_id, df):
                 callback_data=f"ans_{word['word']}_{tr}"
             ))
         
-        sent_message = bot.send_message(chat_id, f"📖 Оберіть переклад для слова: {word['word']}", reply_markup=markup)
+        sent_message = bot.send_message(chat_id, f"📖 Оберіть переклад для слова: {display_word}", reply_markup=markup)
         user_state[chat_id] = {
             "current_word": word,
             "message_id": sent_message.message_id,
@@ -297,6 +312,7 @@ def handle_pairs(call):
         return
     
     state = user_state[chat_id]
+    dict_type = state.get("dict_type", "personal")
     
     if call.data.startswith('tr_'):
         if state.get('selected_tr'):
@@ -314,7 +330,6 @@ def handle_pairs(call):
         correct = any(tr == state['selected_tr'] and de == selected_de for tr, de in state["pairs"])
         
         df = get_dataframe(chat_id)
-        dict_type = state.get("dict_type", "personal")
         
         if correct:
             bot.answer_callback_query(call.id, "✅ Правильно!")
@@ -445,7 +460,7 @@ def test_fire(message):
 def stop_bot(message):
     if message.from_user.id == ADMIN_ID:
         bot.stop_polling()
-        scheduler.shutdown(wait=False)  # Тепер scheduler буде визначений
+        scheduler.shutdown(wait=False)
         print("Бот зупинено!")
         exit(0)
 
@@ -480,6 +495,54 @@ def debug_command(message):
         if DEBUG_MODE:
             log_error(e, f"Error in debug command: {e}")
         bot.reply_to(message, f"❌ Error: {str(e)}")
+
+@bot.message_handler(commands=['articles'])
+@log_handler
+def articles_stats(message):
+    """Show statistics about articles in the database"""
+    if message.from_user.id != ADMIN_ID:
+        bot.reply_to(message, "⛔ Ця команда доступна тільки для адміністратора.")
+        return
+        
+    try:
+        import db_manager
+        conn = db_manager.get_connection()
+        cursor = conn.cursor()
+        
+        # Count total words
+        cursor.execute("SELECT COUNT(*) FROM words")
+        total_words = cursor.fetchone()[0]
+        
+        # Count words for each article
+        cursor.execute("""
+            SELECT a.article, COUNT(w.id) as word_count 
+            FROM words w 
+            JOIN article a ON w.article_id = a.id 
+            GROUP BY a.article
+            ORDER BY word_count DESC
+        """)
+        article_counts = cursor.fetchall()
+        
+        # Count words without article
+        cursor.execute("SELECT COUNT(*) FROM words WHERE article_id IS NULL OR article_id = 4")
+        no_article_count = cursor.fetchone()[0]
+        
+        # Format response
+        response = f"📊 Article Statistics\n\n"
+        response += f"Total words in database: {total_words}\n\n"
+        response += "Words by article:\n"
+        
+        for article, count in article_counts:
+            article_display = article if article else "[empty]"
+            response += f"- {article_display}: {count} ({count/total_words*100:.1f}%)\n"
+        
+        response += f"\nWords without article: {no_article_count} ({no_article_count/total_words*100:.1f}%)"
+        
+        conn.close()
+        bot.reply_to(message, response)
+        
+    except Exception as e:
+        bot.reply_to(message, f"Error getting article statistics: {str(e)}")
 
 def get_uptime():
     """Get bot uptime"""

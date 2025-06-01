@@ -116,8 +116,8 @@ def get_user_words(chat_id, dict_type="personal"):
     
     return df
 
-def add_word(chat_id, word, translation, dict_type="personal"):
-    """Add a word to user's dictionary"""
+def add_word(chat_id, word, translation, dict_type="personal", article=None):
+    """Add a word to user's dictionary with optional article detection"""
     # Check if user can add to common dictionary
     if dict_type == "common" and chat_id != ADMIN_ID:
         return False
@@ -131,6 +131,28 @@ def add_word(chat_id, word, translation, dict_type="personal"):
         conn.close()
         return False
     
+    # Перевіряємо, чи є в слові артикль
+    import re
+    article_match = re.match(r'^(der|die|das)\s+(.+)$', word, re.IGNORECASE)
+    extracted_article = None
+    if article_match:
+        # Якщо знайшли артикль в слові
+        extracted_article = article_match.group(1).lower()
+        word = article_match.group(2).strip()
+    
+    # Визначаємо ID артикля (якщо він є)
+    article_id = None
+    if extracted_article or article:
+        article_to_use = extracted_article or article
+        cursor.execute('SELECT id FROM article WHERE LOWER(article) = LOWER(?)', (article_to_use,))
+        result = cursor.fetchone()
+        if result:
+            article_id = result[0]
+    
+    # Якщо артикль не знайдено, використовуємо порожній артикль (ID = 4)
+    if not article_id:
+        article_id = 4  # Empty article by default
+    
     # Check if word already exists
     cursor.execute('SELECT id FROM words WHERE word = ?', (word,))
     result = cursor.fetchone()
@@ -139,15 +161,20 @@ def add_word(chat_id, word, translation, dict_type="personal"):
         # Word exists, get its ID
         word_id = result[0]
         
-        # Update translation for the language
-        cursor.execute(f'UPDATE words SET {language}_tran = ? WHERE id = ?', (translation, word_id))
+        # Update translation for the language and article_id if we have it
+        if article_id:
+            cursor.execute(f'UPDATE words SET {language}_tran = ?, article_id = ? WHERE id = ?', 
+                         (translation, article_id, word_id))
+        else:
+            cursor.execute(f'UPDATE words SET {language}_tran = ? WHERE id = ?', 
+                         (translation, word_id))
     else:
         # Word doesn't exist, add it
         cursor.execute('''
         INSERT INTO words (article_id, word, ru_tran, uk_tran)
         VALUES (?, ?, ?, ?)
         ''', (
-            4,  # Empty article by default
+            article_id,
             word,
             translation if language == 'ru' else None,
             translation if language == 'uk' else None

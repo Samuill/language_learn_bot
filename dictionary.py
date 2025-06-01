@@ -27,8 +27,16 @@ def save_word(chat_id, translation=None):
     word = data["word"]
     translation = translation or data["auto_translation"]
     
-    # Зберігаємо слово в базу даних
-    success = db_manager.add_word(chat_id, word, translation, dict_type)
+    # Визначаємо артикль зі слова (якщо є)
+    article = None
+    import re
+    article_match = re.match(r'^(der|die|das)\s+(.+)$', word, re.IGNORECASE)
+    if article_match:
+        article = article_match.group(1)
+        # Слово без артикля передається автоматично в add_word через детекцію
+    
+    # Зберігаємо слово в базу даних із можливим артиклем
+    success = db_manager.add_word(chat_id, word, translation, dict_type, article)
     
     if success:
         bot.send_message(
