@@ -13,6 +13,10 @@ def get_connection():
     if not os.path.exists(DB_PATH):
         from db_init import create_database
         create_database()
+        
+        # Також виконаємо міграцію даних з CSV, якщо база щойно створена
+        from db_init import migrate_from_csv
+        migrate_from_csv()
     
     return sqlite3.connect(DB_PATH)
 
@@ -61,9 +65,10 @@ def get_user_words(chat_id, dict_type="personal"):
     if dict_type == "common":
         # Загальний словник - вибираємо всі слова
         language = get_user_language(chat_id) or "uk"
+        print(f"Getting common dictionary words for user {chat_id} in language {language}")
         
         query = f'''
-        SELECT w.id, w.word, w.{language}_tran as translation, a.article, 0.0 as rating
+        SELECT w.id, w.word, w.{language}_tran as translation, a.article, 0.0 as priority
         FROM words w
         LEFT JOIN article a ON w.article_id = a.id
         WHERE w.{language}_tran IS NOT NULL
@@ -73,8 +78,11 @@ def get_user_words(chat_id, dict_type="personal"):
         # Персональний словник - вибираємо слова користувача
         language = get_user_language(chat_id)
         if not language:
+            print(f"Cannot determine language for user {chat_id}")
             conn.close()
             return pd.DataFrame()
+        
+        print(f"Getting personal dictionary for user {chat_id} in language {language}")
         
         # Перевіряємо, чи існує таблиця для користувача
         cursor.execute(f"""
@@ -82,6 +90,7 @@ def get_user_words(chat_id, dict_type="personal"):
         WHERE type='table' AND name='user_{chat_id}'
         """)
         if not cursor.fetchone():
+            print(f"No table found for user {chat_id}")
             conn.close()
             return pd.DataFrame()
         
@@ -94,9 +103,14 @@ def get_user_words(chat_id, dict_type="personal"):
         '''
         cursor.execute(query)
     
+    # Отримуємо результати
+    results = cursor.fetchall()
+    
     # Convert results to DataFrame
     columns = ['id', 'word', 'translation', 'article', 'priority']
-    df = pd.DataFrame(cursor.fetchall(), columns=columns)
+    df = pd.DataFrame(results, columns=columns)
+    
+    print(f"Found {len(df)} words for user {chat_id} with dict_type={dict_type}")
     
     conn.close()
     

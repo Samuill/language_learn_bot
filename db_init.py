@@ -2,6 +2,8 @@
 import os
 import sqlite3
 import pandas as pd
+import glob
+import re
 
 # Шлях до бази даних
 DB_DIR = "database"
@@ -112,88 +114,167 @@ def migrate_from_csv():
     cursor.execute('SELECT id, article FROM article')
     article_map = {article: aid for aid, article in cursor.fetchall()}
     
-    # Знаходимо всі CSV файли словників
-    csv_files = [f for f in os.listdir(USER_DICT_DIR) if f.endswith('.csv')]
+    # Збираємо всі CSV файли словників (включаючи root директорію для сумісності)
+    user_dict_files = []
     
-    for csv_file in csv_files:
-        file_path = os.path.join(USER_DICT_DIR, csv_file)
-        
+    # Пошук у USER_DICT_DIR
+    user_dict_pattern = os.path.join(USER_DICT_DIR, "*_words_*.csv")
+    user_dict_files.extend(glob.glob(user_dict_pattern))
+    
+    # Пошук у root директорії (для сумісності)
+    root_dict_pattern = "*_words_*.csv"
+    user_dict_files.extend(glob.glob(root_dict_pattern))
+    
+    # Загальний словник
+    common_dict_path = os.path.join(USER_DICT_DIR, "common_dictionary.csv")
+    if os.path.exists(common_dict_path):
+        print(f"Found common dictionary: {common_dict_path}")
         try:
             # Читаємо CSV файл
-            df = pd.read_csv(file_path, encoding='utf-8-sig')
+            df = pd.read_csv(common_dict_path, encoding='utf-8-sig')
+            print(f"Migrating common dictionary with {len(df)} words")
             
-            # Перевіряємо, чи це загальний словник
-            if csv_file == "common_dictionary.csv":
-                print(f"Migrating common dictionary from {file_path}")
+            # Додаємо кожне слово в таблицю words
+            for _, row in df.iterrows():
+                word = row['word']
+                translation = row['translation']
+                article = row.get('article', '')
+                article_id = article_map.get(article, article_map[''])
                 
-                # Додаємо кожне слово в таблицю words
-                for _, row in df.iterrows():
-                    word = row['word']
-                    translation = row['translation']
-                    article = row.get('article', '')
-                    article_id = article_map.get(article, article_map[''])  # За замовчуванням порожній артикль
-                    
-                    # Додаємо слово в таблицю words
-                    try:
-                        cursor.execute('''
-                        INSERT OR IGNORE INTO words (article_id, word, uk_tran) VALUES (?, ?, ?)
-                        ''', (article_id, word, translation))
-                    except sqlite3.IntegrityError:
-                        pass
-            else:
-                # Визначаємо мову зі шляху файлу
-                lang_prefix = 'uk' if 'uk_words_' in csv_file else 'ru' if 'ru_words_' in csv_file else None
-                if not lang_prefix:
-                    print(f"Cannot determine language for file {csv_file}, skipping...")
-                    continue
-                
-                # Отримуємо chat_id з імені файлу
+                # Додаємо слово в таблицю words
                 try:
-                    chat_id = int(csv_file.split('_')[-1].split('.')[0])
-                except (ValueError, IndexError):
-                    print(f"Cannot extract chat_id from file name {csv_file}, skipping...")
-                    continue
-                
-                print(f"Migrating {lang_prefix} dictionary for user {chat_id} from {file_path}")
-                
-                # Створюємо таблицю для користувача, якщо не існує
-                create_user_table(chat_id)
-                
-                # Оновлюємо мову користувача
-                cursor.execute('UPDATE users SET language = ? WHERE chat_id = ?', (lang_prefix, chat_id))
-                
-                # Додаємо кожне слово в таблицю words і user_XXX
-                for _, row in df.iterrows():
+                    cursor.execute('''
+                    INSERT OR IGNORE INTO words (article_id, word, uk_tran) VALUES (?, ?, ?)
+                    ''', (article_id, word, translation))
+                    conn.commit()
+                except sqlite3.IntegrityError as e:
+                    print(f"IntegrityError for word {word}: {e}")
+                except Exception as e:
+                    print(f"Error adding word {word} to common dictionary: {e}")
+            
+            print(f"Successfully migrated common dictionary")
+        except Exception as e:
+            print(f"Error processing common dictionary: {e}")
+    
+    # Обробляємо словники користувачів
+    print(f"Found {len(user_dict_files)} user dictionaries")
+    migrated_users = 0
+    
+    for file_path in user_dict_files:
+        filename = os.path.basename(file_path)
+        
+        try:
+            # Визначаємо мову та ID користувача з імені файлу
+            lang_match = re.match(r'(uk|ru)_words_(\d+)\.csv', filename)
+            if not lang_match:
+                print(f"Cannot parse filename: {filename}, skipping...")
+                continue
+            
+            lang_prefix, chat_id_str = lang_match.groups()
+            chat_id = int(chat_id_str)
+            
+            print(f"Processing {lang_prefix} dictionary for user {chat_id}: {file_path}")
+            
+            # Читаємо CSV файл
+            try:
+                df = pd.read_csv(file_path, encoding='utf-8-sig')
+                print(f"  - Found {len(df)} words")
+            except Exception as e:
+                print(f"  - Error reading CSV: {e}")
+                continue
+            
+            # Створюємо або оновлюємо запис користувача
+            try:
+                cursor.execute('SELECT 1 FROM users WHERE chat_id = ?', (chat_id,))
+                if not cursor.fetchone():
+                    # Створюємо запис користувача, якщо він не існує
+                    cursor.execute(
+                        'INSERT INTO users (chat_id, language, streak, last_active) VALUES (?, ?, 0, NULL)',
+                        (chat_id, lang_prefix)
+                    )
+                else:
+                    # Оновлюємо мову користувача
+                    cursor.execute('UPDATE users SET language = ? WHERE chat_id = ?', (lang_prefix, chat_id))
+                conn.commit()
+                print(f"  - User {chat_id} added/updated with language {lang_prefix}")
+            except Exception as e:
+                print(f"  - Error creating/updating user: {e}")
+                continue
+            
+            # Створюємо таблицю для користувача
+            try:
+                cursor.execute(f'''
+                CREATE TABLE IF NOT EXISTS user_{chat_id} (
+                    id INTEGER PRIMARY KEY,
+                    word_id INTEGER,
+                    rating REAL DEFAULT 0.0,
+                    FOREIGN KEY (word_id) REFERENCES words(id),
+                    UNIQUE(word_id)
+                )
+                ''')
+                conn.commit()
+                print(f"  - Table user_{chat_id} created or already exists")
+            except Exception as e:
+                print(f"  - Error creating table for user {chat_id}: {e}")
+                continue
+            
+            # Обробляємо кожне слово
+            words_added = 0
+            for _, row in df.iterrows():
+                try:
                     word = row['word']
                     translation = row['translation']
-                    rating = row.get('priority', 0.0)
+                    priority = float(row.get('priority', 0.0))
                     
-                    # Додаємо слово в таблицю words з правильним перекладом залежно від мови
-                    if lang_prefix == 'uk':
-                        cursor.execute('''
-                        INSERT OR IGNORE INTO words (article_id, word, uk_tran) VALUES (?, ?, ?)
-                        ''', (article_map[''], word, translation))
-                    else:  # ru
-                        cursor.execute('''
-                        INSERT OR IGNORE INTO words (article_id, word, ru_tran) VALUES (?, ?, ?)
-                        ''', (article_map[''], word, translation))
-                    
-                    # Отримуємо ID доданого слова
+                    # Додаємо слово в загальну таблицю words, якщо воно ще не існує
                     cursor.execute('SELECT id FROM words WHERE word = ?', (word,))
-                    word_id = cursor.fetchone()[0]
+                    result = cursor.fetchone()
                     
-                    # Додаємо слово до словника користувача
+                    if result:
+                        # Слово існує, отримуємо його ID
+                        word_id = result[0]
+                        
+                        # Оновлюємо переклад для відповідної мови, якщо він не заданий
+                        cursor.execute(f'SELECT {lang_prefix}_tran FROM words WHERE id = ?', (word_id,))
+                        existing_translation = cursor.fetchone()[0]
+                        
+                        if not existing_translation:
+                            cursor.execute(f'UPDATE words SET {lang_prefix}_tran = ? WHERE id = ?', 
+                                         (translation, word_id))
+                    else:
+                        # Додаємо нове слово
+                        cursor.execute(f'''
+                        INSERT INTO words (article_id, word, {lang_prefix}_tran) 
+                        VALUES (?, ?, ?)
+                        ''', (article_map[''], word, translation))
+                        conn.commit()
+                        
+                        # Отримуємо ID доданого слова
+                        cursor.execute('SELECT id FROM words WHERE word = ?', (word,))
+                        word_id = cursor.fetchone()[0]
+                    
+                    # Додаємо слово в таблицю користувача з рейтингом
                     cursor.execute(f'''
-                    INSERT OR IGNORE INTO user_{chat_id} (word_id, rating) VALUES (?, ?)
-                    ''', (word_id, rating))
+                    INSERT OR REPLACE INTO user_{chat_id} (word_id, rating)
+                    VALUES (?, ?)
+                    ''', (word_id, priority))
+                    conn.commit()
+                    
+                    words_added += 1
+                except Exception as e:
+                    print(f"  - Error processing word '{word}': {e}")
+            
+            print(f"  - Added/updated {words_added} words for user {chat_id}")
+            migrated_users += 1
+            
         except Exception as e:
-            print(f"Error migrating {csv_file}: {e}")
+            print(f"Error processing file {file_path}: {e}")
     
-    # Зберігаємо зміни і закриваємо з'єднання
+    # Закриваємо з'єднання
     conn.commit()
     conn.close()
     
-    print("CSV migration completed")
+    print(f"Migration complete. Processed {migrated_users} user dictionaries.")
 
 if __name__ == "__main__":
     create_database()

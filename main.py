@@ -121,11 +121,51 @@ def migrate_to_sqlite():
     from db_init import DB_PATH, create_database, migrate_from_csv
     
     if not os.path.exists(DB_PATH):
-        print("Migrating data from CSV to SQLite...")
+        print("\n=== STARTING MIGRATION FROM CSV TO SQLITE ===")
+        print("Creating new SQLite database...")
         create_database()
+        print("Migrating data from CSV files...")
         migrate_from_csv()
+        print("=== MIGRATION COMPLETED ===\n")
     else:
         print(f"SQLite database already exists at {DB_PATH}")
+        # Перевіряємо, чи є нові CSV файли для міграції
+        from storage import USER_DICT_DIR
+        import glob
+        
+        user_dict_pattern = os.path.join(USER_DICT_DIR, "*_words_*.csv")
+        user_dict_files = glob.glob(user_dict_pattern)
+        
+        if user_dict_files:
+            print(f"Found {len(user_dict_files)} CSV files that might need migration.")
+            
+            # Перевіряємо, чи всі користувачі вже мігровані
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.cursor()
+            
+            # Отримуємо список існуючих таблиць користувачів
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'user_%'")
+            existing_tables = [row[0] for row in cursor.fetchall()]
+            
+            # Перевіряємо, чи є CSV файли для користувачів, які ще не мігровані
+            need_migration = False
+            for file_path in user_dict_files:
+                filename = os.path.basename(file_path)
+                import re
+                match = re.search(r'_(\d+)\.csv$', filename)
+                if match:
+                    chat_id = match.group(1)
+                    if f"user_{chat_id}" not in existing_tables:
+                        need_migration = True
+                        break
+            
+            conn.close()
+            
+            if need_migration:
+                print("New CSV files found. Running migration...")
+                migrate_from_csv()
+            else:
+                print("All users are already migrated.")
 
 def main():
     """Main function to run the bot"""
