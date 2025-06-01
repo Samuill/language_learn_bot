@@ -270,6 +270,33 @@ def migrate_from_csv():
         except Exception as e:
             print(f"Error processing file {file_path}: {e}")
     
+    # Додаткова перевірка успішної міграції
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        # Перевірка, чи є дані в таблиці words
+        cursor.execute("SELECT COUNT(*) FROM words")
+        word_count = cursor.fetchone()[0]
+        
+        # Перевірка, чи є дані в таблиці users
+        cursor.execute("SELECT COUNT(*) FROM users")
+        user_count = cursor.fetchone()[0]
+        
+        # Перевірка, чи є користувацькі таблиці
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'user_%'")
+        user_tables = cursor.fetchall()
+        
+        print("\n=== MIGRATION STATISTICS ===")
+        print(f"Total words migrated: {word_count}")
+        print(f"Total users migrated: {user_count}")
+        print(f"Total user tables created: {len(user_tables)}")
+        print("===========================")
+        
+        conn.close()
+    except Exception as e:
+        print(f"Error checking migration statistics: {e}")
+    
     # Закриваємо з'єднання
     conn.commit()
     conn.close()

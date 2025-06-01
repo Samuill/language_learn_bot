@@ -58,17 +58,31 @@ def start_activity(chat_id, mode):
     # Відразу встановлюємо поточний тип словника після очищення
     user_state[chat_id] = {"dict_type": dict_type}
     
-    # Оновлюємо streak користувача
-    streak = db_manager.update_user_streak(chat_id)
-    print(f"User {chat_id} streak updated: {streak}")
-    
-    # Отримуємо слова для користувача
-    df = db_manager.get_user_words(chat_id, dict_type)
-    
-    if df.empty:
-        dict_name = "загальному словнику" if dict_type == "common" else "персональному словнику"
-        bot.send_message(chat_id, f"📭 У {dict_name} ще немає доданих слів.")
-        return False
+    try:
+        # Спочатку спробуємо використати SQLite для отримання слів
+        import db_manager
+        # Оновлюємо streak користувача
+        streak = db_manager.update_user_streak(chat_id)
+        print(f"User {chat_id} streak updated: {streak}")
+        
+        # Отримуємо слова для користувача
+        df = db_manager.get_user_words(chat_id, dict_type)
+        
+        if df.empty:
+            dict_name = "загальному словнику" if dict_type == "common" else "персональному словнику"
+            bot.send_message(chat_id, f"📭 У {dict_name} ще немає доданих слів.")
+            return False
+    except Exception as e:
+        print(f"Error using SQLite, falling back to CSV: {e}")
+        # Резервний варіант: старий CSV метод
+        from utils import track_activity
+        track_activity(chat_id)
+        from storage import get_dataframe
+        df = get_dataframe(chat_id)
+        if df is None or df.empty:
+            dict_name = "загальному словнику" if dict_type == "common" else "персональному словнику"
+            bot.send_message(chat_id, f"📭 У {dict_name} ще немає доданих слів.")
+            return False
     
     if mode == 'repeat':
         from handlers import start_repetition

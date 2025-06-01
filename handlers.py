@@ -314,11 +314,21 @@ def handle_pairs(call):
         correct = any(tr == state['selected_tr'] and de == selected_de for tr, de in state["pairs"])
         
         df = get_dataframe(chat_id)
+        dict_type = state.get("dict_type", "personal")
+        
         if correct:
             bot.answer_callback_query(call.id, "✅ Правильно!")
-            # Оновлюємо рейтинг слова в базі даних
-            import db_manager
-            db_manager.update_word_rating(chat_id, df.loc[df['translation'] == state['selected_tr'], 'id'].values[0], -0.1, dict_type)
+            
+            # Використовуємо тільки SQLite для оновлення рейтингу
+            try:
+                import db_manager
+                word_id = df.loc[df['translation'] == state['selected_tr'], 'id'].values[0]
+                db_manager.update_word_rating(chat_id, word_id, -0.1, dict_type)
+            except Exception as e:
+                print(f"Error updating word rating: {e}")
+                # Якщо не вдалося оновити через SQLite, використовуємо старий метод як резервний
+                df.loc[df['translation'] == state['selected_tr'], 'priority'] -= 0.001
+            
             markup = call.message.reply_markup
             for row in markup.keyboard:
                 for btn in row:
@@ -335,14 +345,18 @@ def handle_pairs(call):
                 learn_words(call.message)
         else:
             bot.answer_callback_query(call.id, "❌ Неправильно!")
-            # Оновлюємо рейтинг слова в базі даних
-            import db_manager
-            db_manager.update_word_rating(chat_id, df.loc[df['translation'] == state['selected_tr'], 'id'].values[0], 0.1, dict_type)
-            df.loc[df['translation'] == state['selected_tr'], 'priority'] += 0.001
+            
+            # Використовуємо тільки SQLite для оновлення рейтингу
+            try:
+                import db_manager
+                word_id = df.loc[df['translation'] == state['selected_tr'], 'id'].values[0]
+                db_manager.update_word_rating(chat_id, word_id, 0.1, dict_type)
+            except Exception as e:
+                print(f"Error updating word rating: {e}")
+                # Якщо не вдалося оновити через SQLite, використовуємо старий метод як резервний
+                df.loc[df['translation'] == state['selected_tr'], 'priority'] += 0.001
         
-        dict_type = state.get("dict_type", "personal")
-        print(f"Debug: handle_pairs saving for user {chat_id}, dict_type={dict_type}")
-        
+        # Тут також потрібно оновити DataFrame у CSV (тимчасове рішення для сумісності)
         if dict_type == "common":
             file_path, lang = get_common_file_path()
             save_dataframe(chat_id, df, "common")
@@ -364,29 +378,46 @@ def handle_answer(call):
         correct_tr = user_state[chat_id]["current_word"]['translation']
         
         df = get_dataframe(chat_id)
+        dict_type = user_state[chat_id].get("dict_type", "personal")
+        
         if df is None:
             bot.answer_callback_query(call.id, "❌ Помилка доступу до словника")
             return
             
         if selected_tr == correct_tr:
             bot.answer_callback_query(call.id, "✅ Правильно!")
-            # Оновлюємо рейтинг слова в базі даних
-            import db_manager
-            db_manager.update_word_rating(chat_id, user_state[chat_id]["current_word"]['id'], -0.1, dict_type)
+            
+            # Використовуємо SQLite для оновлення рейтингу
+            try:
+                import db_manager
+                word_id = user_state[chat_id]["current_word"]['id']
+                db_manager.update_word_rating(chat_id, word_id, -0.1, dict_type)
+            except Exception as e:
+                print(f"Error updating word rating: {e}")
+                # Якщо не вдалося, використовуємо старий метод
+                df.loc[df['word'] == word, 'priority'] -= 0.001
+                
             bot.delete_message(chat_id, call.message.message_id)
             repeat_words(call.message)
         else:
             bot.answer_callback_query(call.id, f"❌ Неправильно! Правильно: {correct_tr}")
-            # Оновлюємо рейтинг слова в базі даних
-            import db_manager
-            db_manager.update_word_rating(chat_id, user_state[chat_id]["current_word"]['id'], 0.1, dict_type)
+            
+            # Використовуємо SQLite для оновлення рейтингу
+            try:
+                import db_manager
+                word_id = user_state[chat_id]["current_word"]['id']
+                db_manager.update_word_rating(chat_id, word_id, 0.1, dict_type)
+            except Exception as e:
+                print(f"Error updating word rating: {e}")
+                # Якщо не вдалося, використовуємо старий метод
+                df.loc[df['word'] == word, 'priority'] += 0.001
+            
             markup = call.message.reply_markup
             for row in markup.keyboard:
                 if row[0].callback_data == call.data:
                     row[0].text += " ❌"
             bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=markup)
         
-        dict_type = user_state[chat_id].get("dict_type", "personal")
         if dict_type == "common":
             file_path, lang = get_common_file_path()
         else:
