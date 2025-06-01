@@ -5,6 +5,7 @@ import os
 import sys
 import signal
 import traceback
+import sqlite3  # Додаємо імпорт sqlite3
 from config import bot, scheduler, user_state, DEBUG_MODE
 from scheduler import setup_scheduler
 import handlers  # Import handlers to register them
