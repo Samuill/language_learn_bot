@@ -6,3 +6,5 @@
 [2025-06-01 18:28:53.551] ERROR: 'id' | Context: Critical error in main loop
 [2025-06-01 19:10:51.118] ERROR: HTTPSConnectionPool(host='api.telegram.org', port=443): Read timed out. (read timeout=25) | Context: Critical error in main loop
 [2025-06-01 19:13:45.341] ERROR: HTTPSConnectionPool(host='api.telegram.org', port=443): Read timed out. (read timeout=25) | Context: Critical error in main loop
+[2025-06-01 20:37:21.898] ERROR: HTTPSConnectionPool(host='api.telegram.org', port=443): Read timed out. (read timeout=25) | Context: Critical error in main loop
+[2025-06-01 21:37:16.196] ERROR: HTTPSConnectionPool(host='api.telegram.org', port=443): Read timed out. (read timeout=25) | Context: Critical error in main loop

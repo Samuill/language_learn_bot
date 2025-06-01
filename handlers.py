@@ -3,6 +3,7 @@ import random
 import telebot
 import pandas as pd
 import os
+import sqlite3  # Додано цей рядок
 from config import bot, translator, user_state, ADMIN_ID, DEBUG_MODE, scheduler
 from utils import clear_state, track_activity, main_menu_keyboard, main_menu_cancel, language_selection_keyboard
 from storage import get_dataframe, save_dataframe, get_user_file_path, get_common_file_path
@@ -17,36 +18,52 @@ def start_learning(chat_id, df):
     dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
     print(f"Debug: start_learning for user {chat_id}, dict_type={dict_type}")
     
-    df = df.sort_values(by="priority", ascending=False)
+    # Сортуємо за рейтингом в порядку зростання, щоб менші рейтинги (важчі слова) йшли першими
+    df = df.sort_values(by="priority", ascending=True)
     words = df.sample(min(10, len(df)))
     
-    translations = words['translation'].tolist()
-    
-    # Формуємо німецькі слова з артиклями, якщо вони є
-    de_words = []
+    # Формуємо пари переклад-німецьке слово
+    pairs = []
     for _, row in words.iterrows():
+        translation = row['translation']
+        german_word = row['word']
+        
+        # Формуємо німецьке слово з артиклем, якщо він є
         if pd.notna(row['article']) and row['article'] != '':
-            de_words.append(f"{row['article']} {row['word']}")
+            german_display = f"{row['article']} {german_word}"
         else:
-            de_words.append(row['word'])
+            german_display = german_word
+            
+        pairs.append((translation, german_display, row['id']))
     
-    random.shuffle(translations)
-    random.shuffle(de_words)
+    # Перемішуємо порядок пар
+    random.shuffle(pairs)
+    
+    # Розділяємо пари на окремі списки для створення кнопок
+    translations = [pair[0] for pair in pairs]
+    de_words = [pair[1] for pair in pairs]
+    
+    # Перемішуємо окремо для відображення
+    shuffled_translations = translations.copy()
+    shuffled_de_words = de_words.copy()
+    random.shuffle(shuffled_translations)
+    random.shuffle(shuffled_de_words)
     
     markup = telebot.types.InlineKeyboardMarkup(row_width=2)
-    for tr, de in zip(translations, de_words):
+    for tr, de in zip(shuffled_translations, shuffled_de_words):
         markup.add(
             telebot.types.InlineKeyboardButton(tr, callback_data=f'tr_{tr}'),
             telebot.types.InlineKeyboardButton(de, callback_data=f'de_{de}')
         )
     
-    # Зберігаємо пари з артиклями для звірки
+    # Зберігаємо оригінальні пари та інформацію про слова
     user_state[chat_id] = {
-        "pairs": list(zip(words['translation'], de_words)),
+        "pairs": [(tr, de) for tr, de, _ in pairs],  # Зберігаємо пари без ID
+        "word_ids": {tr: wid for tr, _, wid in pairs},  # Зберігаємо зв'язок між перекладами та ID слів
         "selected_tr": None,
         "message_id": None,
         "dict_type": dict_type,
-        "original_words": words  # Зберігаємо оригінальні дані для доступу до артиклів
+        "original_words": words
     }
     
     sent_message = bot.send_message(chat_id, "🔍 Оберіть пару слів:", reply_markup=markup)
@@ -97,10 +114,14 @@ def start_repetition(chat_id, df):
 @log_handler
 def main_menu(message):
     clear_state(message.chat.id)
-    file_path, language = get_user_file_path(message.chat.id)
+    
+    # Використовуємо базу даних для перевірки мови користувача
+    import db_manager
+    language = db_manager.get_user_language(message.chat.id)
+    
     track_activity(message.chat.id)
     
-    if not file_path:
+    if not language:
         bot.send_message(message.chat.id, "🌍 Виберіть мову, на якій бажаєте отримувати переклад слів:", 
                          reply_markup=language_selection_keyboard())
         user_state[message.chat.id] = {"step": "language_selection"}
@@ -175,6 +196,16 @@ def handle_translation(message):
     dict_type = user_state.get(message.chat.id, {}).get("dict_type", "personal")
     print(f"Debug: User {message.chat.id} adding word to dictionary type: {dict_type}")
     
+    # Пошук артикля у базі даних німецьких слів
+    from german_article_finder import find_german_article
+    article, clean_word = find_german_article(word)
+    if article:
+        print(f"Found article '{article}' for word '{word}' -> '{clean_word}'")
+        # Використовуємо original_word для збереження повного вводу користувача
+        user_state[message.chat.id]["original_word"] = word
+        # А word буде нормалізованим словом з артиклем
+        word = f"{article} {clean_word}"
+    
     # Збережемо dict_type для всіх наступних кроків
     user_state[message.chat.id]["dict_type"] = dict_type
     
@@ -187,21 +218,13 @@ def handle_translation(message):
         clear_state(message.chat.id)
         return
     
-    # Отримання мови для перекладу
-    if dict_type == "personal":
-        file_path, language = get_user_file_path(message.chat.id)
-        if not file_path:
-            bot.send_message(message.chat.id, "❌ Мову перекладу не обрано. Спробуйте /start.")
-            return
-    else:
-        # Для загального словника потрібно використовувати дійсний код мови
-        # Перевіряємо, чи є у користувача персональний словник для визначення мови
-        file_path, language = get_user_file_path(message.chat.id)
-        
-        if not file_path or language not in ["uk", "ru"]:
-            # Якщо немає персонального словника або мова не визначена, використовуємо українську за замовчуванням
-            language = "uk"
-            print(f"Debug: Using default language '{language}' for common dictionary addition")
+    # Отримуємо мову користувача з бази даних
+    import db_manager
+    language = db_manager.get_user_language(message.chat.id)
+    
+    if not language:
+        bot.send_message(message.chat.id, "❌ Мову перекладу не обрано. Спробуйте /start.")
+        return
     
     print(f"Debug: Translating word '{word}' using language code '{language}'")
     translation = translator.translate(word, src="de", dest=language).text
@@ -280,14 +303,6 @@ def select_common_dictionary(message):
     try:
         from dictionary import set_dictionary_type
         print(f"Switching user {message.chat.id} to common dictionary")
-        common_file = os.path.join("user_dictionaries", "common_dictionary.csv")
-        if not os.path.exists(common_file):
-            print(f"Common dictionary does not exist: {common_file}")
-            os.makedirs(os.path.dirname(common_file), exist_ok=True)
-            df = pd.DataFrame(columns=["word", "translation", "priority", "article"])
-            df.to_csv(common_file, index=False, encoding='utf-8-sig')
-            print(f"Created common dictionary: {common_file}")
-        
         set_dictionary_type(message.chat.id, "common")
     except Exception as e:
         print(f"Error switching to common dictionary: {e}")
@@ -327,41 +342,50 @@ def handle_pairs(call):
             return
         
         selected_de = call.data[3:]
-        correct = any(tr == state['selected_tr'] and de == selected_de for tr, de in state["pairs"])
+        selected_tr = state['selected_tr']
         
-        df = get_dataframe(chat_id)
+        # Виправлення: чітке логування для відладки
+        print(f"DEBUG: Selected tr='{selected_tr}', de='{selected_de}'")
+        print(f"DEBUG: Available pairs to match: {state['pairs']}")
+        
+        # Шукаємо точну пару в збережених парах
+        correct = (selected_tr, selected_de) in state["pairs"]
+        
+        print(f"DEBUG: Match {'found' if correct else 'not found'} for tr='{selected_tr}', de='{selected_de}'")
         
         if correct:
             bot.answer_callback_query(call.id, "✅ Правильно!")
             
-            # Використовуємо тільки SQLite для оновлення рейтингу з кроком 0.1
+            # Оновлення рейтингу через SQLite - при правильній відповіді рейтинг збільшується на 0.1
             try:
                 import db_manager
-                word_translation = state['selected_tr']
-                if "original_words" in state:
-                    word_id = state["original_words"].loc[state["original_words"]['translation'] == word_translation, 'id'].values[0]
+                if "word_ids" in state and selected_tr in state["word_ids"]:
+                    word_id = state["word_ids"][selected_tr]
+                    db_manager.update_word_rating(chat_id, word_id, 0.1, dict_type)
+                    print(f"Successfully increased rating for word_id={word_id}")
                 else:
-                    word_id = int(df.loc[df['translation'] == state['selected_tr'], 'id'].iloc[0])
-                
-                # Зменшуємо рейтинг для правильної відповіді (слово стає "легшим")
-                db_manager.update_word_rating(chat_id, word_id, -0.1, dict_type)
-                print(f"Successfully decreased rating for word_id={word_id}")
+                    print("Error: word_id not found for translation")
             except Exception as e:
                 print(f"Error updating word rating: {e}")
-                # Резервний метод для CSV
-                df.loc[df['translation'] == state['selected_tr'], 'priority'] -= 0.1
+                import traceback
+                traceback.print_exc()
             
+            # Оновлення інтерфейсу
             markup = call.message.reply_markup
             for row in markup.keyboard:
                 for btn in row:
-                    if btn.callback_data in [f'tr_{state["selected_tr"]}', f'de_{selected_de}']:
+                    if btn.callback_data in [f'tr_{selected_tr}', f'de_{selected_de}']:
                         btn.text += " ✅"
             bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=markup)
             
+            # Відстежуємо знайдені пари
             if "found_pairs" not in state:
                 state["found_pairs"] = []
-            state["found_pairs"].append((state['selected_tr'], selected_de))
+            state["found_pairs"].append((selected_tr, selected_de))
             
+            print(f"DEBUG: Found pairs: {len(state['found_pairs'])}/{len(state['pairs'])}")
+            
+            # Запускаємо нову гру, якщо всі пари знайдено
             if len(state["found_pairs"]) == len(state["pairs"]):
                 bot.delete_message(chat_id, call.message.message_id)
                 learn_words(call.message)
@@ -370,27 +394,18 @@ def handle_pairs(call):
             
             try:
                 import db_manager
-                word_translation = state['selected_tr']
-                if "original_words" in state:
-                    word_id = state["original_words"].loc[state["original_words"]['translation'] == word_translation, 'id'].values[0]
+                if "word_ids" in state and selected_tr in state["word_ids"]:
+                    word_id = state["word_ids"][selected_tr]
+                    db_manager.update_word_rating(chat_id, word_id, -0.1, dict_type)
+                    print(f"Successfully decreased rating for word_id={word_id}")
                 else:
-                    word_id = int(df.loc[df['translation'] == state['selected_tr'], 'id'].iloc[0])
-                
-                # Збільшуємо рейтинг для неправильної відповіді (слово стає "важчим")
-                db_manager.update_word_rating(chat_id, word_id, 0.1, dict_type)
-                print(f"Successfully increased rating for word_id={word_id}")
+                    print("Error: word_id not found for translation")
             except Exception as e:
                 print(f"Error updating word rating: {e}")
-                # Резервний метод для CSV
-                df.loc[df['translation'] == state['selected_tr'], 'priority'] += 0.1
+                import traceback
+                traceback.print_exc()
         
-        if dict_type == "common":
-            file_path, lang = get_common_file_path()
-            save_dataframe(chat_id, df, "common")
-        else:
-            file_path, lang = get_user_file_path(chat_id)
-            save_dataframe(chat_id, df, lang if lang else "uk")
-        
+        # Зкидаємо вибір після обробки
         state['selected_tr'] = None
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("ans_"))
@@ -403,26 +418,18 @@ def handle_answer(call):
     try:
         _, word, selected_tr = call.data.split('_')
         correct_tr = user_state[chat_id]["current_word"]['translation']
-        
-        df = get_dataframe(chat_id)
         dict_type = user_state[chat_id].get("dict_type", "personal")
         
-        if df is None:
-            bot.answer_callback_query(call.id, "❌ Помилка доступу до словника")
-            return
-            
         if selected_tr == correct_tr:
             bot.answer_callback_query(call.id, "✅ Правильно!")
             
             try:
                 import db_manager
                 word_id = int(user_state[chat_id]["current_word"]['id'])
-                db_manager.update_word_rating(chat_id, word_id, -0.1, dict_type)
-                print(f"Successfully decreased rating for word_id={word_id}")
+                db_manager.update_word_rating(chat_id, word_id, 0.1, dict_type)
+                print(f"Successfully increased rating for word_id={word_id}")
             except Exception as e:
                 print(f"Error updating word rating: {e}")
-                # Резервний метод для CSV
-                df.loc[df['word'] == word, 'priority'] -= 0.1
                 
             bot.delete_message(chat_id, call.message.message_id)
             repeat_words(call.message)
@@ -432,25 +439,17 @@ def handle_answer(call):
             try:
                 import db_manager
                 word_id = int(user_state[chat_id]["current_word"]['id'])
-                db_manager.update_word_rating(chat_id, word_id, 0.1, dict_type)
-                print(f"Successfully increased rating for word_id={word_id}")
+                db_manager.update_word_rating(chat_id, word_id, -0.1, dict_type)
+                print(f"Successfully decreased rating for word_id={word_id}")
             except Exception as e:
                 print(f"Error updating word rating: {e}")
-                # Резервний метод для CSV
-                df.loc[df['word'] == word, 'priority'] += 0.1
             
             markup = call.message.reply_markup
             for row in markup.keyboard:
                 if row[0].callback_data == call.data:
                     row[0].text += " ❌"
             bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=markup)
-        
-        if dict_type == "common":
-            file_path, lang = get_common_file_path()
-        else:
-            file_path, lang = get_user_file_path(chat_id)
             
-        save_dataframe(chat_id, df, lang)
     except Exception as e:
         print(f"Error in handle_answer: {e}")
         bot.answer_callback_query(call.id, "❌ Помилка обробки відповіді")
@@ -485,9 +484,22 @@ def debug_command(message):
         return
         
     try:
-        num_users = len([f for f in os.listdir('user_dictionaries') if f.endswith('.csv') and not f == 'common_dictionary.csv'])
+        import db_manager
+        conn = db_manager.get_connection()
+        cursor = conn.cursor()
+        
+        # Кількість користувачів з бази даних
+        cursor.execute("SELECT COUNT(*) FROM users")
+        db_users_count = cursor.fetchone()[0]
+        
+        # Кількість слів
+        cursor.execute("SELECT COUNT(*) FROM words")
+        word_count = cursor.fetchone()[0]
+        
+        # Кількість активних станів
         active_states = len(user_state)
 
+        # Типи словників для користувачів
         user_dict_types = {}
         for uid, state in user_state.items():
             user_dict_types[uid] = state.get('dict_type', 'personal')
@@ -495,7 +507,8 @@ def debug_command(message):
         bot.reply_to(message, 
             f"📊 Debug Info:\n"
             f"- Active users: {active_states}\n"
-            f"- Total users: {num_users}\n"
+            f"- Database users: {db_users_count}\n"
+            f"- Words in database: {word_count}\n"
             f"- User dictionary types: {user_dict_types}\n"
             f"- Bot uptime: {get_uptime()}\n"
         )
@@ -555,6 +568,81 @@ def articles_stats(message):
         
     except Exception as e:
         bot.reply_to(message, f"Error getting article statistics: {str(e)}")
+
+@bot.message_handler(commands=['dbcheck'])
+@log_handler
+def db_check_command(message):
+    """Check database and CSV files consistency"""
+    if message.from_user.id != ADMIN_ID:
+        bot.reply_to(message, "⛔ Ця команда доступна тільки для адміністратора.")
+        return
+        
+    try:
+        # Перевірка наявності бази даних
+        import os
+        import db_manager
+        
+        db_exists = os.path.exists(db_manager.DB_PATH)
+        response = f"📊 Database Check\n\n"
+        response += f"Database file exists: {'✅' if db_exists else '❌'}\n"
+        
+        if db_exists:
+            # Підключення до бази даних
+            conn = db_manager.get_connection()
+            cursor = conn.cursor()
+            
+            # Кількість слів
+            cursor.execute("SELECT COUNT(*) FROM words")
+            word_count = cursor.fetchone()[0]
+            response += f"Words in database: {word_count}\n"
+            
+            # Кількість користувачів
+            cursor.execute("SELECT COUNT(*) FROM users")
+            user_count = cursor.fetchone()[0]
+            response += f"Users in database: {user_count}\n"
+            
+            # Кількість артиклів
+            cursor.execute("SELECT COUNT(*) FROM article")
+            article_count = cursor.fetchone()[0]
+            response += f"Articles in database: {article_count}\n"
+            
+            # Перевірка мови користувача
+            language = db_manager.get_user_language(message.chat.id)
+            response += f"\nYour language in database: {language or 'not set'}\n"
+            
+            # Кількість слів користувача
+            try:
+                cursor.execute(f"SELECT COUNT(*) FROM user_{message.chat.id}")
+                user_word_count = cursor.fetchone()[0]
+                response += f"Words in your dictionary: {user_word_count}\n"
+            except sqlite3.OperationalError:
+                response += f"Words in your dictionary: table doesn't exist\n"
+            
+            conn.close()
+        
+        bot.reply_to(message, response)
+        
+    except Exception as e:
+        bot.reply_to(message, f"Error during DB check: {str(e)}")
+
+@bot.message_handler(commands=['findart'])
+@log_handler
+def find_article_command(message):
+    """Test command to find article for a German word"""
+    parts = message.text.split(' ', 1)
+    if len(parts) < 2:
+        bot.reply_to(message, "Використання: /findart <німецьке_слово>")
+        return
+    
+    word = parts[1].strip()
+    
+    from german_article_finder import find_german_article
+    article, clean_word = find_german_article(word)
+    
+    if article:
+        bot.reply_to(message, f"Знайдено: '{article} {clean_word}'")
+    else:
+        bot.reply_to(message, f"Артикль для слова '{word}' не знайдено в базі даних")
 
 def get_uptime():
     """Get bot uptime"""

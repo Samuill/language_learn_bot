@@ -64,110 +64,6 @@ def reset_dictionaries():
         if "dict_type" in user_state[chat_id]:
             user_state[chat_id]["dict_type"] = "personal"
 
-def migrate_files():
-    """Переміщує старі файли користувача в новий каталог"""
-    from storage import USER_DICT_DIR
-    
-    # Створюємо директорію, якщо вона не існує
-    if not os.path.exists(USER_DICT_DIR):
-        try:
-            os.makedirs(USER_DICT_DIR)
-            print(f"Created directory {USER_DICT_DIR}")
-        except Exception as e:
-            print(f"Failed to create directory {USER_DICT_DIR}: {e}")
-    
-    # Знаходимо усі файли словників у поточній директорії
-    word_files = [f for f in os.listdir() if (f.startswith("ru_words_") or f.startswith("uk_words_")) and f.endswith(".csv")]
-    
-    # Переміщуємо файли до нової директорії
-    import shutil
-    moved_count = 0
-    for file in word_files:
-        try:
-            source = file
-            target = os.path.join(USER_DICT_DIR, file)
-            
-            # Якщо файл уже існує в цільовій директорії, порівнюємо розміри
-            if os.path.exists(target):
-                if os.path.getsize(source) > os.path.getsize(target):
-                    shutil.copy2(source, target)
-                    print(f"Copied newer/larger file {source} to {target}")
-                    moved_count += 1
-            else:
-                shutil.move(source, target)
-                print(f"Moved file {source} to {target}")
-                moved_count += 1
-        except Exception as e:
-            print(f"Failed to move file {file}: {e}")
-    
-    print(f"Migration complete. Moved {moved_count} files.")
-    
-    # Переміщуємо загальний словник, якщо він є
-    if os.path.exists("common_dictionary.csv"):
-        try:
-            source = "common_dictionary.csv"
-            target = os.path.join(USER_DICT_DIR, "common_dictionary.csv")
-            if not os.path.exists(target):
-                shutil.move(source, target)
-                print(f"Moved common dictionary to {target}")
-            elif os.path.getsize(source) > os.path.getsize(target):
-                shutil.copy2(source, target)
-                print(f"Copied newer/larger common dictionary to {target}")
-        except Exception as e:
-            print(f"Failed to move common dictionary: {e}")
-
-def migrate_to_sqlite():
-    """Migrate data from CSV to SQLite if needed"""
-    import os
-    from db_init import DB_PATH, create_database, migrate_from_csv
-    
-    if not os.path.exists(DB_PATH):
-        print("\n=== STARTING MIGRATION FROM CSV TO SQLITE ===")
-        print("Creating new SQLite database...")
-        create_database()
-        print("Migrating data from CSV files...")
-        migrate_from_csv()
-        print("=== MIGRATION COMPLETED ===\n")
-    else:
-        print(f"SQLite database already exists at {DB_PATH}")
-        # Перевіряємо, чи є нові CSV файли для міграції
-        from storage import USER_DICT_DIR
-        import glob
-        
-        user_dict_pattern = os.path.join(USER_DICT_DIR, "*_words_*.csv")
-        user_dict_files = glob.glob(user_dict_pattern)
-        
-        if user_dict_files:
-            print(f"Found {len(user_dict_files)} CSV files that might need migration.")
-            
-            # Перевіряємо, чи всі користувачі вже мігровані
-            conn = sqlite3.connect(DB_PATH)
-            cursor = conn.cursor()
-            
-            # Отримуємо список існуючих таблиць користувачів
-            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'user_%'")
-            existing_tables = [row[0] for row in cursor.fetchall()]
-            
-            # Перевіряємо, чи є CSV файли для користувачів, які ще не мігровані
-            need_migration = False
-            for file_path in user_dict_files:
-                filename = os.path.basename(file_path)
-                import re
-                match = re.search(r'_(\d+)\.csv$', filename)
-                if match:
-                    chat_id = match.group(1)
-                    if f"user_{chat_id}" not in existing_tables:
-                        need_migration = True
-                        break
-            
-            conn.close()
-            
-            if need_migration:
-                print("New CSV files found. Running migration...")
-                migrate_from_csv()
-            else:
-                print("All users are already migrated.")
-
 def main():
     """Main function to run the bot"""
     # Перевірка, чи вже запущено екземпляр бота
@@ -182,14 +78,18 @@ def main():
     import atexit
     atexit.register(cleanup)
     
-    # Переміщуємо існуючі файли в новий каталог
-    migrate_files()
-    
     # Скидаємо всі активні словники до персонального
     reset_dictionaries()
     
-    # Міграція даних з CSV до SQLite, якщо потрібно
-    migrate_to_sqlite()
+    # Перевіряємо доступ до бази даних
+    try:
+        import db_manager
+        conn = db_manager.get_connection()
+        print(f"Successfully connected to database at {db_manager.DB_PATH}")
+        conn.close()
+    except Exception as e:
+        print(f"Error connecting to database: {e}")
+        traceback.print_exc()
     
     # Додамо логування для відстеження типів словників при старті
     print("Initializing user dictionaries state:")
@@ -203,18 +103,6 @@ def main():
     if DEBUG_MODE:
         from debug_logger import log_error, log_dict_operation
         print(f"Debug logging enabled. Logs will be saved to logs/debug.log")
-        
-        # Log file permissions for troubleshooting
-        try:
-            from storage import USER_DICT_DIR
-            common_file = os.path.join(USER_DICT_DIR, "common_dictionary.csv")
-            if os.path.exists(common_file):
-                import stat
-                permissions = os.stat(common_file).st_mode
-                print(f"Common dictionary permissions: {stat.filemode(permissions)}")
-                print(f"Is writable: {os.access(common_file, os.W_OK)}")
-        except Exception as e:
-            print(f"Error checking file permissions: {e}")
     
     while True:
         try:

@@ -2,6 +2,7 @@
 from config import user_state, bot, ADMIN_ID
 from utils import clear_state, main_menu_keyboard
 import db_manager
+from german_article_finder import find_german_article  # Додаємо імпорт новою функції
 
 def save_word(chat_id, translation=None):
     """Save word to dictionary"""
@@ -27,21 +28,35 @@ def save_word(chat_id, translation=None):
     word = data["word"]
     translation = translation or data["auto_translation"]
     
-    # Визначаємо артикль зі слова (якщо є)
-    article = None
-    import re
-    article_match = re.match(r'^(der|die|das)\s+(.+)$', word, re.IGNORECASE)
-    if article_match:
-        article = article_match.group(1)
-        # Слово без артикля передається автоматично в add_word через детекцію
+    # Пошук артикля у базі німецьких слів
+    article, clean_word = find_german_article(word)
+    print(f"Debug: Article finder returned article='{article}', clean_word='{clean_word}' for '{word}'")
+    
+    # Якщо артикль знайдено, використовуємо його і очищене слово
+    if article:
+        print(f"Found article '{article}' for word '{word}' -> '{clean_word}'")
+        word = clean_word
+    else:
+        # Визначаємо артикль зі слова (якщо є)
+        import re
+        article_match = re.match(r'^(der|die|das)\s+(.+)$', word, re.IGNORECASE)
+        if article_match:
+            article = article_match.group(1).lower()
+            word = article_match.group(2).strip()
     
     # Зберігаємо слово в базу даних із можливим артиклем
     success = db_manager.add_word(chat_id, word, translation, dict_type, article)
     
     if success:
+        # Формуємо повідомлення з урахуванням знайденого артикля
+        if article:
+            message = f"✅ Слово '{article} {word}' успішно додано!"
+        else:
+            message = f"✅ Слово '{word}' успішно додано!"
+            
         bot.send_message(
             chat_id, 
-            "✅ Слово успішно додано!", 
+            message, 
             reply_markup=main_menu_keyboard(chat_id)
         )
     else:
@@ -67,17 +82,17 @@ def start_activity(chat_id, mode):
     user_state[chat_id] = {"dict_type": dict_type}
     
     try:
-        # Використовуємо SQLite для отримання слів
+        # Використовуємо ВИКЛЮЧНО SQLite для отримання слів
         import db_manager
         
         # Оновлюємо streak користувача
         streak = db_manager.update_user_streak(chat_id)
         print(f"User {chat_id} streak updated: {streak}")
         
-        # Отримуємо слова для користувача - налаштований для роботи з SQLite
+        # Отримуємо слова для користувача
         df = db_manager.get_user_words(chat_id, dict_type)
         
-        # Переконуємося, що DataFrameме невелику кількість слів
+        # Перевіряємо результат
         if df.empty:
             dict_name = "загальному словнику" if dict_type == "common" else "персональному словнику"
             bot.send_message(chat_id, f"📭 У {dict_name} ще немає доданих слів.")
@@ -85,7 +100,7 @@ def start_activity(chat_id, mode):
             
         # Переконуємося, що всі необхідні колонки присутні
         if 'id' not in df.columns:
-            print("WARNING: DataFrame from db_manager.get_user_words lacks 'id' column!")
+            print(f"WARNING: DataFrame from db_manager.get_user_words lacks 'id' column!")
             # Додаємо id колонку зі значеннями за замовчуванням
             df['id'] = range(1, len(df) + 1)
             
@@ -98,34 +113,12 @@ def start_activity(chat_id, mode):
         elif mode == 'learn':
             from handlers import start_learning
             return start_learning(chat_id, df)
-            
     except Exception as e:
-        print(f"Error using SQLite: {e}")
+        print(f"ERROR using SQLite database: {e}")
         import traceback
         traceback.print_exc()
-        
-        # Резервний варіант: старий CSV метод
-        from utils import track_activity
-        track_activity(chat_id)
-        from storage import get_dataframe
-        df = get_dataframe(chat_id)
-        if df is None or df.empty:
-            dict_name = "загальному словнику" if dict_type == "common" else "персональному словнику"
-            bot.send_message(chat_id, f"📭 У {dict_name} ще немає доданих слів.")
-            return False
-        
-        # Якщо CSV не має id колонки, додаємо її
-        if 'id' not in df.columns:
-            df['id'] = range(1, len(df) + 1)
-        
-        if mode == 'repeat':
-            from handlers import start_repetition
-            return start_repetition(chat_id, df)
-        elif mode == 'learn':
-            from handlers import start_learning
-            return start_learning(chat_id, df)
-            
-    return False
+        bot.send_message(chat_id, f"❌ Помилка при доступі до бази даних.")
+        return False
 
 def set_dictionary_type(chat_id, dict_type):
     """Set dictionary type to personal or common"""

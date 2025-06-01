@@ -20,6 +20,43 @@ def get_connection():
     
     return sqlite3.connect(DB_PATH)
 
+def user_exists(chat_id):
+    """Check if user exists in database"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('SELECT 1 FROM users WHERE chat_id = ?', (chat_id,))
+    result = cursor.fetchone() is not None
+    
+    conn.close()
+    
+    return result
+
+def initialize_user(chat_id, language):
+    """Initialize a new user in the database with specified language"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # Add user to users table if not exists
+    cursor.execute('INSERT OR IGNORE INTO users (chat_id, language) VALUES (?, ?)', 
+                 (chat_id, language))
+    
+    # Create user dictionary table if not exists
+    cursor.execute(f'''
+    CREATE TABLE IF NOT EXISTS user_{chat_id} (
+        id INTEGER PRIMARY KEY,
+        word_id INTEGER,
+        rating REAL DEFAULT 0.0,
+        FOREIGN KEY (word_id) REFERENCES words(id),
+        UNIQUE(word_id)
+    )
+    ''')
+    
+    conn.commit()
+    conn.close()
+    
+    return True
+
 def get_user_language(chat_id):
     """Get user language from database"""
     conn = get_connection()
@@ -72,6 +109,7 @@ def get_user_words(chat_id, dict_type="personal"):
         FROM words w
         LEFT JOIN article a ON w.article_id = a.id
         WHERE w.{language}_tran IS NOT NULL
+        ORDER BY priority ASC
         '''
         cursor.execute(query)
     else:
@@ -100,6 +138,7 @@ def get_user_words(chat_id, dict_type="personal"):
         JOIN words w ON u.word_id = w.id
         LEFT JOIN article a ON w.article_id = a.id
         WHERE w.{language}_tran IS NOT NULL
+        ORDER BY u.rating ASC
         '''
         cursor.execute(query)
     
