@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
-import pandas as pd
-import os
-from config import translator, user_state, bot, ADMIN_ID
-from storage import get_dataframe, save_dataframe, get_user_file_path, get_common_file_path
+from config import user_state, bot, ADMIN_ID
 from utils import clear_state, main_menu_keyboard
+import db_manager
 
 def save_word(chat_id, translation=None):
     """Save word to dictionary"""
@@ -20,70 +18,34 @@ def save_word(chat_id, translation=None):
         clear_state(chat_id)
         return
     
-    # Отримуємо мову зі стану користувача або використовуємо uk за замовчуванням
-    language = user_state.get(chat_id, {}).get("language", "uk")
-    
-    # Визначаємо шлях до файлу залежно від типу словника
-    if dict_type == "common" and chat_id == ADMIN_ID:
-        # Для адміна використовуємо загальний словник
-        file_path, _ = get_common_file_path()
-        print(f"Debug: Admin is adding word to common dictionary: {file_path} using language: {language}")
-    else:
-        # Для всіх інших використовуємо персональний словник
-        file_path, dict_language = get_user_file_path(chat_id)
-        if dict_language:  # Якщо мова визначена в файлі, використовуємо її
-            language = dict_language
-        print(f"Debug: User is adding word to personal dictionary: {file_path} using language: {language}")
-        
-    if not file_path:
-        bot.send_message(chat_id, "❌ Мову перекладу не обрано. Спробуйте /start.")
+    data = user_state.get(chat_id, {})
+    if not data or "word" not in data:
+        bot.send_message(chat_id, "❌ Помилка: дані слова не знайдено.")
+        clear_state(chat_id)
         return
     
-    # Отримуємо DataFrame для відповідного словника (залежно від dict_type)
-    if dict_type == "common" and chat_id == ADMIN_ID:
-        # Для адміна ми явно отримуємо загальний словник
-        common_path, _ = get_common_file_path()
-        if os.path.exists(common_path):
-            df = pd.read_csv(common_path, encoding='utf-8-sig')
-        else:
-            df = pd.DataFrame(columns=["word", "translation", "priority", "article"])
-    else:
-        # Для звичайних користувачів використовуємо звичайний get_dataframe
-        df = get_dataframe(chat_id)
-        
-    if df is None:
-        df = pd.DataFrame(columns=["word", "translation", "priority", "article"])
-    
-    data = user_state[chat_id]
+    word = data["word"]
     translation = translation or data["auto_translation"]
     
-    new_row = pd.DataFrame({
-        "word": [data["word"]],
-        "translation": [translation],
-        "priority": [0.0],
-        "article": [""]  # Додаємо порожній артикль за замовчуванням
-    })
+    # Зберігаємо слово в базу даних
+    success = db_manager.add_word(chat_id, word, translation, dict_type)
     
-    if not new_row.empty:
-        df = pd.concat([df, new_row], ignore_index=True)
-        
-        # Зберігаємо у відповідний файл, явно передаючи тип словника
-        if dict_type == "common" and chat_id == ADMIN_ID:
-            # Для адміна зберігаємо безпосередньо в загальний словник
-            common_path, _ = get_common_file_path()
-            df.to_csv(common_path, index=False, encoding='utf-8-sig')
-            print(f"Debug: Directly saved to common dictionary: {common_path}")
-            
-            # Викликаємо clear_state з збереженням типу словника для адміна
-            clear_state(chat_id, preserve_dict_type=True)
-        else:
-            # Для звичайних користувачів використовуємо стандартну функцію
-            save_dataframe(chat_id, df, language)
-            clear_state(chat_id)
+    if success:
+        bot.send_message(
+            chat_id, 
+            "✅ Слово успішно додано!", 
+            reply_markup=main_menu_keyboard(chat_id)
+        )
     else:
-        # Якщо не додавали нові рядки, просто очищуємо стан
-        preserve_dict_type = (chat_id == ADMIN_ID and dict_type == "common")
-        clear_state(chat_id, preserve_dict_type=preserve_dict_type)
+        bot.send_message(
+            chat_id, 
+            "❌ Помилка при збереженні слова.", 
+            reply_markup=main_menu_keyboard(chat_id)
+        )
+    
+    # Очищаємо стан користувача, зберігаючи тип словника для адміна
+    preserve_dict_type = (chat_id == ADMIN_ID and dict_type == "common")
+    clear_state(chat_id, preserve_dict_type=preserve_dict_type)
 
 def start_activity(chat_id, mode):
     """Start learning or repetition activity"""
@@ -96,11 +58,14 @@ def start_activity(chat_id, mode):
     # Відразу встановлюємо поточний тип словника після очищення
     user_state[chat_id] = {"dict_type": dict_type}
     
-    from utils import track_activity
-    track_activity(chat_id)
+    # Оновлюємо streak користувача
+    streak = db_manager.update_user_streak(chat_id)
+    print(f"User {chat_id} streak updated: {streak}")
     
-    df = get_dataframe(chat_id)
-    if df is None or df.empty:
+    # Отримуємо слова для користувача
+    df = db_manager.get_user_words(chat_id, dict_type)
+    
+    if df.empty:
         dict_name = "загальному словнику" if dict_type == "common" else "персональному словнику"
         bot.send_message(chat_id, f"📭 У {dict_name} ще немає доданих слів.")
         return False
@@ -124,24 +89,6 @@ def set_dictionary_type(chat_id, dict_type):
     # Встановлюємо новий тип словника
     user_state[chat_id]["dict_type"] = dict_type
     print(f"Set dictionary type for {chat_id} to {dict_type}")
-    
-    # Перевіряємо доступність вибраного словника
-    if dict_type == "common":
-        common_file, _ = get_common_file_path()
-        if not os.path.exists(common_file):
-            print(f"Warning: Common dictionary file does not exist: {common_file}")
-            # Якщо файл не існує, спробуємо його створити
-            try:
-                common_df = pd.DataFrame(columns=["word", "translation", "priority", "article"])
-                os.makedirs(os.path.dirname(common_file), exist_ok=True)
-                common_df.to_csv(common_file, index=False, encoding='utf-8-sig')
-                print(f"Created common dictionary: {common_file}")
-            except Exception as e:
-                print(f"Error creating common dictionary: {e}")
-    else:  # personal
-        file_path, _ = get_user_file_path(chat_id)
-        if not file_path:
-            print(f"Warning: User {chat_id} has no personal dictionary")
     
     # Інформуємо користувача про зміну
     dict_name = "загальний" if dict_type == "common" else "персональний"

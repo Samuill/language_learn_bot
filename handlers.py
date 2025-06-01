@@ -100,8 +100,9 @@ def handle_language_selection(message):
     if user_state.get(chat_id, {}).get("step") == "language_selection":
         language = "uk" if message.text == "🇺🇦 Українська" else "ru"
         
-        df = pd.DataFrame(columns=["word", "translation", "priority"])
-        save_dataframe(chat_id, df, language)
+        # Встановлюємо мову користувача в базі даних
+        import db_manager
+        db_manager.set_user_language(chat_id, language)
         
         bot.send_message(chat_id, f"✅ Мову перекладу обрано: {message.text}. Тепер ви можете додавати слова та вивчати їх.", 
                          reply_markup=main_menu_keyboard(chat_id))
@@ -315,7 +316,9 @@ def handle_pairs(call):
         df = get_dataframe(chat_id)
         if correct:
             bot.answer_callback_query(call.id, "✅ Правильно!")
-            df.loc[df['translation'] == state['selected_tr'], 'priority'] -= 0.001
+            # Оновлюємо рейтинг слова в базі даних
+            import db_manager
+            db_manager.update_word_rating(chat_id, df.loc[df['translation'] == state['selected_tr'], 'id'].values[0], -0.1, dict_type)
             markup = call.message.reply_markup
             for row in markup.keyboard:
                 for btn in row:
@@ -332,6 +335,9 @@ def handle_pairs(call):
                 learn_words(call.message)
         else:
             bot.answer_callback_query(call.id, "❌ Неправильно!")
+            # Оновлюємо рейтинг слова в базі даних
+            import db_manager
+            db_manager.update_word_rating(chat_id, df.loc[df['translation'] == state['selected_tr'], 'id'].values[0], 0.1, dict_type)
             df.loc[df['translation'] == state['selected_tr'], 'priority'] += 0.001
         
         dict_type = state.get("dict_type", "personal")
@@ -364,12 +370,16 @@ def handle_answer(call):
             
         if selected_tr == correct_tr:
             bot.answer_callback_query(call.id, "✅ Правильно!")
-            df.loc[df['word'] == word, 'priority'] -= 0.001
+            # Оновлюємо рейтинг слова в базі даних
+            import db_manager
+            db_manager.update_word_rating(chat_id, user_state[chat_id]["current_word"]['id'], -0.1, dict_type)
             bot.delete_message(chat_id, call.message.message_id)
             repeat_words(call.message)
         else:
             bot.answer_callback_query(call.id, f"❌ Неправильно! Правильно: {correct_tr}")
-            df.loc[df['word'] == word, 'priority'] += 0.001
+            # Оновлюємо рейтинг слова в базі даних
+            import db_manager
+            db_manager.update_word_rating(chat_id, user_state[chat_id]["current_word"]['id'], 0.1, dict_type)
             markup = call.message.reply_markup
             for row in markup.keyboard:
                 if row[0].callback_data == call.data:

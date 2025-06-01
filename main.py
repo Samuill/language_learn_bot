@@ -115,6 +115,18 @@ def migrate_files():
         except Exception as e:
             print(f"Failed to move common dictionary: {e}")
 
+def migrate_to_sqlite():
+    """Migrate data from CSV to SQLite if needed"""
+    import os
+    from db_init import DB_PATH, create_database, migrate_from_csv
+    
+    if not os.path.exists(DB_PATH):
+        print("Migrating data from CSV to SQLite...")
+        create_database()
+        migrate_from_csv()
+    else:
+        print(f"SQLite database already exists at {DB_PATH}")
+
 def main():
     """Main function to run the bot"""
     # Перевірка, чи вже запущено екземпляр бота
@@ -134,6 +146,9 @@ def main():
     
     # Скидаємо всі активні словники до персонального
     reset_dictionaries()
+    
+    # Міграція даних з CSV до SQLite, якщо потрібно
+    migrate_to_sqlite()
     
     # Додамо логування для відстеження типів словників при старті
     print("Initializing user dictionaries state:")

@@ -1,43 +1,51 @@
 # -*- coding: utf-8 -*-
 import os
-import pandas as pd
-from config import user_state, COMMON_DICT_FILE
+from config import user_state
+import db_manager
 
 def debug_dictionaries():
     """Print debug information about dictionaries"""
-    # Перевірка загального словника
-    common_exists = os.path.exists(COMMON_DICT_FILE)
-    print(f"Common dictionary file ({COMMON_DICT_FILE}) exists: {common_exists}")
+    # Get database connection
+    conn = db_manager.get_connection()
+    cursor = conn.cursor()
     
-    if common_exists:
-        try:
-            df = pd.read_csv(COMMON_DICT_FILE, encoding='utf-8-sig')
-            print(f"Common dictionary has {len(df)} entries")
-            print(f"Columns: {df.columns.tolist()}")
-            if not df.empty:
-                print("First 3 entries:")
-                print(df.head(3))
-        except Exception as e:
-            print(f"Error reading common dictionary: {e}")
+    # Get tables list
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+    tables = [row[0] for row in cursor.fetchall()]
+    print(f"SQLite tables: {tables}")
     
-    # Перевірка персональних словників
-    personal_files = [f for f in os.listdir() if (f.startswith("ru_words_") or f.startswith("uk_words_")) and f.endswith(".csv")]
-    print(f"Found {len(personal_files)} personal dictionary files")
+    # Count words
+    cursor.execute("SELECT COUNT(*) FROM words;")
+    word_count = cursor.fetchone()[0]
+    print(f"Total words in database: {word_count}")
     
-    for file in personal_files:
-        try:
-            user_id = file.split("_")[2].split(".")[0]
-            df = pd.read_csv(file, encoding='utf-8-sig')
-            print(f"User {user_id} dictionary has {len(df)} entries")
-            if not df.empty:
-                print(f"First entry: {df.iloc[0].to_dict()}")
-        except Exception as e:
-            print(f"Error reading {file}: {e}")
+    # Count articles
+    cursor.execute("SELECT COUNT(*) FROM article;")
+    article_count = cursor.fetchone()[0]
+    print(f"Total articles in database: {article_count}")
     
-    # Перевірка стану користувачів
+    # Count users
+    cursor.execute("SELECT COUNT(*) FROM users;")
+    user_count = cursor.fetchone()[0]
+    print(f"Total users in database: {user_count}")
+    
+    # Get user tables
+    user_tables = [t for t in tables if t.startswith('user_')]
+    print(f"User tables: {len(user_tables)}")
+    
+    # Get sample of words
+    cursor.execute("SELECT id, word, uk_tran, ru_tran FROM words LIMIT 5;")
+    sample_words = cursor.fetchall()
+    print("Sample words:")
+    for word in sample_words:
+        print(f"  {word}")
+    
+    # Check user state
     print(f"Current user_state has {len(user_state)} entries")
     for user_id, state in user_state.items():
         print(f"User {user_id}: dict_type = {state.get('dict_type', 'personal')}")
+    
+    conn.close()
 
 if __name__ == "__main__":
     debug_dictionaries()
