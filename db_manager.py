@@ -156,7 +156,7 @@ def get_user_words(chat_id, dict_type="personal"):
     return df
 
 def add_word(chat_id, word, translation, dict_type="personal", article=None):
-    """Add a word to user's dictionary with optional article detection"""
+    """Add a word to user's dictionary with duplicate handling and article update"""
     # Check if user can add to common dictionary
     if dict_type == "common" and chat_id != ADMIN_ID:
         return False
@@ -192,23 +192,76 @@ def add_word(chat_id, word, translation, dict_type="personal", article=None):
     if not article_id:
         article_id = 4  # Empty article by default
     
-    # Check if word already exists
-    cursor.execute('SELECT id FROM words WHERE word = ?', (word,))
-    result = cursor.fetchone()
+    # Перевірка на дублікати - шукаємо слово не залежно від регістру
+    cursor.execute('SELECT id, article_id FROM words WHERE LOWER(word) = LOWER(?)', (word,))
+    existing_words = cursor.fetchall()
     
-    if result:
-        # Word exists, get its ID
-        word_id = result[0]
+    if existing_words:
+        # Слово(а) існує, перевіряємо чи є дублікати і які артиклі вже задані
+        duplicate_ids = []
+        best_word_id = None
+        best_has_article = False
         
-        # Update translation for the language and article_id if we have it
-        if article_id:
+        for word_id, existing_article_id in existing_words:
+            # Якщо у нас є артикль і існуюче слово немає артикля, зберігаємо це слово для оновлення
+            has_article = existing_article_id != 4 and existing_article_id is not None
+            
+            if not best_word_id or (article_id != 4 and not best_has_article and has_article):
+                best_word_id = word_id
+                best_has_article = has_article
+            else:
+                # Додаємо інші слова в список дублікатів
+                duplicate_ids.append(word_id)
+        
+        # Оновлюємо переклад для обраного слова і можливо артикль
+        if article_id != 4 and not best_has_article:
+            # Оновлюємо артикль для слова, якщо в нього не було артикля
             cursor.execute(f'UPDATE words SET {language}_tran = ?, article_id = ? WHERE id = ?', 
-                         (translation, article_id, word_id))
+                         (translation, article_id, best_word_id))
         else:
+            # Просто оновлюємо переклад, якщо артикль вже був або ми не надаємо нового
             cursor.execute(f'UPDATE words SET {language}_tran = ? WHERE id = ?', 
-                         (translation, word_id))
+                         (translation, best_word_id))
+        
+        word_id = best_word_id
+        
+        # Обробка дублікатів
+        if duplicate_ids:
+            print(f"Found {len(duplicate_ids)} duplicates for word '{word}', merging to word_id={word_id}")
+            for dup_id in duplicate_ids:
+                # Знаходимо користувачів, у яких є це слово
+                cursor.execute(f"SELECT 'user_' || chat_id FROM users")
+                user_tables = [row[0] for row in cursor.fetchall()]
+                
+                for user_table in user_tables:
+                    try:
+                        # Перевіряємо чи користувач має дублікат
+                        cursor.execute(f"SELECT 1 FROM {user_table} WHERE word_id = ?", (dup_id,))
+                        if cursor.fetchone():
+                            # Перевіряємо чи користувач вже має основне слово
+                            cursor.execute(f"SELECT 1 FROM {user_table} WHERE word_id = ?", (word_id,))
+                            has_main_word = cursor.fetchone() is not None
+                            
+                            if has_main_word:
+                                # Видаляємо дублікат, основне слово вже є
+                                cursor.execute(f"DELETE FROM {user_table} WHERE word_id = ?", (dup_id,))
+                                print(f"Deleted duplicate word_id={dup_id} from {user_table}, already has main word")
+                            else:
+                                # Оновлюємо word_id з дубліката на основне слово
+                                cursor.execute(f"UPDATE {user_table} SET word_id = ? WHERE word_id = ?", 
+                                             (word_id, dup_id))
+                                print(f"Updated in {user_table}: word_id {dup_id} -> {word_id}")
+                    except Exception as e:
+                        print(f"Error processing duplicate for {user_table}: {e}")
+                        continue
     else:
-        # Word doesn't exist, add it
+        # Слово не існує, додаємо нове
+        # Переконаймося, що слово починається з великої літери, якщо це іменник
+        if all(c.islower() or not c.isalpha() for c in word):
+            is_noun = article_id != 4 and article_id is not None  # Якщо є артикль, це іменник
+            if is_noun:
+                word = word.capitalize()
+        
         cursor.execute('''
         INSERT INTO words (article_id, word, ru_tran, uk_tran)
         VALUES (?, ?, ?, ?)
@@ -226,7 +279,7 @@ def add_word(chat_id, word, translation, dict_type="personal", article=None):
         from db_init import create_user_table
         create_user_table(chat_id)
         
-        # Add word to user's table
+        # Add word to user's table if not exists
         cursor.execute(f'''
         INSERT OR IGNORE INTO user_{chat_id} (word_id, rating)
         VALUES (?, ?)

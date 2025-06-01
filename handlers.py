@@ -5,9 +5,9 @@ import pandas as pd
 import os
 import sqlite3  # Додано цей рядок
 from config import bot, translator, user_state, ADMIN_ID, DEBUG_MODE, scheduler
-from utils import clear_state, track_activity, main_menu_keyboard, main_menu_cancel, language_selection_keyboard
+from utils import clear_state, track_activity, main_menu_keyboard, main_menu_cancel, language_selection_keyboard, easy_level_keyboard
 from storage import get_dataframe, save_dataframe, get_user_file_path, get_common_file_path
-from dictionary import save_word, toggle_dictionary, start_activity
+from dictionary import save_word, toggle_dictionary, start_activity, return_to_appropriate_menu
 
 # Import debug logger if debug mode is enabled
 if DEBUG_MODE:
@@ -16,7 +16,8 @@ if DEBUG_MODE:
 def start_learning(chat_id, df):
     """Start learning new words activity"""
     dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
-    print(f"Debug: start_learning for user {chat_id}, dict_type={dict_type}")
+    level = user_state.get(chat_id, {}).get("level", "easy")
+    print(f"Debug: start_learning for user {chat_id}, dict_type={dict_type}, level={level}")
     
     # Сортуємо за рейтингом в порядку зростання, щоб менші рейтинги (важчі слова) йшли першими
     df = df.sort_values(by="priority", ascending=True)
@@ -63,6 +64,7 @@ def start_learning(chat_id, df):
         "selected_tr": None,
         "message_id": None,
         "dict_type": dict_type,
+        "level": level,
         "original_words": words
     }
     
@@ -78,6 +80,7 @@ def start_repetition(chat_id, df):
         
     try:
         dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
+        level = user_state.get(chat_id, {}).get("level", "easy")
         
         word = df.sample(1).iloc[0]
         sample_size = min(3, len(df))
@@ -102,7 +105,8 @@ def start_repetition(chat_id, df):
         user_state[chat_id] = {
             "current_word": word,
             "message_id": sent_message.message_id,
-            "dict_type": dict_type
+            "dict_type": dict_type,
+            "level": level
         }
         return True
     except Exception as e:
@@ -196,7 +200,7 @@ def handle_translation(message):
     dict_type = user_state.get(message.chat.id, {}).get("dict_type", "personal")
     print(f"Debug: User {message.chat.id} adding word to dictionary type: {dict_type}")
     
-    # Пошук артикля у базі даних німецьких слів
+    # Пошук артикля у базі данних німецьких слів
     from german_article_finder import find_german_article
     article, clean_word = find_german_article(word)
     if article:
@@ -246,9 +250,9 @@ def handle_translation(message):
 @log_handler
 def handle_confirmation(message):
     if message.text == "Так":
+        # Функція save_word вже відправляє повідомлення про успіх
         save_word(message.chat.id)
-        bot.send_message(message.chat.id, "✅ Слово успішно додано!", 
-                        reply_markup=main_menu_keyboard(message.chat.id))
+        # Прибираємо дублікат повідомлення
     elif message.text == "Ні":
         bot.send_message(message.chat.id, "Введіть правильний переклад вручну:", 
                         reply_markup=telebot.types.ReplyKeyboardRemove())
@@ -267,20 +271,26 @@ def handle_manual_translation(message):
         bot.send_message(message.chat.id, "❌ Будь ласка, введіть правильний переклад, а не команду.")
         return
     
+    # Функція save_word вже відправляє повідомлення про успіх
     save_word(message.chat.id, message.text.strip())
-    bot.send_message(message.chat.id, "✅ Слово успішно додано з вашим перекладом!", 
-                    reply_markup=main_menu_keyboard(message.chat.id))
+    # Прибираємо дублікат повідомлення
 
 @bot.message_handler(func=lambda message: message.text == "📖 Вчити нові слова")
 @log_handler
 def learn_words(message):
     dict_type = user_state.get(message.chat.id, {}).get("dict_type", "personal")
-    print(f"Debug: User {message.chat.id} learning with dictionary type: {dict_type}")
+    level = user_state.get(message.chat.id, {}).get("level", "easy")
+    
+    print(f"Debug: User {message.chat.id} learning with dictionary type: {dict_type}, level: {level}")
     
     if message.chat.id in user_state:
-        user_state[message.chat.id]["dict_type"] = dict_type
+        # Зберігаємо і тип словника, і рівень
+        user_state[message.chat.id].update({
+            "dict_type": dict_type,
+            "level": level
+        })
     else:
-        user_state[message.chat.id] = {"dict_type": dict_type}
+        user_state[message.chat.id] = {"dict_type": dict_type, "level": level}
     
     start_activity(message.chat.id, 'learn')
 
@@ -288,36 +298,20 @@ def learn_words(message):
 @log_handler
 def repeat_words(message):
     dict_type = user_state.get(message.chat.id, {}).get("dict_type", "personal")
-    print(f"Debug: User {message.chat.id} repeating with dictionary type: {dict_type}")
+    level = user_state.get(message.chat.id, {}).get("level", "easy")
+    
+    print(f"Debug: User {message.chat.id} repeating with dictionary type: {dict_type}, level: {level}")
     
     if message.chat.id in user_state:
-        user_state[message.chat.id]["dict_type"] = dict_type
+        # Зберігаємо і тип словника, і рівень
+        user_state[message.chat.id].update({
+            "dict_type": dict_type,
+            "level": level
+        })
     else:
-        user_state[message.chat.id] = {"dict_type": dict_type}
+        user_state[message.chat.id] = {"dict_type": dict_type, "level": level}
     
     start_activity(message.chat.id, 'repeat')
-
-@bot.message_handler(func=lambda message: "🌐 Загальний словник" in message.text)
-@log_handler
-def select_common_dictionary(message):
-    try:
-        from dictionary import set_dictionary_type
-        print(f"Switching user {message.chat.id} to common dictionary")
-        set_dictionary_type(message.chat.id, "common")
-    except Exception as e:
-        print(f"Error switching to common dictionary: {e}")
-        bot.send_message(message.chat.id, "❌ Виникла помилка при зміні словника.")
-
-@bot.message_handler(func=lambda message: "👤 Персональний словник" in message.text)
-@log_handler
-def select_personal_dictionary(message):
-    try:
-        from dictionary import set_dictionary_type
-        print(f"Switching user {message.chat.id} to personal dictionary")
-        set_dictionary_type(message.chat.id, "personal")
-    except Exception as e:
-        print(f"Error switching to personal dictionary: {e}")
-        bot.send_message(message.chat.id, "❌ Виникла помилка при зміні словника.")
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith(('tr_', 'de_')))
 def handle_pairs(call):
@@ -388,7 +382,7 @@ def handle_pairs(call):
             # Запускаємо нову гру, якщо всі пари знайдено
             if len(state["found_pairs"]) == len(state["pairs"]):
                 bot.delete_message(chat_id, call.message.message_id)
-                learn_words(call.message)
+                return_to_appropriate_menu(chat_id, True, "✅ Відмінно! Всі пари з'єднано!")
         else:
             bot.answer_callback_query(call.id, "❌ Неправильно!")
             
@@ -432,7 +426,7 @@ def handle_answer(call):
                 print(f"Error updating word rating: {e}")
                 
             bot.delete_message(chat_id, call.message.message_id)
-            repeat_words(call.message)
+            start_activity(chat_id, 'repeat')
         else:
             bot.answer_callback_query(call.id, f"❌ Неправильно! Правильно: {correct_tr}")
             
@@ -454,210 +448,65 @@ def handle_answer(call):
         print(f"Error in handle_answer: {e}")
         bot.answer_callback_query(call.id, "❌ Помилка обробки відповіді")
 
-@bot.message_handler(commands=['fire'])
+@bot.message_handler(func=lambda message: message.text == "🟢 Легкий рівень")
 @log_handler
-def test_fire(message):
-    if message.from_user.id == ADMIN_ID:
-        try:
-            from scheduler import send_reminder
-            send_reminder()
-            bot.reply_to(message, "Нагадування відправлено!")
-        except Exception as e:
-            print(f"Помилка в /fire: {e}")
-            bot.reply_to(message, f"Помилка: {str(e)}")
-
-@bot.message_handler(commands=['stop'])
-@log_handler
-def stop_bot(message):
-    if message.from_user.id == ADMIN_ID:
-        bot.stop_polling()
-        scheduler.shutdown(wait=False)
-        print("Бот зупинено!")
-        exit(0)
-
-@bot.message_handler(commands=['debug'])
-@log_handler
-def debug_command(message):
-    """Show debug information for admin"""
-    if message.from_user.id != ADMIN_ID:
-        bot.reply_to(message, "⛔ Ця команда доступна тільки для адміністратора.")
-        return
-        
-    try:
-        import db_manager
-        conn = db_manager.get_connection()
-        cursor = conn.cursor()
-        
-        # Кількість користувачів з бази даних
-        cursor.execute("SELECT COUNT(*) FROM users")
-        db_users_count = cursor.fetchone()[0]
-        
-        # Кількість слів
-        cursor.execute("SELECT COUNT(*) FROM words")
-        word_count = cursor.fetchone()[0]
-        
-        # Кількість активних станів
-        active_states = len(user_state)
-
-        # Типи словників для користувачів
-        user_dict_types = {}
-        for uid, state in user_state.items():
-            user_dict_types[uid] = state.get('dict_type', 'personal')
-        
-        bot.reply_to(message, 
-            f"📊 Debug Info:\n"
-            f"- Active users: {active_states}\n"
-            f"- Database users: {db_users_count}\n"
-            f"- Words in database: {word_count}\n"
-            f"- User dictionary types: {user_dict_types}\n"
-            f"- Bot uptime: {get_uptime()}\n"
-        )
-        
-        from debug_tools import debug_dictionaries
-        debug_dictionaries()
-        
-    except Exception as e:
-        if DEBUG_MODE:
-            log_error(e, f"Error in debug command: {e}")
-        bot.reply_to(message, f"❌ Error: {str(e)}")
-
-@bot.message_handler(commands=['articles'])
-@log_handler
-def articles_stats(message):
-    """Show statistics about articles in the database"""
-    if message.from_user.id != ADMIN_ID:
-        bot.reply_to(message, "⛔ Ця команда доступна тільки для адміністратора.")
-        return
-        
-    try:
-        import db_manager
-        conn = db_manager.get_connection()
-        cursor = conn.cursor()
-        
-        # Count total words
-        cursor.execute("SELECT COUNT(*) FROM words")
-        total_words = cursor.fetchone()[0]
-        
-        # Count words for each article
-        cursor.execute("""
-            SELECT a.article, COUNT(w.id) as word_count 
-            FROM words w 
-            JOIN article a ON w.article_id = a.id 
-            GROUP BY a.article
-            ORDER BY word_count DESC
-        """)
-        article_counts = cursor.fetchall()
-        
-        # Count words without article
-        cursor.execute("SELECT COUNT(*) FROM words WHERE article_id IS NULL OR article_id = 4")
-        no_article_count = cursor.fetchone()[0]
-        
-        # Format response
-        response = f"📊 Article Statistics\n\n"
-        response += f"Total words in database: {total_words}\n\n"
-        response += "Words by article:\n"
-        
-        for article, count in article_counts:
-            article_display = article if article else "[empty]"
-            response += f"- {article_display}: {count} ({count/total_words*100:.1f}%)\n"
-        
-        response += f"\nWords without article: {no_article_count} ({no_article_count/total_words*100:.1f}%)"
-        
-        conn.close()
-        bot.reply_to(message, response)
-        
-    except Exception as e:
-        bot.reply_to(message, f"Error getting article statistics: {str(e)}")
-
-@bot.message_handler(commands=['dbcheck'])
-@log_handler
-def db_check_command(message):
-    """Check database and CSV files consistency"""
-    if message.from_user.id != ADMIN_ID:
-        bot.reply_to(message, "⛔ Ця команда доступна тільки для адміністратора.")
-        return
-        
-    try:
-        # Перевірка наявності бази даних
-        import os
-        import db_manager
-        
-        db_exists = os.path.exists(db_manager.DB_PATH)
-        response = f"📊 Database Check\n\n"
-        response += f"Database file exists: {'✅' if db_exists else '❌'}\n"
-        
-        if db_exists:
-            # Підключення до бази даних
-            conn = db_manager.get_connection()
-            cursor = conn.cursor()
-            
-            # Кількість слів
-            cursor.execute("SELECT COUNT(*) FROM words")
-            word_count = cursor.fetchone()[0]
-            response += f"Words in database: {word_count}\n"
-            
-            # Кількість користувачів
-            cursor.execute("SELECT COUNT(*) FROM users")
-            user_count = cursor.fetchone()[0]
-            response += f"Users in database: {user_count}\n"
-            
-            # Кількість артиклів
-            cursor.execute("SELECT COUNT(*) FROM article")
-            article_count = cursor.fetchone()[0]
-            response += f"Articles in database: {article_count}\n"
-            
-            # Перевірка мови користувача
-            language = db_manager.get_user_language(message.chat.id)
-            response += f"\nYour language in database: {language or 'not set'}\n"
-            
-            # Кількість слів користувача
-            try:
-                cursor.execute(f"SELECT COUNT(*) FROM user_{message.chat.id}")
-                user_word_count = cursor.fetchone()[0]
-                response += f"Words in your dictionary: {user_word_count}\n"
-            except sqlite3.OperationalError:
-                response += f"Words in your dictionary: table doesn't exist\n"
-            
-            conn.close()
-        
-        bot.reply_to(message, response)
-        
-    except Exception as e:
-        bot.reply_to(message, f"Error during DB check: {str(e)}")
-
-@bot.message_handler(commands=['findart'])
-@log_handler
-def find_article_command(message):
-    """Test command to find article for a German word"""
-    parts = message.text.split(' ', 1)
-    if len(parts) < 2:
-        bot.reply_to(message, "Використання: /findart <німецьке_слово>")
-        return
+def easy_level(message):
+    """Show easy level menu with basic learning activities"""
+    chat_id = message.chat.id
     
-    word = parts[1].strip()
-    
-    from german_article_finder import find_german_article
-    article, clean_word = find_german_article(word)
-    
-    if article:
-        bot.reply_to(message, f"Знайдено: '{article} {clean_word}'")
+    # Збережемо поточний тип словника
+    dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
+    if chat_id in user_state:
+        user_state[chat_id]["level"] = "easy"
     else:
-        bot.reply_to(message, f"Артикль для слова '{word}' не знайдено в базі даних")
+        user_state[chat_id] = {"dict_type": dict_type, "level": "easy"}
+    
+    bot.send_message(chat_id, "🟢 Легкий рівень - оберіть активність:", 
+                    reply_markup=easy_level_keyboard())
 
-def get_uptime():
-    """Get bot uptime"""
-    from main import START_TIME
-    import time
+@bot.message_handler(func=lambda message: message.text == "🟠 Середній рівень")
+@log_handler
+def medium_level(message):
+    """Show medium level menu (placeholder)"""
+    chat_id = message.chat.id
     
-    uptime_seconds = int(time.time() - START_TIME)
-    days, remainder = divmod(uptime_seconds, 86400)
-    hours, remainder = divmod(remainder, 3600)
-    minutes, seconds = divmod(remainder, 60)
+    # Зберігаємо поточний тип словника і рівень
+    dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
+    if chat_id in user_state:
+        user_state[chat_id]["level"] = "medium"
+    else:
+        user_state[chat_id] = {"dict_type": dict_type, "level": "medium"}
     
-    parts = []
-    if days: parts.append(f"{days} days")
-    if hours: parts.append(f"{hours} hours")
-    if minutes: parts.append(f"{minutes} minutes")
-    if seconds or not parts: parts.append(f"{seconds} seconds")
+    bot.send_message(chat_id, "🟠 Середній рівень у розробці", 
+                    reply_markup=main_menu_keyboard(chat_id))
+
+@bot.message_handler(func=lambda message: message.text == "🔴 Складний рівень")
+@log_handler
+def hard_level(message):
+    """Show hard level menu (placeholder)"""
+    chat_id = message.chat.id
     
-    return ", ".join(parts)
+    # Зберігаємо поточний тип словника і рівень
+    dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
+    if chat_id in user_state:
+        user_state[chat_id]["level"] = "hard"
+    else:
+        user_state[chat_id] = {"dict_type": dict_type, "level": "hard"}
+    
+    bot.send_message(chat_id, "🔴 Складний рівень у розробці", 
+                    reply_markup=main_menu_keyboard(chat_id))
+
+@bot.message_handler(func=lambda message: message.text == "↩️ Повернутися до головного меню")
+@log_handler
+def return_to_main_menu(message):
+    """Return to main menu"""
+    chat_id = message.chat.id
+    
+    # Зберігаємо тип словника
+    dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
+    if chat_id in user_state:
+        # Видаляємо рівень, зберігаючи тип словника
+        user_state[chat_id] = {"dict_type": dict_type}
+    
+    bot.send_message(chat_id, "Головне меню:", 
+                    reply_markup=main_menu_keyboard(chat_id))

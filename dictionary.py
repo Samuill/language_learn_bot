@@ -35,24 +35,55 @@ def save_word(chat_id, translation=None):
     # Якщо артикль знайдено, використовуємо його і очищене слово
     if article:
         print(f"Found article '{article}' for word '{word}' -> '{clean_word}'")
-        word = clean_word
+        word_to_save = clean_word  # Зберігаємо слово без артикля
+        article_to_save = article  # Окремо зберігаємо артикль
     else:
         # Визначаємо артикль зі слова (якщо є)
         import re
         article_match = re.match(r'^(der|die|das)\s+(.+)$', word, re.IGNORECASE)
         if article_match:
-            article = article_match.group(1).lower()
-            word = article_match.group(2).strip()
+            article_to_save = article_match.group(1).lower()
+            word_to_save = article_match.group(2).strip()
+        else:
+            # Якщо артикль не знайдено
+            word_to_save = word
+            article_to_save = None
+    
+    # Перевірка, чи слово вже існує в словнику користувача
+    conn = db_manager.get_connection()
+    cursor = conn.cursor()
+    
+    exists_in_personal = False
+    
+    if dict_type == "personal":
+        # Перевіряємо, чи слово вже є в словнику користувача
+        try:
+            cursor.execute(f"""
+                SELECT 1 FROM words w
+                JOIN user_{chat_id} u ON w.id = u.word_id
+                WHERE LOWER(w.word) = LOWER(?)
+            """, (word_to_save,))
+            exists_in_personal = cursor.fetchone() is not None
+        except Exception as e:
+            print(f"Error checking if word exists: {e}")
+    
+    conn.close()
     
     # Зберігаємо слово в базу даних із можливим артиклем
-    success = db_manager.add_word(chat_id, word, translation, dict_type, article)
+    success = db_manager.add_word(chat_id, word_to_save, translation, dict_type, article_to_save)
     
     if success:
-        # Формуємо повідомлення з урахуванням знайденого артикля
-        if article:
-            message = f"✅ Слово '{article} {word}' успішно додано!"
+        # Формуємо повідомлення в залежності від наявності артикля та існування слова
+        if exists_in_personal:
+            if article_to_save:
+                message = f"✅ Слово '{article_to_save} {word_to_save}' оновлено у вашому словнику!"
+            else:
+                message = f"✅ Слово '{word_to_save}' оновлено у вашому словнику!"
         else:
-            message = f"✅ Слово '{word}' успішно додано!"
+            if article_to_save:
+                message = f"✅ Слово '{article_to_save} {word_to_save}' успішно додано!"
+            else:
+                message = f"✅ Слово '{word_to_save}' успішно додано!"
             
         bot.send_message(
             chat_id, 
@@ -72,14 +103,16 @@ def save_word(chat_id, translation=None):
 
 def start_activity(chat_id, mode):
     """Start learning or repetition activity"""
-    # Зберігаємо поточний тип словника перед очищенням стану
+    # Зберігаємо поточний тип словника і рівень перед очищенням стану
     dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
-    print(f"Debug: Starting {mode} activity for user {chat_id} with dict_type={dict_type}")
+    level = user_state.get(chat_id, {}).get("level", "easy")
+    
+    print(f"Debug: Starting {mode} activity for user {chat_id} with dict_type={dict_type}, level={level}")
     
     clear_state(chat_id)
     
-    # Відразу встановлюємо поточний тип словника після очищення
-    user_state[chat_id] = {"dict_type": dict_type}
+    # Відразу встановлюємо поточний тип словника і рівень після очищення
+    user_state[chat_id] = {"dict_type": dict_type, "level": level}
     
     try:
         # Використовуємо ВИКЛЮЧНО SQLite для отримання слів
@@ -119,6 +152,22 @@ def start_activity(chat_id, mode):
         traceback.print_exc()
         bot.send_message(chat_id, f"❌ Помилка при доступі до бази даних.")
         return False
+
+def return_to_appropriate_menu(chat_id, success=True, message=None):
+    """Return to the appropriate menu based on user's level"""
+    level = user_state.get(chat_id, {}).get("level", "easy")
+    
+    if not message:
+        message = "✅ Завершено!" if success else "❌ Помилка!"
+    
+    if level == "easy":
+        # Повернення до меню легкого рівня
+        from utils import easy_level_keyboard
+        bot.send_message(chat_id, message, reply_markup=easy_level_keyboard())
+    else:
+        # Повернення до головного меню
+        from utils import main_menu_keyboard
+        bot.send_message(chat_id, message, reply_markup=main_menu_keyboard(chat_id))
 
 def set_dictionary_type(chat_id, dict_type):
     """Set dictionary type to personal or common"""

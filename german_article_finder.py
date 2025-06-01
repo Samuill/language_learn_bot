@@ -44,7 +44,7 @@ def find_german_article(word):
         conn = sqlite3.connect(NOUNS_DB_PATH)
         cursor = conn.cursor()
         
-        # Шукаємо спочатку в таблиці declensions (це основна таблиця іменників)
+        # Шукаємо спочатку в таблиці declensions (це основна таблиця іменників) для однини
         cursor.execute("""
             SELECT article_mask, word 
             FROM declensions 
@@ -57,6 +57,20 @@ def find_german_article(word):
             article = get_article_by_mask(cursor, article_mask)
             conn.close()
             return article, exact_word
+            
+        # Тепер перевіряємо множину в таблиці declensions
+        cursor.execute("""
+            SELECT plural_article_mask, plural_word 
+            FROM declensions 
+            WHERE LOWER(plural_word) = LOWER(?)
+        """, (word_clean,))
+        result = cursor.fetchone()
+        
+        if result:
+            plural_article_mask, exact_word = result
+            # У множині завжди використовується "die"
+            conn.close()
+            return "die", exact_word
         
         # Якщо не знайдено, шукаємо послідовно в таблицях noun_0, noun_1, noun_2
         for table in ["noun_0", "noun_1", "noun_2"]:
