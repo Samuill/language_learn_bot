@@ -334,15 +334,22 @@ def handle_pairs(call):
         if correct:
             bot.answer_callback_query(call.id, "✅ Правильно!")
             
-            # Використовуємо тільки SQLite для оновлення рейтингу
+            # Використовуємо тільки SQLite для оновлення рейтингу з кроком 0.1
             try:
                 import db_manager
-                word_id = df.loc[df['translation'] == state['selected_tr'], 'id'].values[0]
+                word_translation = state['selected_tr']
+                if "original_words" in state:
+                    word_id = state["original_words"].loc[state["original_words"]['translation'] == word_translation, 'id'].values[0]
+                else:
+                    word_id = int(df.loc[df['translation'] == state['selected_tr'], 'id'].iloc[0])
+                
+                # Зменшуємо рейтинг для правильної відповіді (слово стає "легшим")
                 db_manager.update_word_rating(chat_id, word_id, -0.1, dict_type)
+                print(f"Successfully decreased rating for word_id={word_id}")
             except Exception as e:
                 print(f"Error updating word rating: {e}")
-                # Якщо не вдалося оновити через SQLite, використовуємо старий метод як резервний
-                df.loc[df['translation'] == state['selected_tr'], 'priority'] -= 0.001
+                # Резервний метод для CSV
+                df.loc[df['translation'] == state['selected_tr'], 'priority'] -= 0.1
             
             markup = call.message.reply_markup
             for row in markup.keyboard:
@@ -361,17 +368,22 @@ def handle_pairs(call):
         else:
             bot.answer_callback_query(call.id, "❌ Неправильно!")
             
-            # Використовуємо тільки SQLite для оновлення рейтингу
             try:
                 import db_manager
-                word_id = df.loc[df['translation'] == state['selected_tr'], 'id'].values[0]
+                word_translation = state['selected_tr']
+                if "original_words" in state:
+                    word_id = state["original_words"].loc[state["original_words"]['translation'] == word_translation, 'id'].values[0]
+                else:
+                    word_id = int(df.loc[df['translation'] == state['selected_tr'], 'id'].iloc[0])
+                
+                # Збільшуємо рейтинг для неправильної відповіді (слово стає "важчим")
                 db_manager.update_word_rating(chat_id, word_id, 0.1, dict_type)
+                print(f"Successfully increased rating for word_id={word_id}")
             except Exception as e:
                 print(f"Error updating word rating: {e}")
-                # Якщо не вдалося оновити через SQLite, використовуємо старий метод як резервний
-                df.loc[df['translation'] == state['selected_tr'], 'priority'] += 0.001
+                # Резервний метод для CSV
+                df.loc[df['translation'] == state['selected_tr'], 'priority'] += 0.1
         
-        # Тут також потрібно оновити DataFrame у CSV (тимчасове рішення для сумісності)
         if dict_type == "common":
             file_path, lang = get_common_file_path()
             save_dataframe(chat_id, df, "common")
@@ -402,30 +414,30 @@ def handle_answer(call):
         if selected_tr == correct_tr:
             bot.answer_callback_query(call.id, "✅ Правильно!")
             
-            # Використовуємо SQLite для оновлення рейтингу
             try:
                 import db_manager
-                word_id = user_state[chat_id]["current_word"]['id']
+                word_id = int(user_state[chat_id]["current_word"]['id'])
                 db_manager.update_word_rating(chat_id, word_id, -0.1, dict_type)
+                print(f"Successfully decreased rating for word_id={word_id}")
             except Exception as e:
                 print(f"Error updating word rating: {e}")
-                # Якщо не вдалося, використовуємо старий метод
-                df.loc[df['word'] == word, 'priority'] -= 0.001
+                # Резервний метод для CSV
+                df.loc[df['word'] == word, 'priority'] -= 0.1
                 
             bot.delete_message(chat_id, call.message.message_id)
             repeat_words(call.message)
         else:
             bot.answer_callback_query(call.id, f"❌ Неправильно! Правильно: {correct_tr}")
             
-            # Використовуємо SQLite для оновлення рейтингу
             try:
                 import db_manager
-                word_id = user_state[chat_id]["current_word"]['id']
+                word_id = int(user_state[chat_id]["current_word"]['id'])
                 db_manager.update_word_rating(chat_id, word_id, 0.1, dict_type)
+                print(f"Successfully increased rating for word_id={word_id}")
             except Exception as e:
                 print(f"Error updating word rating: {e}")
-                # Якщо не вдалося, використовуємо старий метод
-                df.loc[df['word'] == word, 'priority'] += 0.001
+                # Резервний метод для CSV
+                df.loc[df['word'] == word, 'priority'] += 0.1
             
             markup = call.message.reply_markup
             for row in markup.keyboard:

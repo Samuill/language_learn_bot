@@ -67,21 +67,43 @@ def start_activity(chat_id, mode):
     user_state[chat_id] = {"dict_type": dict_type}
     
     try:
-        # Спочатку спробуємо використати SQLite для отримання слів
+        # Використовуємо SQLite для отримання слів
         import db_manager
+        
         # Оновлюємо streak користувача
         streak = db_manager.update_user_streak(chat_id)
         print(f"User {chat_id} streak updated: {streak}")
         
-        # Отримуємо слова для користувача
+        # Отримуємо слова для користувача - налаштований для роботи з SQLite
         df = db_manager.get_user_words(chat_id, dict_type)
         
+        # Переконуємося, що DataFrameме невелику кількість слів
         if df.empty:
             dict_name = "загальному словнику" if dict_type == "common" else "персональному словнику"
             bot.send_message(chat_id, f"📭 У {dict_name} ще немає доданих слів.")
             return False
+            
+        # Переконуємося, що всі необхідні колонки присутні
+        if 'id' not in df.columns:
+            print("WARNING: DataFrame from db_manager.get_user_words lacks 'id' column!")
+            # Додаємо id колонку зі значеннями за замовчуванням
+            df['id'] = range(1, len(df) + 1)
+            
+        print(f"Successfully retrieved {len(df)} words from database with columns: {df.columns.tolist()}")
+        
+        # Запускаємо відповідну активність
+        if mode == 'repeat':
+            from handlers import start_repetition
+            return start_repetition(chat_id, df)
+        elif mode == 'learn':
+            from handlers import start_learning
+            return start_learning(chat_id, df)
+            
     except Exception as e:
-        print(f"Error using SQLite, falling back to CSV: {e}")
+        print(f"Error using SQLite: {e}")
+        import traceback
+        traceback.print_exc()
+        
         # Резервний варіант: старий CSV метод
         from utils import track_activity
         track_activity(chat_id)
@@ -91,13 +113,18 @@ def start_activity(chat_id, mode):
             dict_name = "загальному словнику" if dict_type == "common" else "персональному словнику"
             bot.send_message(chat_id, f"📭 У {dict_name} ще немає доданих слів.")
             return False
-    
-    if mode == 'repeat':
-        from handlers import start_repetition
-        return start_repetition(chat_id, df)
-    elif mode == 'learn':
-        from handlers import start_learning
-        return start_learning(chat_id, df)
+        
+        # Якщо CSV не має id колонки, додаємо її
+        if 'id' not in df.columns:
+            df['id'] = range(1, len(df) + 1)
+        
+        if mode == 'repeat':
+            from handlers import start_repetition
+            return start_repetition(chat_id, df)
+        elif mode == 'learn':
+            from handlers import start_learning
+            return start_learning(chat_id, df)
+            
     return False
 
 def set_dictionary_type(chat_id, dict_type):

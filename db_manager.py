@@ -199,17 +199,34 @@ def add_word(chat_id, word, translation, dict_type="personal", article=None):
     return True
 
 def update_word_rating(chat_id, word_id, change, dict_type="personal"):
-    """Update word rating for a user"""
+    """Update word rating for a user with step 0.1, constrained between 0 and 5"""
     conn = get_connection()
     cursor = conn.cursor()
     
     if dict_type == "personal":
-        # Update in user's table
+        # Спочатку отримуємо поточний рейтинг
         cursor.execute(f'''
-        UPDATE user_{chat_id} 
-        SET rating = max(min(rating + ?, 5.0), 0.0)
-        WHERE word_id = ?
-        ''', (change, word_id))
+        SELECT rating FROM user_{chat_id} WHERE word_id = ?
+        ''', (word_id,))
+        result = cursor.fetchone()
+        
+        if result:
+            current_rating = result[0]
+            # Застосовуємо зміну з кроком 0.1
+            new_rating = max(min(current_rating + change, 5.0), 0.0)
+            # Округлюємо до однієї цифри після коми для стабільного збереження
+            new_rating = round(new_rating, 1)
+            
+            # Оновлюємо рейтинг
+            cursor.execute(f'''
+            UPDATE user_{chat_id} 
+            SET rating = ?
+            WHERE word_id = ?
+            ''', (new_rating, word_id))
+            
+            print(f"Updated rating for user {chat_id}, word_id {word_id}: {current_rating} -> {new_rating}")
+        else:
+            print(f"Warning: Word {word_id} not found in user_{chat_id} table")
     else:
         # Common dictionary - can't update ratings
         pass
