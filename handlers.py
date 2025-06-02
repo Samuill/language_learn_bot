@@ -333,61 +333,75 @@ def handle_article_selection(call):
         bot.answer_callback_query(call.id, "❗ Спочатку оберіть розділ 'Вивчати артиклі'")
         return
     
-    state = user_state[chat_id]
-    word_id = state.get("word_id")
-    correct_article = state.get("correct_article")
-    word = state.get("word")
-    dict_type = state.get("dict_type", "personal")
-    
-    # Парсимо вибраний артикль
-    _, selected_article, word_id_from_callback = call.data.split('_')
-    
-    # Перевіряємо правильність відповіді
-    is_correct = selected_article == correct_article
-    
-    if is_correct:
-        bot.answer_callback_query(call.id, "✅ Правильно!")
+    try:
+        state = user_state[chat_id]
+        word_id = state.get("word_id")
+        correct_article = state.get("correct_article")
+        word = state.get("word")
+        dict_type = state.get("dict_type", "personal")
         
-        # Оновлюємо рейтинг слова
+        # Парсимо вибраний артикль
+        _, selected_article, word_id_from_callback = call.data.split('_')
+        
+        # Перевіряємо правильність відповіді
+        is_correct = selected_article == correct_article
+        
+        if is_correct:
+            bot.answer_callback_query(call.id, "✅ Правильно!")
+            
+            # Оновлюємо рейтинг слова
+            try:
+                import db_manager
+                if dict_type == "personal":
+                    db_manager.update_word_rating(chat_id, word_id, 0.1, dict_type)
+                    print(f"Successfully increased rating for word_id={word_id}")
+            except Exception as e:
+                print(f"Error updating word rating: {e}")
+            
+            # Показуємо правильну відповідь без кнопки "Далі"
+            bot.edit_message_text(
+                f"🏷️ <b>{correct_article} {word}</b>\n\n<i>✅ Правильно!</i>",
+                chat_id,
+                call.message.message_id,
+                parse_mode="HTML"
+            )
+        else:
+            bot.answer_callback_query(call.id, f"❌ Неправильно! Правильно: {correct_article}")
+            
+            # Оновлюємо рейтинг слова (знижуємо)
+            try:
+                import db_manager
+                if dict_type == "personal":
+                    db_manager.update_word_rating(chat_id, word_id, -0.1, dict_type)
+                    print(f"Successfully decreased rating for word_id={word_id}")
+            except Exception as e:
+                print(f"Error updating word rating: {e}")
+            
+            # Показуємо правильну відповідь без кнопки "Далі"
+            bot.edit_message_text(
+                f"🏷️ <b>{correct_article} {word}</b>\n\n<i>❌ Запам'ятайте правильний артикль.</i>",
+                chat_id,
+                call.message.message_id,
+                parse_mode="HTML"
+            )
+        
+        # Додаємо кнопку для продовження
+        markup = telebot.types.InlineKeyboardMarkup()
+        markup.add(telebot.types.InlineKeyboardButton("➡️ Наступне слово", callback_data="next_article"))
+        bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=markup)
+        
+    except Exception as e:
+        print(f"Error in handle_article_selection: {e}")
+        import traceback
+        traceback.print_exc()
+        bot.answer_callback_query(call.id, "❌ Помилка обробки відповіді")
         try:
-            import db_manager
-            if dict_type == "personal":
-                db_manager.update_word_rating(chat_id, word_id, 0.1, dict_type)
-                print(f"Successfully increased rating for word_id={word_id}")
-        except Exception as e:
-            print(f"Error updating word rating: {e}")
-        
-        # Показуємо правильну відповідь без кнопки "Далі"
-        bot.edit_message_text(
-            f"🏷️ <b>{correct_article} {word}</b>\n\n<i>✅ Правильно!</i>",
-            chat_id,
-            call.message.message_id,
-            parse_mode="HTML"
-        )
-    else:
-        bot.answer_callback_query(call.id, f"❌ Неправильно!")
-        
-        # Оновлюємо рейтинг слова (знижуємо)
-        try:
-            import db_manager
-            if dict_type == "personal":
-                db_manager.update_word_rating(chat_id, word_id, -0.1, dict_type)
-                print(f"Successfully decreased rating for word_id={word_id}")
-        except Exception as e:
-            print(f"Error updating word rating: {e}")
-        
-        # Показуємо правильну відповідь без кнопки "Далі"
-        bot.edit_message_text(
-            f"🏷️ <b>{correct_article} {word}</b>\n\n<i>❌ Запам'ятайте правильний артикль.</i>",
-            chat_id,
-            call.message.message_id,
-            parse_mode="HTML"
-        )
-    
-    # Додаємо короткий таймер перед видаленням повідомлення і запуском нової активності
-    import threading
-    timer = threading.Timer(1.5, lambda: continue_article_activity(chat_id, call.message.message_id))
-    timer.start()
+            # Додаємо кнопку для продовження навіть у разі помилки
+            markup = telebot.types.InlineKeyboardMarkup()
+            markup.add(telebot.types.InlineKeyboardButton("➡️ Спробувати інше слово", callback_data="next_article"))
+            bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=markup)
+        except:
+            pass
 
 # Нова функція для запуску наступної активності після таймауту
 def continue_article_activity(chat_id, message_id):

@@ -62,8 +62,8 @@ def update_streak(chat_id):
         
     params['last_active'] = today
     with open(params_path, 'w') as f:
-        json.dump(params, f)    
-        return params['streak']
+        json.dump(params, f)
+    return params['streak']
 
 def track_activity(chat_id):
     """Track user activity and update streak"""
@@ -81,18 +81,47 @@ def main_menu_keyboard(chat_id=None):
     
     # Визначаємо, який словник активний
     dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
+    shared_dict_id = user_state.get(chat_id, {}).get("shared_dict_id", None)
     
     # Додаємо кнопку "Додати слово" тільки якщо це персональний словник 
     # або користувач адмін і використовує загальний словник
     if dict_type == "personal" or chat_id == ADMIN_ID:
-        keyboard.add("➕ Додати нове слово", "📖 Вчити нові слова", "🔄 Повторити")
-    else:
-        # Для звичайних користувачів у режимі загального словника не показуємо кнопку додавання
-        keyboard.add("📖 Вчити нові слова", "🔄 Повторити")
+        keyboard.add("➕ Додати нове слово")
+    
+    # Додаємо кнопки рівнів складності
+    keyboard.add("🟢 Легкий рівень", "🟠 Середній рівень", "🔴 Складний рівень")
     
     # Додаємо кнопки перемикання словників
-    keyboard.add("👤 Персональний словник", "👥 Спільний словник")
+    if dict_type == "shared" and shared_dict_id:
+        # Якщо обрано спільний словник, додаємо також інформацію про нього
+        import db_manager
+        conn = db_manager.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT name FROM shared_dictionaries WHERE id = ?', (shared_dict_id,))
+        result = cursor.fetchone()
+        dict_name = result[0] if result else "Спільний"
+        conn.close()
+        
+        keyboard.add(f"👤 Персональний словник", f"👥 Спільний словник ({dict_name})")
+    else:
+        keyboard.add("👤 Персональний словник", "👥 Спільний словник")
     
+    return keyboard
+
+def shared_dictionary_keyboard():
+    """Create keyboard for shared dictionary options"""
+    keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
+    keyboard.add("🆕 Створити спільний словник", "🔑 Вступити до спільного словника")
+    keyboard.add("📋 Мої спільні словники")
+    keyboard.add("↩️ Повернутися до головного меню")
+    return keyboard
+
+def easy_level_keyboard():
+    """Create keyboard for easy level"""
+    keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
+    keyboard.add("📖 Вчити нові слова", "🔄 Повторити")
+    keyboard.add("🏷️ Вивчати артиклі")  # Нова кнопка для вивчення артиклів
+    keyboard.add("↩️ Повернутися до головного меню")
     return keyboard
 
 def main_menu_cancel():
