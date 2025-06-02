@@ -8,3 +8,12 @@
 [2025-06-01 19:13:45.341] ERROR: HTTPSConnectionPool(host='api.telegram.org', port=443): Read timed out. (read timeout=25) | Context: Critical error in main loop
 [2025-06-01 20:37:21.898] ERROR: HTTPSConnectionPool(host='api.telegram.org', port=443): Read timed out. (read timeout=25) | Context: Critical error in main loop
 [2025-06-01 21:37:16.196] ERROR: HTTPSConnectionPool(host='api.telegram.org', port=443): Read timed out. (read timeout=25) | Context: Critical error in main loop
+[2025-06-02 04:33:52.507] ERROR: local variable 'shared_dict_id' referenced before assignment | Context: Critical error in main loop
+[2025-06-02 04:35:21.822] ERROR: local variable 'shared_dict_id' referenced before assignment | Context: Critical error in main loop
+[2025-06-02 04:37:12.524] ERROR: HTTPSConnectionPool(host='api.telegram.org', port=443): Read timed out. (read timeout=25) | Context: Critical error in main loop
+[2025-06-02 04:44:04.095] ERROR: local variable 'db_manager' referenced before assignment | Context: Critical error in main loop
+[2025-06-02 04:44:10.116] ERROR: local variable 'db_manager' referenced before assignment | Context: Critical error in main loop
+[2025-06-02 04:49:48.245] ERROR: local variable 'db_manager' referenced before assignment | Context: Critical error in main loop
+[2025-06-02 04:51:26.477] ERROR: local variable 'db_manager' referenced before assignment | Context: Critical error in main loop
+[2025-06-02 04:57:39.104] ERROR: local variable 'db_manager' referenced before assignment | Context: Critical error in main loop
+[2025-06-02 05:02:18.886] ERROR: local variable 'db_manager' referenced before assignment | Context: Critical error in main loop

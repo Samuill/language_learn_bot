@@ -106,6 +106,8 @@ def start_activity(chat_id, mode):
     # Зберігаємо поточний тип словника і рівень перед очищенням стану
     dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
     level = user_state.get(chat_id, {}).get("level", "easy")
+    # Отримуємо shared_dict_id ДО поділу на умови (fix critical bug)
+    shared_dict_id = user_state.get(chat_id, {}).get("shared_dict_id", None)
     
     print(f"Debug: Starting {mode} activity for user {chat_id} with dict_type={dict_type}, level={level}")
     
@@ -128,13 +130,13 @@ def start_activity(chat_id, mode):
             print(f"Debug: Retrieved shared_dict_id={shared_dict_id} from database for user {chat_id}")
         else:
             print(f"Warning: User {chat_id} has dict_type 'shared' but no shared_dict_id in database")
-    elif shared_dict_id:
+    elif shared_dict_id:  # Тепер ця змінна вже визначена
         # Якщо не спільний словник, але shared_dict_id вказано, зберігаємо його
         user_state[chat_id]["shared_dict_id"] = shared_dict_id
     
     try:
         # Використовуємо ВИКЛЮЧНО SQLite для отримання слів
-        import db_manager
+        
         
         # Оновлюємо streak користувача
         streak = db_manager.update_user_streak(chat_id)

@@ -1,8 +1,13 @@
 # -*- coding: utf-8 -*-
 import os
+import re
+import random
+import string
+import datetime
 import sqlite3
 import pandas as pd
 from config import ADMIN_ID
+from db_init import create_user_table, create_database, migrate_from_csv
 
 # Шлях до бази даних
 DB_DIR = "database"
@@ -11,11 +16,11 @@ DB_PATH = os.path.join(DB_DIR, "german_words.db")
 def get_connection():
     """Get a connection to the database, creating it if needed"""
     if not os.path.exists(DB_PATH):
-        from db_init import create_database
+        
         create_database()
         
         # Також виконаємо міграцію даних з CSV, якщо база щойно створена
-        from db_init import migrate_from_csv
+        
         migrate_from_csv()
     
     return sqlite3.connect(DB_PATH)
@@ -85,7 +90,6 @@ def set_user_language(chat_id, language):
         cursor.execute('INSERT INTO users (chat_id, language) VALUES (?, ?)', (chat_id, language))
         
         # Create user table
-        from db_init import create_user_table
         create_user_table(chat_id)
     
     conn.commit()
@@ -170,7 +174,7 @@ def add_word(chat_id, word, translation, dict_type="personal", article=None):
         return False
     
     # Перевіряємо, чи є в слові артикль
-    import re
+
     article_match = re.match(r'^(der|die|das)\s+(.+)$', word, re.IGNORECASE)
     extracted_article = None
     if article_match:
@@ -275,7 +279,7 @@ def add_word(chat_id, word, translation, dict_type="personal", article=None):
     # If it's a personal dictionary, add reference to user's table
     if dict_type == "personal":
         # Ensure user table exists
-        from db_init import create_user_table
+        
         create_user_table(chat_id)
         
         # Add word to user's table if not exists
@@ -344,7 +348,7 @@ def get_user_streak(chat_id):
 
 def update_user_streak(chat_id):
     """Update user's streak"""
-    import datetime
+
     
     conn = get_connection()
     cursor = conn.cursor()
@@ -421,10 +425,7 @@ def create_shared_dictionary_tables():
 
 def create_shared_dictionary(chat_id, name):
     """Create a new shared dictionary with a random code"""
-    import random
-    import string
-    import time
-    
+
     # Генеруємо випадковий код з 6 символів (літери верхнього регістру та цифри)
     code_chars = string.ascii_uppercase + string.digits
     code = ''.join(random.choice(code_chars) for _ in range(6))

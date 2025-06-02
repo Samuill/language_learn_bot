@@ -765,3 +765,227 @@ def return_to_main_menu(message):
     # Send main menu
     bot.send_message(chat_id, "Головне меню:", 
                    reply_markup=main_menu_keyboard(chat_id))
+
+# Fix for Add New Word command
+@bot.message_handler(func=lambda message: message.text == "➕ Додати нове слово")
+def add_word(message):
+    """Add a new word to dictionary"""
+    chat_id = message.chat.id
+    dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
+    
+    # Check permissions for common dictionary
+    if dict_type == "common" and chat_id != ADMIN_ID:
+        bot.send_message(
+            chat_id, 
+            "❌ Додати слово неможливо, змініть свій словник на персональний.",
+            reply_markup=main_menu_keyboard(chat_id)
+        )
+        return
+    
+    # Clear state and setup for word addition
+    clear_state(chat_id)
+    user_state[chat_id] = {
+        "step": "adding_word",
+        "dict_type": dict_type
+    }
+    
+    bot.send_message(
+        chat_id, 
+        "Введіть слово, яке хочете додати:", 
+        reply_markup=main_menu_cancel()
+    )
+
+# Fix for add_word flow to ensure reliable translation
+@bot.message_handler(func=lambda message: user_state.get(message.chat.id, {}).get("step") == "adding_word")
+def handle_translation(message):
+    """Handle word input for translation"""
+    chat_id = message.chat.id
+    
+    try:
+        # Basic input validation
+        if not message.text or message.text.startswith('/'):
+            bot.send_message(chat_id, "❌ Будь ласка, введіть слово текстом!")
+            return
+            
+        if message.text in ["➕ Додати нове слово", "📖 Вчити нові слова", "🔄 Повторити", "🇺🇦 Українська", "🇷🇺 Російська"]:
+            bot.send_message(chat_id, "❌ Будь ласка, введіть нове слово, а не команду.")
+            return
+            
+        word = message.text.strip()
+        dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
+        print(f"Debug: User {chat_id} adding word to dictionary type: {dict_type}")
+        
+        # Get article from database of German words
+        from german_article_finder import find_german_article
+        article, clean_word = find_german_article(word)
+        
+        if article:
+            print(f"Found article '{article}' for word '{word}' -> '{clean_word}'")
+            # Save the original word
+            user_state[chat_id]["original_word"] = word
+            # Use normalized word with article
+            word = f"{article} {clean_word}"
+        
+        # Save dict_type for future steps
+        user_state[chat_id]["dict_type"] = dict_type
+        
+        # Check if user can add to this dictionary type
+        if dict_type == "common" and chat_id != ADMIN_ID:
+            bot.send_message(
+                chat_id, 
+                "❌ Додати слово неможливо, змініть свій словник на персональний.",
+                reply_markup=main_menu_keyboard(chat_id)
+            )
+            clear_state(chat_id)
+            return
+        
+        # Get user language preference
+        import db_manager
+        language = db_manager.get_user_language(chat_id)
+        
+        if not language:
+            bot.send_message(chat_id, "❌ Мову перекладу не обрано. Спробуйте /start.")
+            return
+        
+        # Translate word using Google Translate
+        print(f"Debug: Translating word '{word}' using language code '{language}'")
+        translation = translator.translate(word, src="de", dest=language).text
+        
+        if translation:
+            # Update user state with translation data
+            user_state[chat_id].update({
+                "step": "confirm_translation",
+                "word": word,
+                "auto_translation": translation,
+                "language": language
+            })
+            
+            # Create confirmation keyboard
+            keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
+            keyboard.add("Так", "Ні", "Відміна")
+            bot.send_message(chat_id, f"Знайдено переклад: {translation}. Це правильно?", reply_markup=keyboard)
+        else:
+            bot.send_message(chat_id, "Не вдалося перекласти слово. Спробуйте ще раз.")
+    
+    except Exception as e:
+        print(f"Error in handle_translation: {e}")
+        import traceback
+        traceback.print_exc()
+        bot.send_message(chat_id, "❌ Помилка при обробці слова. Спробуйте ще раз.")
+
+# Simplify confirmation handler
+@bot.message_handler(func=lambda message: user_state.get(message.chat.id, {}).get("step") == "confirm_translation")
+def handle_confirmation(message):
+    """Handle translation confirmation"""
+    chat_id = message.chat.id
+    
+    try:
+        if message.text == "Так":
+            # Use the dictionary.py save_word function
+            from dictionary import save_word
+            save_word(chat_id)
+            # Bot message is sent by save_word
+        elif message.text == "Ні":
+            bot.send_message(chat_id, "Введіть правильний переклад вручну:", 
+                           reply_markup=main_menu_cancel())
+            user_state[chat_id]["step"] = "manual_translation"
+        elif message.text == "Відміна":
+            clear_state(chat_id)
+            bot.send_message(chat_id, "🚫 Дію скасовано.", 
+                           reply_markup=main_menu_keyboard(chat_id))
+        else:
+            bot.send_message(chat_id, "❌ Будь ласка, виберіть 'Так', 'Ні' або 'Відміна'.")
+    except Exception as e:
+        print(f"Error in handle_confirmation: {e}")
+        clear_state(chat_id)
+        bot.send_message(chat_id, "❌ Помилка при обробці підтвердження.", 
+                       reply_markup=main_menu_keyboard(chat_id))
+
+# Simplify manual translation handler
+@bot.message_handler(func=lambda message: user_state.get(message.chat.id, {}).get("step") == "manual_translation")
+def handle_manual_translation(message):
+    """Handle manual translation input"""
+    chat_id = message.chat.id
+    
+    try:
+        if message.text in ["➕ Додати нове слово", "📖 Вчити нові слова", "🔄 Повторити"]:
+            bot.send_message(chat_id, "❌ Будь ласка, введіть правильний переклад, а не команду.")
+            return
+        
+        # Use save_word function from dictionary.py
+        from dictionary import save_word
+        save_word(chat_id, message.text.strip())
+        # Message is sent by save_word
+    except Exception as e:
+        print(f"Error in handle_manual_translation: {e}")
+        clear_state(chat_id)
+        bot.send_message(chat_id, "❌ Помилка при збереженні перекладу.", 
+                       reply_markup=main_menu_keyboard(chat_id))
+
+# Fix for Learn New Words command
+@bot.message_handler(func=lambda message: message.text == "📖 Вчити нові слова")
+def learn_words(message):
+    """Start learning new words activity"""
+    chat_id = message.chat.id
+    dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
+    level = user_state.get(chat_id, {}).get("level", "easy")
+    shared_dict_id = user_state.get(chat_id, {}).get("shared_dict_id", None)
+    
+    # Setup user state
+    state_data = {"dict_type": dict_type, "level": level}
+    if shared_dict_id:
+        state_data["shared_dict_id"] = shared_dict_id
+    
+    # Update or create user state
+    if chat_id in user_state:
+        user_state[chat_id].update(state_data)
+    else:
+        user_state[chat_id] = state_data
+    
+    # Start the learning activity
+    start_activity(chat_id, 'learn')
+
+# Fix for Repeat command
+@bot.message_handler(func=lambda message: message.text == "🔄 Повторити")
+def repeat_words(message):
+    """Start repetition activity"""
+    chat_id = message.chat.id
+    dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
+    level = user_state.get(chat_id, {}).get("level", "easy")
+    shared_dict_id = user_state.get(chat_id, {}).get("shared_dict_id", None)
+    
+    # Setup user state
+    state_data = {"dict_type": dict_type, "level": level}
+    if shared_dict_id:
+        state_data["shared_dict_id"] = shared_dict_id
+    
+    # Update or create user state
+    if chat_id in user_state:
+        user_state[chat_id].update(state_data)
+    else:
+        user_state[chat_id] = state_data
+    
+    # Start the repetition activity
+    start_activity(chat_id, 'repeat')
+
+# Fix for Learn Articles command
+@bot.message_handler(func=lambda message: message.text == "🏷️ Вивчати артиклі")
+def learn_articles(message):
+    """Start learning articles activity"""
+    chat_id = message.chat.id
+    dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
+    shared_dict_id = user_state.get(chat_id, {}).get("shared_dict_id", None)
+    
+    # Setup user state
+    state_data = {"dict_type": dict_type, "level": "easy"}
+    if shared_dict_id:
+        state_data["shared_dict_id"] = shared_dict_id
+    
+    # Update or create user state
+    if chat_id in user_state:
+        user_state[chat_id].update(state_data)
+    else:
+        user_state[chat_id] = state_data
+    
+    # Start the article learning activity
+    start_article_activity(chat_id)
