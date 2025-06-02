@@ -76,6 +76,19 @@ def start_article_activity(chat_id):
         
         language = db_manager.get_user_language(chat_id) or "uk"
         
+        # Якщо тип словника "shared", але shared_dict_id не вказано, спробуємо отримати його з бази даних
+        if dict_type == "shared" and not shared_dict_id:
+            cursor.execute("SELECT shared_dict_id FROM users WHERE chat_id = ?", (chat_id,))
+            result = cursor.fetchone()
+            if result and result[0]:
+                shared_dict_id = result[0]
+                print(f"Retrieved shared_dict_id={shared_dict_id} for user {chat_id}")
+            else:
+                bot.send_message(chat_id, "❌ Помилка: не вибрано спільний словник. Спершу виберіть словник.")
+                return_to_appropriate_menu(chat_id, False, "Не вибрано спільний словник")
+                conn.close()
+                return False
+        
         # Отримуємо всі слова з артиклями, виключаючи артикль з ID=4 (порожній) 
         # і останнє показане слово
         results = None
@@ -161,12 +174,24 @@ def start_article_activity(chat_id):
         # Вибираємо випадкове слово з результатів
         import random
         result = random.choice(results)
+        print(f"Debug: Selected result: {result}")
         
-        # Отримуємо дані зі слова
+        # Отримуємо дані зі слова, враховуючи, що результат може мати різну кількість полів
         if dict_type == "personal":
-            word_id, word, correct_article, article_id, translation, _ = result
+            # Для персонального словника результат містить 6 полів (включно з рейтингом)
+            if len(result) >= 6:
+                word_id, word, correct_article, article_id, translation, _ = result
+            else:
+                # Захист від помилок, якщо запит повернув менше полів
+                word_id, word, correct_article, article_id, translation = result[:5]
         else:
-            word_id, word, correct_article, article_id, translation = result
+            # Для спільного або загального словника результат містить 5 полів
+            if len(result) >= 5:
+                word_id, word, correct_article, article_id, translation = result[:5]
+            else:
+                # Захист від помилок
+                print(f"Warning: Unexpected result format: {result}")
+                raise ValueError(f"Unexpected result format: got {len(result)} values, expected at least 5")
         
         # Зберігаємо ID слова, щоб не повторювати його наступного разу
         user_state[chat_id] = {
@@ -206,6 +231,63 @@ def start_article_activity(chat_id):
         traceback.print_exc()
         bot.send_message(chat_id, "❌ Помилка при запуску активності вивчення артиклів.")
         return False
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith(('art_der_', 'art_die_', 'art_das_')))
+def handle_article_selection(call):
+    """Handle article selection"""
+    chat_id = call.message.chat.id
+    
+    if chat_id not in user_state or "correct_article" not in user_state[chat_id]:
+        bot.answer_callback_query(call.id, "❗ Спочатку оберіть розділ 'Вивчати артиклі'")
+        return
+    
+    # Отримуємо обраний артикль та ID слова
+    selected_article = None
+    if call.data.startswith('art_der_'):
+        selected_article = 'der'
+    elif call.data.startswith('art_die_'):
+        selected_article = 'die'
+    elif call.data.startswith('art_das_'):
+        selected_article = 'das'
+    
+    correct_article = user_state[chat_id]["correct_article"]
+    word = user_state[chat_id]["word"]
+    word_id = user_state[chat_id]["word_id"]
+    
+    # Перевіряємо правильність вибору
+    is_correct = selected_article == correct_article
+    
+    # Оновлюємо рейтинг слова в залежності від типу словника
+    dict_type = user_state[chat_id].get("dict_type", "personal")
+    if dict_type == "shared":
+        import db_manager
+        shared_dict_id = user_state[chat_id].get("shared_dict_id")
+        db_manager.update_word_rating_shared_dict(chat_id, word_id, -0.1 if is_correct else 0.1, shared_dict_id)
+    elif dict_type == "personal":
+        import db_manager
+        db_manager.update_word_rating(chat_id, word_id, -0.1 if is_correct else 0.1)
+    
+    # Показуємо користувачу результат
+    if is_correct:
+        bot.answer_callback_query(call.id, "✅ Правильно!")
+        bot.edit_message_text(
+            f"✅ Правильно! Слово <b>{word}</b> має артикль <b>{correct_article}</b>.",
+            chat_id=chat_id,
+            message_id=call.message.message_id,
+            parse_mode="HTML"
+        )
+    else:
+        bot.answer_callback_query(call.id, f"❌ Неправильно! Правильний артикль: {correct_article}")
+        bot.edit_message_text(
+            f"❌ Неправильно! Слово <b>{word}</b> має артикль <b>{correct_article}</b>, а не {selected_article}.",
+            chat_id=chat_id,
+            message_id=call.message.message_id,
+            parse_mode="HTML"
+        )
+    
+    # Переходимо до наступного слова через 2 секунди
+    import threading
+    threading.Timer(2, lambda: start_article_activity(chat_id)).start()
 
 # Command handlers
 @bot.message_handler(commands=["start"])
