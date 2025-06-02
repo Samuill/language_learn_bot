@@ -211,51 +211,55 @@ def set_dictionary_type(chat_id, dict_type):
     conn = db_manager.get_connection()
     cursor = conn.cursor()
     
-    # Інформуємо користувача про зміну
-    if dict_type == "personal":
-        # При переході на персональний словник очищаємо shared_dict_id в БД
-        cursor.execute("UPDATE users SET shared_dict_id = NULL WHERE chat_id = ?", (chat_id,))
-        conn.commit()
-        
-        message = f"📚 Обрано персональний словник."
-        bot.send_message(chat_id, message, reply_markup=main_menu_keyboard(chat_id))
-    elif dict_type == "common":
-        # Для загального словника також очищаємо shared_dict_id в БД
-        cursor.execute("UPDATE users SET shared_dict_id = NULL WHERE chat_id = ?", (chat_id,))
-        conn.commit()
-        
-        message = f"📚 Обрано загальний словник."
-        if chat_id != ADMIN_ID:
-            message += "\n⚠️ У загальному словнику ви можете тільки вчити та повторювати слова."
-        bot.send_message(chat_id, message, reply_markup=main_menu_keyboard(chat_id))
-    elif dict_type == "shared":
-        # Для спільного словника перевіряємо наявність активного словника
-        cursor.execute("SELECT shared_dict_id FROM users WHERE chat_id = ?", (chat_id,))
-        result = cursor.fetchone()
-        
-        if result and result[0]:
-            # Користувач вже має вибраний спільний словник
-            shared_dict_id = result[0]
-            user_state[chat_id]["shared_dict_id"] = shared_dict_id
+    try:
+        # Інформуємо користувача про зміну
+        if dict_type == "personal":
+            # При переході на персональний словник очищаємо shared_dict_id в БД
+            cursor.execute("UPDATE users SET shared_dict_id = NULL WHERE chat_id = ?", (chat_id,))
+            conn.commit()
             
-            # Отримуємо назву словника
-            cursor.execute("SELECT name FROM shared_dictionaries WHERE id = ?", (shared_dict_id,))
-            dict_name = cursor.fetchone()[0]
+            message = f"📚 Обрано персональний словник."
+            bot.send_message(chat_id, message, reply_markup=main_menu_keyboard(chat_id))
+        elif dict_type == "common":
+            # Для загального словника також очищаємо shared_dict_id в БД
+            cursor.execute("UPDATE users SET shared_dict_id = NULL WHERE chat_id = ?", (chat_id,))
+            conn.commit()
             
-            # Показуємо меню з вибраним словником
-            bot.send_message(
-                chat_id,
-                f"📚 Обрано спільний словник: <b>{dict_name}</b>",
-                parse_mode="HTML",
-                reply_markup=main_menu_keyboard(chat_id)
-            )
-        else:
-            # Користувач ще не вибрав спільний словник
-            from utils import shared_dictionary_keyboard
-            bot.send_message(chat_id, "👥 Спільні словники - оберіть опцію:",
-                        reply_markup=shared_dictionary_keyboard())
-    
-    conn.close()
+            message = f"📚 Обрано загальний словник."
+            if chat_id != ADMIN_ID:
+                message += "\n⚠️ У загальному словнику ви можете тільки вчити та повторювати слова."
+            bot.send_message(chat_id, message, reply_markup=main_menu_keyboard(chat_id))
+        elif dict_type == "shared":
+            # Для спільного словника перевіряємо наявність активного словника
+            cursor.execute("SELECT shared_dict_id FROM users WHERE chat_id = ?", (chat_id,))
+            result = cursor.fetchone()
+            
+            if result and result[0]:
+                # Користувач вже має вибраний спільний словник
+                shared_dict_id = result[0]
+                user_state[chat_id]["shared_dict_id"] = shared_dict_id
+                
+                # Отримуємо назву словника
+                cursor.execute("SELECT name FROM shared_dictionaries WHERE id = ?", (shared_dict_id,))
+                dict_name = cursor.fetchone()[0]
+                
+                # Показуємо меню з вибраним словником
+                bot.send_message(
+                    chat_id,
+                    f"📚 Обрано спільний словник: <b>{dict_name}</b>",
+                    parse_mode="HTML",
+                    reply_markup=main_menu_keyboard(chat_id)
+                )
+            else:
+                # Користувач ще не вибрав спільний словник
+                from utils import shared_dictionary_keyboard
+                bot.send_message(chat_id, "👥 Спільні словники - оберіть опцію:",
+                            reply_markup=shared_dictionary_keyboard())
+    except Exception as e:
+        print(f"Error in set_dictionary_type: {e}")
+    finally:
+        conn.close()
+        
     return dict_type
 
 # Залишаємо toggle_dictionary для зворотної сумісності

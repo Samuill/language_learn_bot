@@ -18,3 +18,4 @@
 [2025-06-02 04:57:39.104] ERROR: local variable 'db_manager' referenced before assignment | Context: Critical error in main loop
 [2025-06-02 05:02:18.886] ERROR: local variable 'db_manager' referenced before assignment | Context: Critical error in main loop
 [2025-06-02 05:37:11.010] ERROR: HTTPSConnectionPool(host='api.telegram.org', port=443): Read timed out. (read timeout=25) | Context: Critical error in main loop
+[2025-06-02 05:58:39.905] ERROR: database is locked | Context: Critical error in main loop

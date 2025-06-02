@@ -79,7 +79,7 @@ def main_menu_keyboard(chat_id=None):
     """Create main menu keyboard with dictionary selection"""
     keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
     
-    # Визначаємо, який словник активний
+    # Add dictionary selector button
     dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
     shared_dict_id = user_state.get(chat_id, {}).get("shared_dict_id", None)
     
@@ -127,7 +127,7 @@ def easy_level_keyboard():
 def main_menu_cancel():
     """Create cancel menu keyboard"""
     keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
-    keyboard.add("Відміна")
+    keyboard.add("✖️ Відміна")  # Додаємо хрестик для візуального виділення
     return keyboard
 
 def language_selection_keyboard():
