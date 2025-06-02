@@ -64,5 +64,195 @@ def start_repetition(chat_id, df):
 
 def start_article_activity(chat_id):
     """Start learning articles activity"""
-    # ... existing code ...
-    # Перенесіть сюди весь код функції start_article_activity з handlers.py
+    # Спочатку завжди перевіряємо поточний тип словника в стані користувача
+    dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
+    shared_dict_id = user_state.get(chat_id, {}).get("shared_dict_id", None)
+    
+    print(f"Debug: Starting article activity for user {chat_id} with dict_type={dict_type}, shared_dict_id={shared_dict_id}")
+    
+    # Для спільного словника, перевіряємо, чи є ID словника в БД, якщо немає в стані
+    if dict_type == "shared" and not shared_dict_id:
+        try:
+            import db_manager
+            conn = db_manager.get_connection()
+            cursor = conn.cursor()
+            cursor.execute("SELECT shared_dict_id FROM users WHERE chat_id = ?", (chat_id,))
+            result = cursor.fetchone()
+            conn.close()
+            
+            if result and result[0]:
+                shared_dict_id = result[0]
+                # Оновлюємо стан користувача
+                if chat_id in user_state:
+                    user_state[chat_id]["shared_dict_id"] = shared_dict_id
+                print(f"Retrieved shared_dict_id={shared_dict_id} from database for user {chat_id}")
+            else:
+                # Якщо немає активного спільного словника, перемикаємо на персональний
+                dict_type = "personal"
+                if chat_id in user_state:
+                    user_state[chat_id]["dict_type"] = "personal"
+                print(f"No active shared dictionary found, switching to personal dictionary")
+        except Exception as e:
+            print(f"Error retrieving shared_dict_id: {e}")
+            dict_type = "personal"  # Перемикаємо на персональний в разі помилки
+            if chat_id in user_state:
+                user_state[chat_id]["dict_type"] = "personal"
+    
+    try:
+        # Отримуємо останнє слово, яке було показано, щоб не повторювати його
+        last_word_id = user_state.get(chat_id, {}).get("last_article_word_id", None)
+        
+        import db_manager
+        conn = db_manager.get_connection()
+        cursor = conn.cursor()
+        
+        language = db_manager.get_user_language(chat_id) or "uk"
+        
+        # Отримуємо всі слова з артиклями, виключаючи артикль з ID=4 (порожній) 
+        # і останнє показане слово
+        results = None
+        
+        if dict_type == "shared" and shared_dict_id:
+            # Для спільного словника використовуємо відповідний запит
+            exclude_condition = f"AND w.id != {last_word_id}" if last_word_id else ""
+            query = f"""
+            SELECT w.id, w.word, a.article, a.id as article_id, w.{language}_tran as translation
+            FROM shared_dict_{shared_dict_id} sd
+            JOIN words w ON sd.word_id = w.id
+            JOIN article a ON w.article_id = a.id
+            WHERE w.article_id != 4 AND w.article_id IS NOT NULL
+            {exclude_condition}
+            ORDER BY RANDOM()
+            LIMIT 20
+            """
+            cursor.execute(query)
+            results = cursor.fetchall()
+            
+            if not results:
+                # Якщо не знайдено слів з виключенням, спробуємо без нього
+                query = f"""
+                SELECT w.id, w.word, a.article, a.id as article_id, w.{language}_tran as translation
+                FROM shared_dict_{shared_dict_id} sd
+                JOIN words w ON sd.word_id = w.id
+                JOIN article a ON w.article_id = a.id
+                WHERE w.article_id != 4 AND w.article_id IS NOT NULL
+                ORDER BY RANDOM()
+                LIMIT 20
+                """
+                cursor.execute(query)
+                results = cursor.fetchall()
+            
+        elif dict_type == "common":
+            # Для загального словника
+            exclude_condition = f"AND w.id != {last_word_id}" if last_word_id else ""
+            query = f"""
+            SELECT w.id, w.word, a.article, a.id as article_id, w.{language}_tran as translation
+            FROM words w
+            JOIN article a ON w.article_id = a.id
+            WHERE w.article_id != 4 AND w.article_id IS NOT NULL
+            {exclude_condition}
+            ORDER BY RANDOM()
+            LIMIT 20
+            """
+            cursor.execute(query)
+            results = cursor.fetchall()
+            
+            if not results:
+                query = query.replace(exclude_condition, "")
+                cursor.execute(query)
+                results = cursor.fetchall()
+        
+        else:
+            # Переконуємось, що dict_type встановлено як "personal" для особистого словника
+            dict_type = "personal"
+            if chat_id in user_state:
+                user_state[chat_id]["dict_type"] = "personal"
+                
+            # Для персонального словника
+            exclude_condition = f"AND w.id != {last_word_id}" if last_word_id else ""
+            query = f"""
+            SELECT w.id, w.word, a.article, a.id as article_id, w.{language}_tran as translation, u.rating
+            FROM user_{chat_id} u
+            JOIN words w ON u.word_id = w.id
+            JOIN article a ON w.article_id = a.id
+            WHERE w.article_id != 4 AND w.article_id IS NOT NULL
+            {exclude_condition}
+            ORDER BY u.rating ASC
+            LIMIT 15
+            """
+            cursor.execute(query)
+            results = cursor.fetchall()
+            
+            if not results:
+                query = query.replace(exclude_condition, "")
+                cursor.execute(query)
+                results = cursor.fetchall()
+        
+        conn.close()
+        
+        if not results:
+            from dictionary import return_to_appropriate_menu
+            bot.send_message(chat_id, "📭 У словнику немає слів з артиклями для вивчення.")
+            return_to_appropriate_menu(chat_id, False, "У словнику немає слів з артиклями для вивчення.")
+            return False
+            
+        # Вибираємо випадкове слово з результатів
+        import random
+        result = random.choice(results)
+        print(f"Debug: Selected result: {result}")
+        
+        # Отримуємо дані зі слова, враховуючи, що результат може мати різну кількість полів
+        if dict_type == "personal":
+            # Для персонального словника результат містить 6 полів (включно з рейтингом)
+            if len(result) >= 6:
+                word_id, word, correct_article, article_id, translation, _ = result
+            else:
+                # Захист від помилок, якщо запит повернув менше полів
+                word_id, word, correct_article, article_id, translation = result[:5]
+        else:
+            # Для спільного або загального словника результат містить 5 полів
+            if len(result) >= 5:
+                word_id, word, correct_article, article_id, translation = result[:5]
+            else:
+                # Захист від помилок
+                print(f"Warning: Unexpected result format: {result}")
+                raise ValueError(f"Unexpected result format: got {len(result)} values, expected at least 5")
+        
+        # Зберігаємо ID слова, щоб не повторювати його наступного разу
+        user_state[chat_id] = {
+            "word_id": word_id,
+            "word": word,
+            "correct_article": correct_article,
+            "dict_type": dict_type,
+            "level": "easy",
+            "translation": translation,
+            "last_article_word_id": word_id  # Зберігаємо для наступного запуску
+        }
+        
+        if shared_dict_id:
+            user_state[chat_id]["shared_dict_id"] = shared_dict_id
+            
+        # Створюємо інлайн клавіатуру з артиклями
+        markup = telebot.types.InlineKeyboardMarkup(row_width=3)
+        markup.add(
+            telebot.types.InlineKeyboardButton("der", callback_data=f"art_der_{word_id}"),
+            telebot.types.InlineKeyboardButton("die", callback_data=f"art_die_{word_id}"),
+            telebot.types.InlineKeyboardButton("das", callback_data=f"art_das_{word_id}")
+        )
+        
+        sent_message = bot.send_message(
+            chat_id,
+            f"🏷️ Виберіть правильний артикль для слова:\n\n<b>{word}</b>\n\n<i>Переклад: {translation}</i>",
+            reply_markup=markup,
+            parse_mode="HTML"
+        )
+        
+        user_state[chat_id]["message_id"] = sent_message.message_id
+        return True
+        
+    except Exception as e:
+        print(f"Error in start_article_activity: {e}")
+        import traceback
+        traceback.print_exc()
+        bot.send_message(chat_id, "❌ Помилка при запуску активності вивчення артиклів.")
+        return False
