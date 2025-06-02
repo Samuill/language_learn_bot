@@ -124,9 +124,10 @@ def start_repetition(chat_id, df):
         
         markup = telebot.types.InlineKeyboardMarkup()
         for tr in translations:
+            # Спрощуємо формат callback_data щоб уникнути проблем з символами у перекладі
             markup.add(telebot.types.InlineKeyboardButton(
                 tr, 
-                callback_data=f"ans_{word['word']}_{tr}"
+                callback_data=f"ans_{word['id']}_{translations.index(tr)}"
             ))
         
         sent_message = bot.send_message(chat_id, f"📖 Оберіть переклад для слова: {display_word}", reply_markup=markup)
@@ -134,13 +135,97 @@ def start_repetition(chat_id, df):
             "current_word": word,
             "message_id": sent_message.message_id,
             "dict_type": dict_type,
-            "level": level
+            "level": level,
+            "translations": translations  # Зберігаємо переклади окремо для перевірки
         }
         return True
     except Exception as e:
         print(f"Error in start_repetition: {e}")
         bot.send_message(chat_id, "❌ Помилка при запуску повторення.")
         return False
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("ans_"))
+def handle_answer(call):
+    chat_id = call.message.chat.id
+    if chat_id not in user_state or "current_word" not in user_state[chat_id]:
+        bot.answer_callback_query(call.id, "❗ Спочатку оберіть розділ 'Повторити'")
+        return
+    
+    try:
+        # Отримуємо дані з колбеку (формат: ans_id_index)
+        parts = call.data.split('_')
+        if len(parts) < 3:
+            bot.answer_callback_query(call.id, "❌ Помилка в даних відповіді")
+            return
+            
+        word_id = int(parts[1])
+        translation_index = int(parts[2])
+        
+        # Отримуємо інформацію зі стану користувача
+        state = user_state[chat_id]
+        current_word = state["current_word"]
+        translations = state.get("translations", [])
+        
+        # Перевіряємо, чи ID слова співпадає
+        if current_word['id'] != word_id:
+            bot.answer_callback_query(call.id, "❌ Невідповідність ID слова")
+            return
+            
+        # Отримуємо вибраний переклад зі збереженого списку
+        if translation_index < 0 or translation_index >= len(translations):
+            bot.answer_callback_query(call.id, "❌ Помилка індексу перекладу")
+            return
+            
+        selected_tr = translations[translation_index]
+        correct_tr = current_word['translation']
+        
+        # Перевіряємо правильність відповіді
+        dict_type = state.get("dict_type", "personal")
+        is_correct = (selected_tr == correct_tr)
+        
+        if is_correct:
+            bot.answer_callback_query(call.id, "✅ Правильно!")
+            
+            # Оновлюємо рейтинг
+            try:
+                import db_manager
+                if dict_type == "personal":
+                    db_manager.update_word_rating(chat_id, current_word['id'], 0.1, dict_type)
+                elif dict_type == "shared":
+                    shared_dict_id = state.get("shared_dict_id")
+                    db_manager.update_word_rating_shared_dict(chat_id, current_word['id'], 0.1, shared_dict_id)
+            except Exception as e:
+                print(f"Error updating rating: {e}")
+            
+            # Видаляємо повідомлення і запускаємо нове завдання
+            bot.delete_message(chat_id, call.message.message_id)
+            start_repetition(chat_id, state.get("original_df", pd.DataFrame()))
+        else:
+            bot.answer_callback_query(call.id, f"❌ Неправильно! Правильно: {correct_tr}")
+            
+            # Оновлюємо рейтинг
+            try:
+                import db_manager
+                if dict_type == "personal":
+                    db_manager.update_word_rating(chat_id, current_word['id'], -0.1, dict_type)
+                elif dict_type == "shared":
+                    shared_dict_id = state.get("shared_dict_id")
+                    db_manager.update_word_rating_shared_dict(chat_id, current_word['id'], -0.1, shared_dict_id)
+            except Exception as e:
+                print(f"Error updating rating: {e}")
+            
+            # Оновлюємо відмічаємо неправильний варіант
+            markup = call.message.reply_markup
+            for row in markup.keyboard:
+                if row[0].callback_data == call.data:
+                    row[0].text += " ❌"
+            bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=markup)
+    
+    except Exception as e:
+        print(f"Error in handle_answer: {e}")
+        import traceback
+        traceback.print_exc()
+        bot.answer_callback_query(call.id, "❌ Помилка обробки відповіді")
 
 def start_article_activity(chat_id):
     """Start learning articles activity"""
@@ -966,7 +1051,7 @@ def repeat_words(message):
         user_state[chat_id] = state_data
     
     # Start the repetition activity
-    start_activity(chat_id, 'repeat')
+    start_repetition(chat_id, get_dataframe(chat_id))
 
 # Fix for Learn Articles command
 @bot.message_handler(func=lambda message: message.text == "🏷️ Вивчати артиклі")

@@ -118,6 +118,8 @@ def start_activity(chat_id, mode):
     
     # Якщо це спільний словник, завжди отримуємо shared_dict_id з бази даних
     if dict_type == "shared":
+        # Не створюємо нову змінну db_manager в цій області видимості
+        # використовуємо імпортований модуль
         conn = db_manager.get_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT shared_dict_id FROM users WHERE chat_id = ?", (chat_id,))
@@ -130,14 +132,10 @@ def start_activity(chat_id, mode):
             print(f"Debug: Retrieved shared_dict_id={shared_dict_id} from database for user {chat_id}")
         else:
             print(f"Warning: User {chat_id} has dict_type 'shared' but no shared_dict_id in database")
-    elif shared_dict_id:  # Тепер ця змінна вже визначена
-        # Якщо не спільний словник, але shared_dict_id вказано, зберігаємо його
+    elif shared_dict_id:
         user_state[chat_id]["shared_dict_id"] = shared_dict_id
     
     try:
-        # Використовуємо ВИКЛЮЧНО SQLite для отримання слів
-        
-        
         # Оновлюємо streak користувача
         streak = db_manager.update_user_streak(chat_id)
         print(f"User {chat_id} streak updated: {streak}")
@@ -145,7 +143,8 @@ def start_activity(chat_id, mode):
         # Отримуємо слова для користувача з урахуванням типу словника
         df = None
         if dict_type == "shared" and shared_dict_id:
-            # Для спільного словника викликаємо спеціальну функцію
+            # Для спільного словника викликаємо спеціальну функцію з явним параметром
+            print(f"Getting shared dictionary words with ID={shared_dict_id}")
             df = db_manager.get_shared_dictionary_words(chat_id, shared_dict_id)
             print(f"Got {len(df) if df is not None else 0} words from shared dictionary {shared_dict_id}")
         else:

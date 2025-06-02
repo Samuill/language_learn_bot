@@ -174,7 +174,6 @@ def add_word(chat_id, word, translation, dict_type="personal", article=None):
         return False
     
     # Перевіряємо, чи є в слові артикль
-
     article_match = re.match(r'^(der|die|das)\s+(.+)$', word, re.IGNORECASE)
     extracted_article = None
     if article_match:
@@ -216,17 +215,42 @@ def add_word(chat_id, word, translation, dict_type="personal", article=None):
                 # Додаємо інші слова в список дублікатів
                 duplicate_ids.append(word_id)
         
-        # Оновлюємо переклад для обраного слова і можливо артикль
-        if article_id != 4 and not best_has_article:
-            # Оновлюємо артикль для слова, якщо в нього не було артикля
-            cursor.execute(f'UPDATE words SET {language}_tran = ?, article_id = ? WHERE id = ?', 
-                         (translation, article_id, best_word_id))
-        else:
-            # Просто оновлюємо переклад, якщо артикль вже був або ми не надаємо нового
-            cursor.execute(f'UPDATE words SET {language}_tran = ? WHERE id = ?', 
-                         (translation, best_word_id))
-        
         word_id = best_word_id
+        
+        # Перевіряємо, чи є переклад для поточної мови користувача
+        cursor.execute(f'SELECT {language}_tran FROM words WHERE id = ?', (word_id,))
+        current_translation = cursor.fetchone()[0]
+        
+        if not current_translation:
+            # Якщо немає перекладу для поточної мови користувача,
+            # але слово існує, спробуємо отримати переклад з іншої мови
+            other_language = "ru" if language == "uk" else "uk"
+            cursor.execute(f'SELECT {other_language}_tran FROM words WHERE id = ?', (word_id,))
+            other_translation = cursor.fetchone()[0]
+            
+            if other_translation:
+                # Якщо є переклад на іншу мову, використовуємо перекладач
+                try:
+                    from config import translator
+                    auto_translation = translator.translate(
+                        other_translation, 
+                        src=other_language, 
+                        dest=language
+                    ).text
+                    print(f"Auto-translated '{other_translation}' ({other_language}) to '{auto_translation}' ({language})")
+                    translation = auto_translation
+                except Exception as e:
+                    print(f"Error auto-translating: {e}")
+        
+        # Оновлюємо переклад та артикль для обраного слова
+        if article_id != 4 and not best_has_article:
+            # Оновлюємо артикль і переклад
+            cursor.execute(f'UPDATE words SET {language}_tran = ?, article_id = ? WHERE id = ?', 
+                         (translation, article_id, word_id))
+        else:
+            # Просто оновлюємо переклад
+            cursor.execute(f'UPDATE words SET {language}_tran = ? WHERE id = ?', 
+                         (translation, word_id))
         
         # Обробка дублікатів
         if duplicate_ids:
@@ -559,48 +583,55 @@ def get_user_shared_dictionaries(chat_id):
     for table in tables:
         try:
             # Витягуємо ID зі назви таблиці
-            dict_id = int(table.replace('shared_dict_', ''))
-            
-            # Перевіряємо, чи словник вже доданий
-            if any(d['id'] == dict_id for d in shared_dicts):
-                continue
+            # Виправлено тут - перевіряємо, що назва таблиці починається з префіксу і вилучаємо ID
+            if table.startswith('shared_dict_'):
+                try:
+                    dict_id = int(table.replace('shared_dict_', ''))
+                except ValueError:
+                    # Це не таблиця спільного словника з ID
+                    print(f"Skipping table {table}: invalid ID format")
+                    continue
                 
-            # Отримуємо інформацію про цей словник
-            cursor.execute('SELECT name, code FROM shared_dictionaries WHERE id = ?', (dict_id,))
-            dict_info = cursor.fetchone()
-            
-            if not dict_info:
-                continue
+                # Перевіряємо, чи словник вже доданий
+                if any(d['id'] == dict_id for d in shared_dicts):
+                    continue
                 
-            name, code = dict_info
-            
-            # Перевіряємо, чи є колонка user_{chat_id} в цій таблиці
-            cursor.execute(f"PRAGMA table_info({table})")
-            columns = [col[1] for col in cursor.fetchall()]
-            user_col = f"user_{chat_id}"
-            
-            # Або перевіряємо, чи є слова додані цим користувачем
-            has_words = False
-            if user_col in columns:
-                has_words = True
-            
-            # Також перевіряємо, чи є записи в таблиці для цього користувача
-            cursor.execute(f"SELECT EXISTS (SELECT 1 FROM {table} LIMIT 1)")
-            table_has_data = cursor.fetchone()[0]
-            
-            # Якщо є дані і користувач має доступ
-            if table_has_data and has_words:
-                # Перевіряємо статус адміністратора
-                cursor.execute('SELECT shared_dict_admin FROM users WHERE chat_id = ?', (chat_id,))
-                is_admin_result = cursor.fetchone()
-                is_admin = bool(is_admin_result and is_admin_result[0])
+                # Отримуємо інформацію про цей словник
+                cursor.execute('SELECT name, code FROM shared_dictionaries WHERE id = ?', (dict_id,))
+                dict_info = cursor.fetchone()
                 
-                shared_dicts.append({
-                    'id': dict_id,
-                    'name': name,
-                    'code': code,
-                    'is_admin': is_admin
-                })
+                if not dict_info:
+                    continue
+                    
+                name, code = dict_info
+                
+                # Перевіряємо, чи є колонка user_{chat_id} в цій таблиці
+                cursor.execute(f"PRAGMA table_info({table})")
+                columns = [col[1] for col in cursor.fetchall()]
+                user_col = f"user_{chat_id}"
+                
+                # Або перевіряємо, чи є слова додані цим користувачем
+                has_words = False
+                if user_col in columns:
+                    has_words = True
+                
+                # Також перевіряємо, чи є записи в таблиці для цього користувача
+                cursor.execute(f"SELECT EXISTS (SELECT 1 FROM {table} LIMIT 1)")
+                table_has_data = cursor.fetchone()[0]
+                
+                # Якщо є дані і користувач має доступ
+                if table_has_data and has_words:
+                    # Перевіряємо статус адміністратора
+                    cursor.execute('SELECT shared_dict_admin FROM users WHERE chat_id = ?', (chat_id,))
+                    is_admin_result = cursor.fetchone()
+                    is_admin = bool(is_admin_result and is_admin_result[0])
+                    
+                    shared_dicts.append({
+                        'id': dict_id,
+                        'name': name,
+                        'code': code,
+                        'is_admin': is_admin
+                    })
         except Exception as e:
             print(f"Error checking shared dict table {table}: {e}")
             continue
@@ -625,6 +656,7 @@ def get_shared_dictionary_words(chat_id, shared_dict_id=None):
     
     # Отримуємо мову користувача
     language = get_user_language(chat_id) or "uk"
+    other_language = "uk" if language == "ru" else "ru"
     
     # Перевіряємо, чи існує таблиця для цього словника
     cursor.execute(f"""
@@ -647,13 +679,13 @@ def get_shared_dictionary_words(chat_id, shared_dict_id=None):
         ''')
         conn.commit()
     
-    # Отримуємо слова зі спільного словника з рейтингами для цього користувача
+    # Отримуємо ВСІ слова зі спільного словника, навіть без перекладу поточною мовою
     query = f'''
-    SELECT w.id, w.word, w.{language}_tran as translation, a.article, sd.{user_col} as priority
+    SELECT w.id, w.word, w.{language}_tran as translation, w.{other_language}_tran as other_translation,
+           a.article, sd.{user_col} as priority
     FROM shared_dict_{shared_dict_id} sd
     JOIN words w ON sd.word_id = w.id
     LEFT JOIN article a ON w.article_id = a.id
-    WHERE w.{language}_tran IS NOT NULL
     ORDER BY sd.{user_col} ASC
     '''
     cursor.execute(query)
@@ -661,9 +693,49 @@ def get_shared_dictionary_words(chat_id, shared_dict_id=None):
     # Отримуємо результати
     results = cursor.fetchall()
     
-    # Convert results to DataFrame
-    columns = ['id', 'word', 'translation', 'article', 'priority']
+    # Convert results to DataFrame with all columns including other_translation
+    columns = ['id', 'word', 'translation', 'other_translation', 'article', 'priority']
     df = pd.DataFrame(results, columns=columns)
+    
+    # Для слів, які не мають перекладу на мову користувача, але мають на іншу мову,
+    # автоматично перекладаємо і зберігаємо в базу даних
+    words_to_translate = df[df['translation'].isnull() & df['other_translation'].notnull()]
+    if not words_to_translate.empty:
+        print(f"Found {len(words_to_translate)} words without {language} translation. Auto-translating...")
+        
+        try:
+            from config import translator
+            for index, row in words_to_translate.iterrows():
+                try:
+                    # Використовуємо переклад з іншої мови як основу
+                    source_text = row['other_translation']
+                    source_lang = other_language
+                    auto_translation = translator.translate(source_text, src=source_lang, dest=language).text
+                    
+                    # Оновлюємо базу даних
+                    cursor.execute(f'''
+                    UPDATE words SET {language}_tran = ? WHERE id = ?
+                    ''', (auto_translation, row['id']))
+                    
+                    # Оновлюємо DataFrame
+                    df.at[index, 'translation'] = auto_translation
+                    print(f"Auto-translated word ID {row['id']}: '{source_text}' -> '{auto_translation}'")
+                except Exception as e:
+                    print(f"Error translating word ID {row['id']}: {e}")
+            
+            # Зберігаємо зміни в базі даних
+            conn.commit()
+            
+        except ImportError:
+            print("Google translator not available for automatic translation")
+        except Exception as e:
+            print(f"Error during auto-translation: {e}")
+    
+    # Відфільтровуємо записи, які все ще не мають перекладу
+    df = df[df['translation'].notnull()]
+    
+    # Видаляємо колонку other_translation, яка вже не потрібна
+    df = df.drop(columns=['other_translation'])
     
     conn.close()
     
