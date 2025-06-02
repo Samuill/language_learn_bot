@@ -682,3 +682,86 @@ def use_shared_dictionary(call):
         parse_mode="HTML",
         reply_markup=main_menu_keyboard(chat_id)
     )
+
+@bot.message_handler(commands=["start"])
+def main_menu(message):
+    """Initial start command handler - simplified for reliability"""
+    chat_id = message.chat.id
+    clear_state(chat_id)
+    
+    # Використовуємо базу даних для перевірки мови користувача
+    import db_manager
+    language = db_manager.get_user_language(chat_id)
+    
+    track_activity(chat_id)
+    
+    if not language:
+        bot.send_message(chat_id, "🌍 Виберіть мову, на якій бажаєте отримувати переклад слів:", 
+                         reply_markup=language_selection_keyboard())
+        user_state[chat_id] = {"step": "language_selection"}
+    else:
+        bot.send_message(chat_id, "Оберіть дію:", 
+                         reply_markup=main_menu_keyboard(chat_id))
+
+# Simplify level selection handlers to ensure they work reliably
+@bot.message_handler(func=lambda message: message.text == "🟢 Легкий рівень")
+def easy_level(message):
+    """Show easy level menu with learning activities"""
+    chat_id = message.chat.id
+    dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
+    
+    # Update user state
+    if chat_id in user_state:
+        user_state[chat_id]["level"] = "easy"
+    else:
+        user_state[chat_id] = {"dict_type": dict_type, "level": "easy"}
+    
+    from utils import easy_level_keyboard
+    bot.send_message(chat_id, "🟢 Легкий рівень - оберіть активність:", 
+                   reply_markup=easy_level_keyboard())
+
+@bot.message_handler(func=lambda message: message.text == "🟠 Середній рівень")
+def medium_level(message):
+    """Show medium level menu (placeholder)"""
+    chat_id = message.chat.id
+    dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
+    
+    # Update user state
+    if chat_id in user_state:
+        user_state[chat_id]["level"] = "medium"
+    else:
+        user_state[chat_id] = {"dict_type": dict_type, "level": "medium"}
+    
+    # Show "under development" message
+    bot.send_message(chat_id, "🟠 Середній рівень у розробці. Будь ласка, оберіть інший рівень.", 
+                   reply_markup=main_menu_keyboard(chat_id))
+
+@bot.message_handler(func=lambda message: message.text == "🔴 Складний рівень")
+def hard_level(message):
+    """Show hard level menu (placeholder)"""
+    chat_id = message.chat.id
+    dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
+    
+    # Update user state
+    if chat_id in user_state:
+        user_state[chat_id]["level"] = "hard"
+    else:
+        user_state[chat_id] = {"dict_type": dict_type, "level": "hard"}
+    
+    # Show "under development" message
+    bot.send_message(chat_id, "🔴 Складний рівень у розробці. Будь ласка, оберіть інший рівень.", 
+                   reply_markup=main_menu_keyboard(chat_id))
+
+@bot.message_handler(func=lambda message: message.text == "↩️ Повернутися до головного меню")
+def return_to_main_menu(message):
+    """Return to main menu"""
+    chat_id = message.chat.id
+    dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
+    
+    # Preserve dictionary type but remove level information
+    if chat_id in user_state:
+        user_state[chat_id] = {"dict_type": dict_type}
+    
+    # Send main menu
+    bot.send_message(chat_id, "Головне меню:", 
+                   reply_markup=main_menu_keyboard(chat_id))
