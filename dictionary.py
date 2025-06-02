@@ -114,6 +114,24 @@ def start_activity(chat_id, mode):
     # Відразу встановлюємо поточний тип словника і рівень після очищення
     user_state[chat_id] = {"dict_type": dict_type, "level": level}
     
+    # Якщо це спільний словник, завжди отримуємо shared_dict_id з бази даних
+    if dict_type == "shared":
+        conn = db_manager.get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT shared_dict_id FROM users WHERE chat_id = ?", (chat_id,))
+        result = cursor.fetchone()
+        conn.close()
+        
+        if result and result[0]:
+            shared_dict_id = result[0]
+            user_state[chat_id]["shared_dict_id"] = shared_dict_id
+            print(f"Debug: Retrieved shared_dict_id={shared_dict_id} from database for user {chat_id}")
+        else:
+            print(f"Warning: User {chat_id} has dict_type 'shared' but no shared_dict_id in database")
+    elif shared_dict_id:
+        # Якщо не спільний словник, але shared_dict_id вказано, зберігаємо його
+        user_state[chat_id]["shared_dict_id"] = shared_dict_id
+    
     try:
         # Використовуємо ВИКЛЮЧНО SQLite для отримання слів
         import db_manager
@@ -122,18 +140,25 @@ def start_activity(chat_id, mode):
         streak = db_manager.update_user_streak(chat_id)
         print(f"User {chat_id} streak updated: {streak}")
         
-        # Отримуємо слова для користувача
-        df = db_manager.get_user_words(chat_id, dict_type)
+        # Отримуємо слова для користувача з урахуванням типу словника
+        df = None
+        if dict_type == "shared" and shared_dict_id:
+            # Для спільного словника викликаємо спеціальну функцію
+            df = db_manager.get_shared_dictionary_words(chat_id, shared_dict_id)
+            print(f"Got {len(df) if df is not None else 0} words from shared dictionary {shared_dict_id}")
+        else:
+            # Для персонального або загального словника використовуємо звичайний метод
+            df = db_manager.get_user_words(chat_id, dict_type)
         
         # Перевіряємо результат
-        if df.empty:
-            dict_name = "загальному словнику" if dict_type == "common" else "персональному словнику"
+        if df is None or df.empty:
+            dict_name = "спільному словнику" if dict_type == "shared" else "загальному словнику" if dict_type == "common" else "персональному словнику"
             bot.send_message(chat_id, f"📭 У {dict_name} ще немає доданих слів.")
             return False
             
         # Переконуємося, що всі необхідні колонки присутні
         if 'id' not in df.columns:
-            print(f"WARNING: DataFrame from db_manager.get_user_words lacks 'id' column!")
+            print(f"WARNING: DataFrame lacks 'id' column!")
             # Додаємо id колонку зі значеннями за замовчуванням
             df['id'] = range(1, len(df) + 1)
             
@@ -181,28 +206,68 @@ def set_dictionary_type(chat_id, dict_type):
     user_state[chat_id]["dict_type"] = dict_type
     print(f"Set dictionary type for {chat_id} to {dict_type}")
     
+    # Оновлюємо БД при зміні типу словника
+    conn = db_manager.get_connection()
+    cursor = conn.cursor()
+    
     # Інформуємо користувача про зміну
-    dict_name = "загальний" if dict_type == "common" else "персональний"
-    message = f"📚 Обрано {dict_name} словник."
-    
-    # Додаємо попередження для звичайних користувачів щодо загального словника
-    if dict_type == "common" and chat_id != ADMIN_ID:
-        message += "\n⚠️ У загальному словнику ви можете тільки вчити та повторювати слова."
-    
-    # Завжди надсилаємо повідомлення про вибір словника
-    try:
+    if dict_type == "personal":
+        # При переході на персональний словник очищаємо shared_dict_id в БД
+        cursor.execute("UPDATE users SET shared_dict_id = NULL WHERE chat_id = ?", (chat_id,))
+        conn.commit()
+        
+        message = f"📚 Обрано персональний словник."
         bot.send_message(chat_id, message, reply_markup=main_menu_keyboard(chat_id))
-    except Exception as e:
-        print(f"Error sending dictionary change message: {e}")
+    elif dict_type == "common":
+        # Для загального словника також очищаємо shared_dict_id в БД
+        cursor.execute("UPDATE users SET shared_dict_id = NULL WHERE chat_id = ?", (chat_id,))
+        conn.commit()
+        
+        message = f"📚 Обрано загальний словник."
+        if chat_id != ADMIN_ID:
+            message += "\n⚠️ У загальному словнику ви можете тільки вчити та повторювати слова."
+        bot.send_message(chat_id, message, reply_markup=main_menu_keyboard(chat_id))
+    elif dict_type == "shared":
+        # Для спільного словника перевіряємо наявність активного словника
+        cursor.execute("SELECT shared_dict_id FROM users WHERE chat_id = ?", (chat_id,))
+        result = cursor.fetchone()
+        
+        if result and result[0]:
+            # Користувач вже має вибраний спільний словник
+            shared_dict_id = result[0]
+            user_state[chat_id]["shared_dict_id"] = shared_dict_id
+            
+            # Отримуємо назву словника
+            cursor.execute("SELECT name FROM shared_dictionaries WHERE id = ?", (shared_dict_id,))
+            dict_name = cursor.fetchone()[0]
+            
+            # Показуємо меню з вибраним словником
+            bot.send_message(
+                chat_id,
+                f"📚 Обрано спільний словник: <b>{dict_name}</b>",
+                parse_mode="HTML",
+                reply_markup=main_menu_keyboard(chat_id)
+            )
+        else:
+            # Користувач ще не вибрав спільний словник
+            from utils import shared_dictionary_keyboard
+            bot.send_message(chat_id, "👥 Спільні словники - оберіть опцію:",
+                        reply_markup=shared_dictionary_keyboard())
     
+    conn.close()
     return dict_type
 
 # Залишаємо toggle_dictionary для зворотної сумісності
 def toggle_dictionary(chat_id):
-    """Toggle between personal and common dictionary"""
+    """Toggle between dictionaries"""
     if chat_id not in user_state:
         user_state[chat_id] = {}
     
     current = user_state[chat_id].get("dict_type", "personal")
-    new_type = "common" if current == "personal" else "personal"
+    
+    if current == "personal":
+        new_type = "common"
+    else:
+        new_type = "personal"
+    
     return set_dictionary_type(chat_id, new_type)
