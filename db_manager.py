@@ -433,6 +433,20 @@ def create_shared_dictionary_tables():
     )
     ''')
     
+    # Створюємо таблицю для зв'язку користувачів та словників
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS shared_dict_users (
+        id INTEGER PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        dict_id INTEGER NOT NULL,
+        is_admin INTEGER DEFAULT 0,
+        joined_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(chat_id),
+        FOREIGN KEY (dict_id) REFERENCES shared_dictionaries(id),
+        UNIQUE(user_id, dict_id)
+    )
+    ''')
+    
     # Додати колонку shared_dict_admin до таблиці users, якщо вона не існує
     cursor.execute("PRAGMA table_info(users)")
     columns = [col[1] for col in cursor.fetchall()]
@@ -470,6 +484,12 @@ def create_shared_dictionary(chat_id, name):
     cursor.execute('''
     UPDATE users SET shared_dict_admin = 1, shared_dict_id = ? WHERE chat_id = ?
     ''', (shared_dict_id, chat_id))
+    
+    # ВАЖЛИВО: Додаємо запис в таблицю зв'язків, чітко вказавши статус адміна
+    cursor.execute('''
+    INSERT OR REPLACE INTO shared_dict_users (user_id, dict_id, is_admin, joined_at)
+    VALUES (?, ?, 1, datetime('now'))
+    ''', (chat_id, shared_dict_id))
     
     # Створюємо таблицю для слів цього словника
     cursor.execute(f'''
@@ -511,6 +531,12 @@ def join_shared_dictionary(chat_id, code):
     cursor.execute('UPDATE users SET shared_dict_id = ? WHERE chat_id = ?', 
                  (shared_dict_id, chat_id))
     
+    # Додаємо запис про зв'язок користувача з словником
+    cursor.execute('''
+    INSERT OR IGNORE INTO shared_dict_users (user_id, dict_id, joined_at)
+    VALUES (?, ?, datetime('now'))
+    ''', (chat_id, shared_dict_id))
+    
     # Створюємо колонку для користувача в таблиці словника, якщо її ще немає
     cursor.execute(f"PRAGMA table_info(shared_dict_{shared_dict_id})")
     columns = [col[1] for col in cursor.fetchall()]
@@ -531,114 +557,61 @@ def get_user_shared_dictionaries(chat_id):
     conn = get_connection()
     cursor = conn.cursor()
     
-    # Спершу перевіряємо словники, де користувач є учасником або адміністратором
-    # Для цього використовуємо три підходи:
-    # 1. Словник є активним для користувача (shared_dict_id)
-    # 2. Користувач є адміністратором цього словника (shared_dict_admin = 1)
-    # 3. Користувач має колонку в таблиці спільного словника
-    
-    # Збираємо всі можливі словники з трьох підходів
-    shared_dicts = []
-    
-    # Підхід 1: активний словник
+    # Перевіряємо словники, створені користувачем (він точно адміністратор)
     cursor.execute('''
-    SELECT sd.id, sd.name, sd.code, u.shared_dict_admin 
-    FROM shared_dictionaries sd
-    JOIN users u ON sd.id = u.shared_dict_id
-    WHERE u.chat_id = ?
+    SELECT id, name, code 
+    FROM shared_dictionaries
+    WHERE created_by = ?
     ''', (chat_id,))
-    result = cursor.fetchone()
     
-    if result:
-        dict_id, name, code, is_admin = result
-        shared_dicts.append({
+    owned_dicts = []
+    for dict_id, name, code in cursor.fetchall():
+        owned_dicts.append({
             'id': dict_id,
             'name': name,
             'code': code,
-            'is_admin': bool(is_admin)
+            'is_admin': True  # Якщо створив, то 100% адміністратор
         })
     
-    # Підхід 2: користувач є адміністратором
+    # Додатково перевіряємо shared_dict_users для отримання словників, до яких користувач приєднався
     cursor.execute('''
-    SELECT sd.id, sd.name, sd.code
+    SELECT sd.id, sd.name, sd.code, sdu.is_admin
     FROM shared_dictionaries sd
-    JOIN users u ON sd.created_by = u.chat_id
-    WHERE u.chat_id = ? AND (u.shared_dict_admin = 1 OR sd.created_by = ?)
-    ''', (chat_id, chat_id))
+    JOIN shared_dict_users sdu ON sd.id = sdu.dict_id
+    WHERE sdu.user_id = ? AND sd.created_by != ?
+    ''', (chat_id, chat_id))  # Виключаємо ті, що вже додали як створені
     
-    for dict_id, name, code in cursor.fetchall():
-        # Перевіряємо, чи не додали вже цей словник
-        if not any(d['id'] == dict_id for d in shared_dicts):
-            shared_dicts.append({
+    for dict_id, name, code, is_admin in cursor.fetchall():
+        # Додаємо тільки якщо такого ID ще немає у списку
+        if not any(d['id'] == dict_id for d in owned_dicts):
+            owned_dicts.append({
                 'id': dict_id,
                 'name': name,
                 'code': code,
-                'is_admin': True  # Якщо користувач творець, він адміністратор
+                'is_admin': bool(is_admin)
             })
     
-    # Підхід 3: ми повинні перевірити всі таблиці shared_dict_*, чи містять вони колонки для користувача
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'shared_dict_%'")
-    tables = [row[0] for row in cursor.fetchall()]
-    
-    for table in tables:
-        try:
-            # Витягуємо ID зі назви таблиці
-            # Виправлено тут - перевіряємо, що назва таблиці починається з префіксу і вилучаємо ID
-            if table.startswith('shared_dict_'):
-                try:
-                    dict_id = int(table.replace('shared_dict_', ''))
-                except ValueError:
-                    # Це не таблиця спільного словника з ID
-                    print(f"Skipping table {table}: invalid ID format")
-                    continue
-                
-                # Перевіряємо, чи словник вже доданий
-                if any(d['id'] == dict_id for d in shared_dicts):
-                    continue
-                
-                # Отримуємо інформацію про цей словник
-                cursor.execute('SELECT name, code FROM shared_dictionaries WHERE id = ?', (dict_id,))
-                dict_info = cursor.fetchone()
-                
-                if not dict_info:
-                    continue
-                    
-                name, code = dict_info
-                
-                # Перевіряємо, чи є колонка user_{chat_id} в цій таблиці
-                cursor.execute(f"PRAGMA table_info({table})")
-                columns = [col[1] for col in cursor.fetchall()]
-                user_col = f"user_{chat_id}"
-                
-                # Або перевіряємо, чи є слова додані цим користувачем
-                has_words = False
-                if user_col in columns:
-                    has_words = True
-                
-                # Також перевіряємо, чи є записи в таблиці для цього користувача
-                cursor.execute(f"SELECT EXISTS (SELECT 1 FROM {table} LIMIT 1)")
-                table_has_data = cursor.fetchone()[0]
-                
-                # Якщо є дані і користувач має доступ
-                if table_has_data and has_words:
-                    # Перевіряємо статус адміністратора
-                    cursor.execute('SELECT shared_dict_admin FROM users WHERE chat_id = ?', (chat_id,))
-                    is_admin_result = cursor.fetchone()
-                    is_admin = bool(is_admin_result and is_admin_result[0])
-                    
-                    shared_dicts.append({
-                        'id': dict_id,
-                        'name': name,
-                        'code': code,
-                        'is_admin': is_admin
-                    })
-        except Exception as e:
-            print(f"Error checking shared dict table {table}: {e}")
-            continue
+    # Якщо немає записів у таблицях, перевіряємо shared_dict_id в таблиці users (для сумісності)
+    if not owned_dicts:
+        cursor.execute('''
+        SELECT sd.id, sd.name, sd.code, u.shared_dict_admin 
+        FROM shared_dictionaries sd
+        JOIN users u ON sd.id = u.shared_dict_id
+        WHERE u.chat_id = ?
+        ''', (chat_id,))
+        result = cursor.fetchone()
+        
+        if result:
+            dict_id, name, code, is_admin = result
+            owned_dicts.append({
+                'id': dict_id,
+                'name': name,
+                'code': code,
+                'is_admin': bool(is_admin)
+            })
     
     conn.close()
-    
-    return shared_dicts
+    return owned_dicts
 
 def get_shared_dictionary_words(chat_id, shared_dict_id=None):
     """Get words from a shared dictionary for a specific user"""
@@ -653,6 +626,17 @@ def get_shared_dictionary_words(chat_id, shared_dict_id=None):
             conn.close()
             return pd.DataFrame()
         shared_dict_id = result[0]
+    
+    # Перевіряємо, чи має користувач доступ до цього словника
+    cursor.execute('''
+    SELECT 1 FROM shared_dict_users 
+    WHERE user_id = ? AND dict_id = ?
+    ''', (chat_id, shared_dict_id))
+    
+    if not cursor.fetchone():
+        print(f"User {chat_id} does not have access to shared dictionary {shared_dict_id}")
+        conn.close()
+        return pd.DataFrame()
     
     # Отримуємо мову користувача
     language = get_user_language(chat_id) or "uk"

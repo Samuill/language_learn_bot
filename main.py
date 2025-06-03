@@ -86,6 +86,17 @@ def main():
         import db_manager
         conn = db_manager.get_connection()
         print(f"Successfully connected to database at {db_manager.DB_PATH}")
+        
+        # Міграція та виправлення даних спільних словників
+        try:
+            from migration_tools import migrate_shared_dictionary_users, fix_dictionary_admin_status
+            migrate_shared_dictionary_users()
+            fix_dictionary_admin_status()
+        except Exception as e:
+            print(f"Error during shared dictionary migration: {e}")
+            import traceback as tb  # Перейменовуємо імпорт, щоб уникнути конфлікту
+            tb.print_exc()
+        
         conn.close()
     except Exception as e:
         print(f"Error connecting to database: {e}")
@@ -107,9 +118,13 @@ def main():
     while True:
         try:
             print(f"Bot started at {time.strftime('%Y-%m-%d %H:%M:%S')}...")
-            bot.polling(none_stop=True, interval=1)
+            # Збільшуємо таймаут до 60 секунд (замість 25 за замовчуванням)
+            bot.polling(none_stop=True, interval=1, timeout=60, long_polling_timeout=60)
         except requests.exceptions.ConnectionError:
             print("Помилка з'єднання. Повторна спроба через 5 секунд...")
+            time.sleep(5)
+        except requests.exceptions.ReadTimeout:
+            print("Таймаут читання. Повторна спроба через 5 секунд...")
             time.sleep(5)
         except Exception as e:
             print(f"Критична помилка: {e}")

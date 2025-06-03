@@ -21,3 +21,8 @@
 [2025-06-02 05:58:39.905] ERROR: database is locked | Context: Critical error in main loop
 [2025-06-02 06:37:20.634] ERROR: HTTPSConnectionPool(host='api.telegram.org', port=443): Read timed out. (read timeout=25) | Context: Critical error in main loop
 [2025-06-02 07:37:16.878] ERROR: HTTPSConnectionPool(host='api.telegram.org', port=443): Read timed out. (read timeout=25) | Context: Critical error in main loop
+[2025-06-02 16:37:29.347] ERROR: HTTPSConnectionPool(host='api.telegram.org', port=443): Read timed out. (read timeout=25) | Context: Critical error in main loop
+[2025-06-03 08:23:22.577] ERROR: name 'clear_state' is not defined | Context: Critical error in main loop
+[2025-06-03 08:23:37.693] ERROR: name 'clear_state' is not defined | Context: Critical error in main loop
+[2025-06-03 08:24:37.879] ERROR: name 'clear_state' is not defined | Context: Critical error in main loop
+[2025-06-03 08:24:43.913] ERROR: name 'clear_state' is not defined | Context: Critical error in main loop

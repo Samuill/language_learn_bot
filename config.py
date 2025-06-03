@@ -3,13 +3,16 @@ import os
 import telebot
 from googletrans import Translator
 from apscheduler.schedulers.background import BackgroundScheduler
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 # TOKEN = "7616425414:AAFaZCuYss9UyNSXm_MJCd42rLjAKNWy0Mc"
 TOKEN = "7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw"
 ADMIN_ID = 476376623  # ID адміністратора
 
 # Глобальні об'єкти
-bot = telebot.TeleBot(TOKEN)
+bot = telebot.TeleBot(TOKEN, num_threads=4)  # Збільшуємо кількість потоків
 translator = Translator()
 scheduler = BackgroundScheduler()
 user_state = {}
@@ -44,6 +47,24 @@ def get_personal_dict_path(user_id):
 def can_edit_common_dict(user_id):
     """Check if user has rights to edit the common dictionary"""
     return user_id == ADMIN_ID
+
+# Налаштування таймаутів для запитів до API Telegram
+retry_strategy = Retry(
+    total=3,
+    status_forcelist=[429, 500, 502, 503, 504],
+    allowed_methods=["GET", "POST"],
+    backoff_factor=1
+)
+adapter = HTTPAdapter(max_retries=retry_strategy)
+bot_session = requests.Session()
+bot_session.mount("https://", adapter)
+bot_session.mount("http://", adapter)
+
+# Встановлюємо цю сесію для telebot
+import telebot.apihelper
+telebot.apihelper.SESSION = bot_session
+telebot.apihelper.CONNECT_TIMEOUT = 60  # Збільшуємо таймаут підключення
+telebot.apihelper.READ_TIMEOUT = 60     # Збільшуємо таймаут читання
 
 # Enable debug mode
 DEBUG_MODE = True

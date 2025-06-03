@@ -52,12 +52,10 @@ def cancel_action(message):
 def return_to_main_menu(message):
     """Return to main menu"""
     chat_id = message.chat.id
-    dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
     
-    # Preserve dictionary type but remove level information
-    if chat_id in user_state:
-        user_state[chat_id] = {"dict_type": dict_type}
+    # Зберігаємо тип словника, але видаляємо повідомлення активності
+    clear_state(chat_id, preserve_dict_type=True, preserve_messages=False)
     
-    # Send main menu
+    # Відправляємо повідомлення головного меню
     bot.send_message(chat_id, "Головне меню:", 
                    reply_markup=main_menu_keyboard(chat_id))

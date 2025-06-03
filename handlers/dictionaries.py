@@ -5,7 +5,7 @@
 """
 
 from config import bot, user_state, ADMIN_ID
-from utils import main_menu_keyboard
+from utils import main_menu_keyboard, clear_state  # Добавляем импорт clear_state
 from dictionary import toggle_dictionary, set_dictionary_type
 import db_manager
 
@@ -46,9 +46,12 @@ def personal_dictionary_button(message):
 def easy_level(message):
     """Show easy level menu with learning activities"""
     chat_id = message.chat.id
-    dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
     
-    # Update user state
+    # Зберігаємо тип словника, але видаляємо повідомлення активності
+    clear_state(chat_id, preserve_dict_type=True, preserve_messages=False)
+    
+    # Оновлюємо рівень у стані
+    dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
     if chat_id in user_state:
         user_state[chat_id]["level"] = "easy"
     else:
@@ -62,9 +65,12 @@ def easy_level(message):
 def medium_level(message):
     """Show medium level menu (placeholder)"""
     chat_id = message.chat.id
-    dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
     
-    # Update user state
+    # Зберігаємо тип словника, але видаляємо повідомлення активності
+    clear_state(chat_id, preserve_dict_type=True, preserve_messages=False)
+    
+    # Оновлюємо рівень у стані
+    dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
     if chat_id in user_state:
         user_state[chat_id]["level"] = "medium"
     else:
@@ -76,16 +82,20 @@ def medium_level(message):
 
 @bot.message_handler(func=lambda message: message.text == "🔴 Складний рівень")
 def hard_level(message):
-    """Show hard level menu (placeholder)"""
+    """Show hard level menu with learning activities"""
     chat_id = message.chat.id
-    dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
     
-    # Update user state
+    # Зберігаємо тип словника, але видаляємо повідомлення активності
+    clear_state(chat_id, preserve_dict_type=True, preserve_messages=False)
+    
+    # Оновлюємо рівень у стані
+    dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
     if chat_id in user_state:
         user_state[chat_id]["level"] = "hard"
     else:
         user_state[chat_id] = {"dict_type": dict_type, "level": "hard"}
     
-    # Show "under development" message
-    bot.send_message(chat_id, "🔴 Складний рівень у розробці. Будь ласка, оберіть інший рівень.", 
-                   reply_markup=main_menu_keyboard(chat_id))
+    # Show hard level menu
+    from utils import hard_level_keyboard
+    bot.send_message(chat_id, "🔴 Складний рівень - оберіть активність:", 
+                   reply_markup=hard_level_keyboard())

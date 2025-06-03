@@ -15,6 +15,7 @@ from . import articles
 from . import dictionaries
 from . import shared_dicts
 from . import admin
+from . import hard_level  # Додаємо імпорт нового модуля
 
 # Експортуємо функції, що потрібні в інших модулях
 from .core import start_learning, start_repetition, start_article_activity

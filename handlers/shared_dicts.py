@@ -15,47 +15,43 @@ def shared_dictionary_menu(message):
     """Show shared dictionary menu"""
     chat_id = message.chat.id
     
+    # Ініціалізуємо таблиці для спільних словників, якщо вони не існують
+    db_manager.create_shared_dictionary_tables()
+    
     # Перевіряємо, чи є вже активний словник
     conn = db_manager.get_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT shared_dict_id FROM users WHERE chat_id = ?", (chat_id,))
     result = cursor.fetchone()
     
+    # Оновлюємо тип словника у стані користувача
+    if chat_id in user_state:
+        user_state[chat_id].update({"dict_type": "shared"})
+    else:
+        user_state[chat_id] = {"dict_type": "shared"}
+    
+    # Показуємо інформацію про поточний словник, якщо є
     if result and result[0]:
-        # Якщо вже є вибраний словник, переходимо до нього
         shared_dict_id = result[0]
-        
-        # Оновлюємо стан користувача
-        if chat_id in user_state:
-            user_state[chat_id].update({"dict_type": "shared", "shared_dict_id": shared_dict_id})
-        else:
-            user_state[chat_id] = {"dict_type": "shared", "shared_dict_id": shared_dict_id}
+        user_state[chat_id]["shared_dict_id"] = shared_dict_id
         
         # Отримуємо інформацію про словник
         cursor.execute("SELECT name FROM shared_dictionaries WHERE id = ?", (shared_dict_id,))
         dict_info = cursor.fetchone()
         dict_name = dict_info[0] if dict_info else "Невідомий словник"
         
-        # Повідомляємо про активний словник
+        # Повідомляємо про поточний активний словник
         bot.send_message(
             chat_id,
-            f"📚 Обрано спільний словник: <b>{dict_name}</b>",
+            f"📚 Поточний активний словник: <b>{dict_name}</b>\n\n"
+            f"Оберіть дію з меню нижче:",
             parse_mode="HTML",
-            reply_markup=main_menu_keyboard(chat_id)
+            reply_markup=shared_dictionary_keyboard()
         )
     else:
-        # Ініціалізуємо таблиці для спільних словників, якщо вони не існують
-        db_manager.create_shared_dictionary_tables()
-        
-        # Показуємо меню спільних словників
+        # Просто показуємо меню спільних словників
         bot.send_message(chat_id, "👥 Спільні словники - оберіть опцію:",
                         reply_markup=shared_dictionary_keyboard())
-        
-        # Оновлюємо тип словника у стані користувача
-        if chat_id in user_state:
-            user_state[chat_id].update({"dict_type": "shared"})
-        else:
-            user_state[chat_id] = {"dict_type": "shared"}
     
     conn.close()
 
@@ -200,42 +196,64 @@ def use_shared_dictionary(call):
     chat_id = call.message.chat.id
     shared_dict_id = int(call.data.replace("use_shared_dict_", ""))
     
-    # Оновлюємо статус користувача
-    import db_manager
+    # Перевіряємо, чи користувач є творцем словника (першочергова перевірка)
     conn = db_manager.get_connection()
     cursor = conn.cursor()
     
-    # Перевіряємо, чи користувач є адміністратором цього словника
     cursor.execute('SELECT created_by FROM shared_dictionaries WHERE id = ?', (shared_dict_id,))
     creator_result = cursor.fetchone()
-    is_admin = creator_result and creator_result[0] == chat_id
+    is_creator = creator_result and creator_result[0] == chat_id
     
-    # Оновлюємо запис у базі даних
+    # Якщо користувач є творцем, він точно адміністратор
+    if is_creator:
+        is_admin = True
+    else:
+        # Якщо не творець, перевіряємо статус в shared_dict_users
+        cursor.execute('''
+        SELECT is_admin FROM shared_dict_users 
+        WHERE user_id = ? AND dict_id = ?
+        ''', (chat_id, shared_dict_id))
+        admin_result = cursor.fetchone()
+        is_admin = bool(admin_result and admin_result[0])
+    
+    # Оновлюємо записи в БД
     if is_admin:
         cursor.execute('UPDATE users SET shared_dict_id = ?, shared_dict_admin = 1 WHERE chat_id = ?', 
                      (shared_dict_id, chat_id))
+        
+        # Переконаємося, що є відповідний запис у shared_dict_users
+        cursor.execute('''
+        INSERT OR REPLACE INTO shared_dict_users (user_id, dict_id, is_admin, joined_at)
+        VALUES (?, ?, 1, datetime('now'))
+        ''', (chat_id, shared_dict_id))
     else:
-        cursor.execute('UPDATE users SET shared_dict_id = ? WHERE chat_id = ?', 
+        cursor.execute('UPDATE users SET shared_dict_id = ?, shared_dict_admin = 0 WHERE chat_id = ?', 
                      (shared_dict_id, chat_id))
+        
+        # Переконаємося, що є запис у shared_dict_users
+        cursor.execute('''
+        INSERT OR IGNORE INTO shared_dict_users (user_id, dict_id, is_admin, joined_at)
+        VALUES (?, ?, 0, datetime('now'))
+        ''', (chat_id, shared_dict_id))
     
     conn.commit()
     
-    # Отримуємо назву словника
+    # Отримуємо назву словника для повідомлення
     cursor.execute('SELECT name FROM shared_dictionaries WHERE id = ?', (shared_dict_id,))
     dict_name = cursor.fetchone()[0]
     conn.close()
     
-    # Зберігаємо важливі налаштування користувача
+    # Оновлюємо стан в пам'яті
     level = user_state.get(chat_id, {}).get("level", "easy")
     
-    # Оновлюємо стан в пам'яті ПОВНІСТЮ, не втрачаючи важливі параметри
     user_state[chat_id] = {
         "dict_type": "shared", 
         "shared_dict_id": shared_dict_id,
-        "level": level
+        "level": level,
+        "is_admin": is_admin
     }
     
-    # Повідомляємо користувача
+    # Показуємо повідомлення
     bot.answer_callback_query(call.id, f"Обрано спільний словник: {dict_name}")
     bot.delete_message(chat_id, call.message.message_id)
     

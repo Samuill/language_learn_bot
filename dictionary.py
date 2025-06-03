@@ -111,9 +111,8 @@ def start_activity(chat_id, mode):
     
     print(f"Debug: Starting {mode} activity for user {chat_id} with dict_type={dict_type}, level={level}, shared_dict_id={shared_dict_id}")
     
-    # Оновлюємо стан користувача, зберігаючи важливі налаштування
-    old_state = user_state.get(chat_id, {})
-    clear_state(chat_id)
+    # Оновлюємо стан користувача і видаляємо повідомлення активності
+    clear_state(chat_id, preserve_dict_type=True, preserve_messages=False)
     
     # Відновлюємо необхідні параметри після очищення
     new_state = {"dict_type": dict_type, "level": level}
