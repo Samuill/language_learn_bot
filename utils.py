@@ -211,7 +211,15 @@ def easy_level_keyboard():
     """Create keyboard for easy level"""
     keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
     keyboard.add("📖 Вчити нові слова", "🔄 Повторити")
-    keyboard.add("🏷️ Вивчати артиклі", "🧩 Вивчати присвійні займенники")  # Added possessive articles
+    keyboard.add("🏷️ Вивчати артиклі", "🧩 Вивчати присвійні займенники")
+    keyboard.add("↩️ Повернутися до головного меню")
+    return keyboard
+
+def medium_level_keyboard():
+    """Create keyboard for medium level"""
+    keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
+    keyboard.add("📖 Вчити нові слова", "🔄 Повторити")
+    keyboard.add("🏷️ Вивчати артиклі", "🧩 Вивчати присвійні займенники (середній)")
     keyboard.add("↩️ Повернутися до головного меню")
     return keyboard
 
@@ -219,7 +227,7 @@ def hard_level_keyboard():
     """Create keyboard for hard level"""
     keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
     keyboard.add("🧩 Складна гра", "📝 Введення слів")
-    keyboard.add("🏷️ Введення артиклів")
+    keyboard.add("🏷️ Введення артиклів", "🧩 Вивчати присвійні займенники (складний)")
     keyboard.add("↩️ Повернутися до головного меню")
     return keyboard
 

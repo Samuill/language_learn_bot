@@ -63,7 +63,7 @@ def easy_level(message):
 
 @bot.message_handler(func=lambda message: message.text == "🟠 Середній рівень")
 def medium_level(message):
-    """Show medium level menu (placeholder)"""
+    """Show medium level menu with learning activities"""
     chat_id = message.chat.id
     
     # Зберігаємо тип словника, але видаляємо повідомлення активності
@@ -76,9 +76,10 @@ def medium_level(message):
     else:
         user_state[chat_id] = {"dict_type": dict_type, "level": "medium"}
     
-    # Show "under development" message
-    bot.send_message(chat_id, "🟠 Середній рівень у розробці. Будь ласка, оберіть інший рівень.", 
-                   reply_markup=main_menu_keyboard(chat_id))
+    # Show medium level menu with activities
+    from utils import medium_level_keyboard
+    bot.send_message(chat_id, "🟠 Середній рівень - оберіть активність:", 
+                    reply_markup=medium_level_keyboard())
 
 @bot.message_handler(func=lambda message: message.text == "🔴 Складний рівень")
 def hard_level(message):

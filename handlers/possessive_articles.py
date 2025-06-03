@@ -10,11 +10,21 @@ from config import bot, user_state
 from utils import clear_state, easy_level_keyboard
 import db_manager
 
-@bot.message_handler(func=lambda message: message.text == "🧩 Вивчати присвійні займенники")
-def start_possessive_exercise(message):
+@bot.message_handler(func=lambda message: message.text in ["🧩 Вивчати присвійні займенники", "🧩 Вивчати присвійні займенники (середній)", "🧩 Вивчати присвійні займенники (складний)"])
+def start_possessive_exercise_handler(message):
+    """Handle possessive pronouns exercises at different difficulty levels"""
+    # Визначаємо рівень складності за текстом кнопки
+    if message.text == "🧩 Вивчати присвійні займенники":
+        difficulty = "easy"
+    elif message.text == "🧩 Вивчати присвійні займенники (середній)":
+        difficulty = "medium" 
+    else:
+        difficulty = "hard"
+        
+    start_possessive_exercise(message.chat.id, difficulty)
+
+def start_possessive_exercise(chat_id, difficulty="easy"):
     """Start an exercise for learning German possessive articles"""
-    chat_id = message.chat.id
-    
     # Clear current state but preserve dictionary type
     clear_state(chat_id, preserve_dict_type=True, preserve_messages=False)
     
@@ -24,8 +34,9 @@ def start_possessive_exercise(message):
     
     user_state[chat_id] = {
         "dict_type": dict_type,
-        "level": "easy",
+        "level": difficulty,
         "exercise": "possessive",
+        "difficulty": difficulty,
         "attempts": 0
     }
     
@@ -60,6 +71,25 @@ def get_pronoun_translation(pronoun):
     }
     return pronoun_translations.get(pronoun, pronoun)
 
+def get_case_explanation(case, language="uk"):
+    """Get explanation for grammatical cases"""
+    explanations = {
+        "Nominativ": {
+            "uk": "Називний відмінок (Nominativ) використовується для підмета речення і відповідає на питання 'хто/що?'",
+            "ru": "Именительный падеж (Nominativ) используется для подлежащего и отвечает на вопрос 'кто/что?'"
+        },
+        "Akkusativ": {
+            "uk": "Знахідний відмінок (Akkusativ) використовується для прямого додатка і відповідає на питання 'кого/що?'",
+            "ru": "Винительный падеж (Akkusativ) используется для прямого дополнения и отвечает на вопрос 'кого/что?'"
+        },
+        "Dativ": {
+            "uk": "Давальний відмінок (Dativ) використовується для непрямого додатка і відповідає на питання 'кому/чому?'",
+            "ru": "Дательный падеж (Dativ) используется для непрямого дополнения и отвечает на вопрос 'кому/чему?'"
+        }
+    }
+    
+    return explanations.get(case, {}).get(language, explanations[case]["uk"])
+
 def generate_possessive_exercise(chat_id):
     """Generate a new possessive article exercise"""
     conn = db_manager.get_connection()
@@ -67,6 +97,18 @@ def generate_possessive_exercise(chat_id):
     
     # Get user language
     language = db_manager.get_user_language(chat_id) or "uk"
+    
+    # Get difficulty level
+    difficulty = user_state[chat_id].get("difficulty", "easy")
+    
+    # Filter available cases based on difficulty level
+    allowed_cases = []
+    if difficulty == "easy":
+        allowed_cases = ["Nominativ"]
+    elif difficulty == "medium":
+        allowed_cases = ["Nominativ", "Akkusativ"]
+    else:  # hard
+        allowed_cases = ["Akkusativ", "Dativ"]
     
     # Step 1: Get a random noun with gender info
     dict_type = user_state[chat_id].get("dict_type", "personal")
@@ -127,9 +169,8 @@ def generate_possessive_exercise(chat_id):
     pronouns = ["ich", "du", "er", "es", "sie (singular)", "wir", "ihr", "sie (plural)", "Sie"]
     pronoun = random.choice(pronouns)
     
-    # Step 3: Select a random case (excluding Genitive for now as it's less common)
-    cases = ["Nominativ", "Akkusativ", "Dativ"]
-    case = random.choice(cases)
+    # Step 3: Select a random case from allowed cases
+    case = random.choice(allowed_cases)
     
     # Step 4: Determine if singular or plural
     # For this exercise, we'll stick with singular for simplicity
@@ -204,12 +245,21 @@ def generate_possessive_exercise(chat_id):
     # Step 9: Send the question to the user
     pronoun_display = get_pronoun_translation(pronoun)
     case_display = get_case_name_in_ukrainian(case)
+    case_explanation = get_case_explanation(case, language)
+    
+    message_text = (
+        f"🧩 Виберіть правильний присвійний займенник:\n\n"
+        f"[{pronoun_display} - <b>{pronoun}</b>] ____ <b>{word}</b> (<b>{case}</b> - {case_display})\n\n"
+        f"<i>Переклад: {translation}</i>"
+    )
+    
+    # Add case explanation for easy level
+    if difficulty == "easy":
+        message_text += f"\n\n<i>{case_explanation}</i>"
     
     bot.send_message(
         chat_id,
-        f"🧩 Виберіть правильний присвійний займенник:\n\n"
-        f"[{pronoun_display} - <b>{pronoun}</b>] ____ <b>{word}</b> ({case_display})\n\n"
-        f"<i>Переклад: {translation}</i>",
+        message_text,
         parse_mode="HTML",
         reply_markup=markup
     )
