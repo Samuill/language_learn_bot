@@ -10,7 +10,13 @@ from dictionary import start_activity
 
 @bot.message_handler(func=lambda message: message.text == "📖 Вчити нові слова")
 def learn_words(message):
-    start_activity(message.chat.id, 'learn')
+    chat_id = message.chat.id
+    
+    # Зберігаємо поточний рівень
+    level = user_state.get(chat_id, {}).get("level", "easy")
+    
+    # Запускаємо активність з обмеженням на показ слів з максимальним рейтингом для не-складного рівня
+    start_activity(message.chat.id, 'learn', exclude_max_rating=(level != "hard"))
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith(('tr_', 'de_')))
 def handle_pairs(call):

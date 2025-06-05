@@ -37,7 +37,8 @@ def start_possessive_exercise(chat_id, difficulty="easy"):
         "level": difficulty,
         "exercise": "possessive",
         "difficulty": difficulty,
-        "attempts": 0
+        "attempts": 0,
+        "active_messages": []  # Додаємо список для відстеження активних повідомлень
     }
     
     if shared_dict_id:
@@ -257,12 +258,17 @@ def generate_possessive_exercise(chat_id):
     if difficulty == "easy":
         message_text += f"\n\n<i>{case_explanation}</i>"
     
-    bot.send_message(
+    sent_message = bot.send_message(
         chat_id,
         message_text,
         parse_mode="HTML",
         reply_markup=markup
     )
+    
+    # Зберігаємо ID повідомлення для можливості видалення
+    if "active_messages" not in user_state[chat_id]:
+        user_state[chat_id]["active_messages"] = []
+    user_state[chat_id]["active_messages"].append(sent_message.message_id)
     
     conn.close()
 
@@ -342,3 +348,35 @@ def handle_possessive_answer(call):
                 message_id=call.message.message_id,
                 reply_markup=markup
             )
+
+# Додаємо обробник загальних команд меню для виходу з гри
+@bot.message_handler(func=lambda message: user_state.get(message.chat.id, {}).get("exercise") == "possessive" and 
+                    message.text in ["↩️ Повернутися до головного меню", "🟢 Легкий рівень", "🟠 Середній рівень", "🔴 Складний рівень"])
+def exit_possessive_exercise(message):
+    """Handle exit from possessive exercise"""
+    chat_id = message.chat.id
+    
+    # Видаляємо всі активні повідомлення гри
+    if "active_messages" in user_state[chat_id]:
+        for msg_id in user_state[chat_id]["active_messages"]:
+            try:
+                bot.delete_message(chat_id, msg_id)
+            except Exception as e:
+                print(f"Error deleting message {msg_id}: {e}")
+    
+    # Визначаємо, куди повертатися
+    if message.text == "↩️ Повернутися до головного меню":
+        clear_state(chat_id, preserve_dict_type=True)
+        bot.send_message(chat_id, "Головне меню:", reply_markup=main_menu_keyboard(chat_id))
+    elif message.text == "🟢 Легкий рівень":
+        clear_state(chat_id, preserve_dict_type=True)
+        from utils import easy_level_keyboard
+        bot.send_message(chat_id, "🟢 Легкий рівень - оберіть активність:", reply_markup=easy_level_keyboard())
+    elif message.text == "🟠 Середній рівень":
+        clear_state(chat_id, preserve_dict_type=True)
+        from utils import medium_level_keyboard
+        bot.send_message(chat_id, "🟠 Середній рівень - оберіть активність:", reply_markup=medium_level_keyboard())
+    elif message.text == "🔴 Складний рівень":
+        clear_state(chat_id, preserve_dict_type=True)
+        from utils import hard_level_keyboard
+        bot.send_message(chat_id, "🔴 Складний рівень - оберіть активність:", reply_markup=hard_level_keyboard())

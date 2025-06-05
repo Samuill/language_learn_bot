@@ -168,25 +168,35 @@ def start_article_activity(chat_id):
             if chat_id in user_state:
                 user_state[chat_id]["dict_type"] = "personal"
                 
-            # Для персонального словника
+            # Персональний словник - фільтруємо слова з максимальним рейтингом (5.0) для не-складного рівня
+            level = user_state.get(chat_id, {}).get("level", "easy")
+            
+            # Якщо це не складний рівень, обмежуємо показ слів з максимальним рейтингом
+            exclude_max_rating_words = level != "hard"
+            
             exclude_condition = f"AND w.id != {last_word_id}" if last_word_id else ""
+            max_rating_filter = " AND u.rating < 4.9" if exclude_max_rating_words else ""
+            
             query = f"""
             SELECT w.id, w.word, a.article, a.id as article_id, w.{language}_tran as translation, u.rating
             FROM user_{chat_id} u
             JOIN words w ON u.word_id = w.id
             JOIN article a ON w.article_id = a.id
             WHERE w.article_id != 4 AND w.article_id IS NOT NULL
-            {exclude_condition}
+            {exclude_condition} {max_rating_filter}
             ORDER BY u.rating ASC
             LIMIT 15
             """
+            
             cursor.execute(query)
             results = cursor.fetchall()
             
             if not results:
-                query = query.replace(exclude_condition, "")
-                cursor.execute(query)
-                results = cursor.fetchall()
+                # Якщо немає слів з урахуванням фільтру, спробуємо знову без фільтрації максимального рейтингу
+                if exclude_max_rating_words:
+                    query = query.replace(" AND u.rating < 4.9", "")
+                    cursor.execute(query)
+                    results = cursor.fetchall()
         
         conn.close()
         

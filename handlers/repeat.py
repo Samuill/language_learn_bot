@@ -10,7 +10,13 @@ from dictionary import start_activity
 
 @bot.message_handler(func=lambda message: message.text == "🔄 Повторити")
 def repeat_words(message):
-    start_activity(message.chat.id, 'repeat')
+    chat_id = message.chat.id
+    
+    # Зберігаємо поточний рівень
+    level = user_state.get(chat_id, {}).get("level", "easy")
+    
+    # Запускаємо активність з обмеженням на показ слів з максимальним рейтингом для не-складного рівня
+    start_activity(message.chat.id, 'repeat', exclude_max_rating=(level != "hard"))
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("ans_"))
 def handle_answer(call):

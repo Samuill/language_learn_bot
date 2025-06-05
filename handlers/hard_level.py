@@ -47,7 +47,7 @@ def word_typing_game(message):
     shared_dict_id = user_state.get(chat_id, {}).get("shared_dict_id", None)
     
     try:
-        # Отримуємо випадкове слово з словника користувача
+        # Отримуємо слова з словника користувача
         df = None
         if dict_type == "shared":
             if shared_dict_id:
@@ -63,9 +63,17 @@ def word_typing_game(message):
             dict_name = "спільному словнику" if dict_type == "shared" else "загальному словнику" if dict_type == "common" else "персональному словнику"
             bot.send_message(chat_id, f"📭 У {dict_name} ще немає доданих слів.", reply_markup=hard_level_keyboard())
             return
+            
+        # Для складного рівня вибираємо слова з найвищим рейтингом
+        # Сортуємо за рейтингом у спадаючому порядку (спочатку найважчі слова)
+        df = df.sort_values(by="priority", ascending=False)
         
-        # Вибираємо випадкове слово
-        word_row = df.sample(1).iloc[0]
+        # Беремо верхні 30% слів для складного рівня
+        top_word_count = max(1, int(len(df) * 0.3))
+        top_words_df = df.head(top_word_count)
+        
+        # Вибираємо випадкове слово з отриманих найтяжчих слів
+        word_row = top_words_df.sample(1).iloc[0]
         
         # Зберігаємо стан
         user_state[chat_id] = {
@@ -175,12 +183,12 @@ def handle_word_typing_answer(message):
             parse_mode="HTML"
         )
         
-        # Оновлюємо рейтинг слова
+        # Оновлюємо рейтинг слова - для складного рівня більше зниження рейтингу
         if dict_type == "shared":
             if shared_dict_id:
-                db_manager.update_word_rating_shared_dict(chat_id, word_id, -0.1, shared_dict_id)
+                db_manager.update_word_rating_shared_dict(chat_id, word_id, -0.2, shared_dict_id)
         else:
-            db_manager.update_word_rating(chat_id, word_id, -0.1)
+            db_manager.update_word_rating(chat_id, word_id, -0.2)
         
         # Продовжуємо з новим словом
         bot.send_message(chat_id, "Продовжуємо...")
@@ -190,7 +198,7 @@ def handle_word_typing_answer(message):
         attempts = user_state[chat_id]["attempts"] + 1
         user_state[chat_id]["attempts"] = attempts
         
-        # Оновлюємо рейтинг слова
+        # Оновлюємо рейтинг слова - для складного рівня менший штраф
         if dict_type == "shared":
             if shared_dict_id:
                 db_manager.update_word_rating_shared_dict(chat_id, word_id, 0.1, shared_dict_id)
@@ -244,55 +252,59 @@ def article_typing_game(message):
         language = db_manager.get_user_language(chat_id) or "uk"
         results = None
         
-        # Отримання слів залежно від типу словника
+        # Отримання слів залежно від типу словника, з фокусом на слова з високим рейтингом
         if dict_type == "shared" and shared_dict_id:
             query = f"""
-            SELECT w.id, w.word, a.article, a.id as article_id, w.{language}_tran as translation
+            SELECT w.id, w.word, a.article, a.id as article_id, w.{language}_tran as translation, 
+                   sd.user_{chat_id} as rating
             FROM shared_dict_{shared_dict_id} sd
             JOIN words w ON sd.word_id = w.id
             JOIN article a ON w.article_id = a.id
             WHERE w.article_id != 4 AND w.article_id IS NOT NULL
-            ORDER BY RANDOM()
-            LIMIT 20
+            ORDER BY sd.user_{chat_id} DESC
+            LIMIT 30
             """
         elif dict_type == "common":
+            # Для загального словника рейтинг імітуємо випадковий
             query = f"""
-            SELECT w.id, w.word, a.article, a.id as article_id, w.{language}_tran as translation
+            SELECT w.id, w.word, a.article, a.id as article_id, w.{language}_tran as translation, 
+                   RANDOM() as rating
             FROM words w
             JOIN article a ON w.article_id = a.id
             WHERE w.article_id != 4 AND w.article_id IS NOT NULL
-            ORDER BY RANDOM()
-            LIMIT 20
+            ORDER BY rating DESC
+            LIMIT 30
             """
         else:
-            # Для персонального словника
+            # Для персонального словника, беремо слова з найвищим рейтингом
             query = f"""
-            SELECT w.id, w.word, a.article, a.id as article_id, w.{language}_tran as translation
+            SELECT w.id, w.word, a.article, a.id as article_id, w.{language}_tran as translation, 
+                   u.rating
             FROM user_{chat_id} u
             JOIN words w ON u.word_id = w.id
             JOIN article a ON w.article_id = a.id
             WHERE w.article_id != 4 AND w.article_id IS NOT NULL
-            ORDER BY RANDOM()
-            LIMIT 15
+            ORDER BY u.rating DESC
+            LIMIT 30
             """
             
         cursor.execute(query)
         results = cursor.fetchall()
-        conn.close()
         
-        if not results:
+        # Вибираємо випадкове слово з топ-слів (перші 30%)
+        if results:
+            top_results_count = max(1, int(len(results) * 0.3))
+            top_results = results[:top_results_count]
+            result = random.choice(top_results)
+        else:
+            # Якщо результатів немає, повідомляємо про це
             bot.send_message(chat_id, "📭 У словнику немає слів з артиклями для вивчення.", 
                            reply_markup=hard_level_keyboard())
+            conn.close()
             return
         
-        # Вибираємо випадкове слово
-        import random
-        result = random.choice(results)
-        
-        if dict_type == "personal":
-            word_id, word, correct_article, article_id, translation = result[:5]
-        else:
-            word_id, word, correct_article, article_id, translation = result[:5]
+        # Розбираємо результат
+        word_id, word, correct_article, article_id, translation, rating = result
         
         # Зберігаємо стан
         user_state[chat_id] = {
@@ -303,7 +315,8 @@ def article_typing_game(message):
             "level": "hard",
             "game": "article_typing",
             "translation": translation,
-            "attempts": 0
+            "attempts": 0,
+            "rating": rating  # Зберігаємо рейтинг для відстеження
         }
         
         if shared_dict_id:
@@ -318,6 +331,8 @@ def article_typing_game(message):
         
         # Реєструємо обробник для наступного повідомлення
         bot.register_next_step_handler(sent_message, handle_article_typing_answer)
+        
+        conn.close()
         
     except Exception as e:
         print(f"Error in article_typing_game: {e}")
@@ -402,12 +417,12 @@ def handle_article_typing_answer(message):
             parse_mode="HTML"
         )
         
-        # Оновлюємо рейтинг слова
+        # Оновлюємо рейтинг слова - для складного рівня більше зниження рейтингу
         if dict_type == "shared":
             if shared_dict_id:
-                db_manager.update_word_rating_shared_dict(chat_id, word_id, -0.1, shared_dict_id)
+                db_manager.update_word_rating_shared_dict(chat_id, word_id, -0.2, shared_dict_id)
         else:
-            db_manager.update_word_rating(chat_id, word_id, -0.1)
+            db_manager.update_word_rating(chat_id, word_id, -0.2)
         
         # Продовжуємо з новим словом
         bot.send_message(chat_id, "Продовжуємо...")
@@ -417,7 +432,7 @@ def handle_article_typing_answer(message):
         attempts = user_state[chat_id]["attempts"] + 1
         user_state[chat_id]["attempts"] = attempts
         
-        # Оновлюємо рейтинг слова
+        # Оновлюємо рейтинг слова - для складного рівня менший штраф за помилку
         if dict_type == "shared":
             if shared_dict_id:
                 db_manager.update_word_rating_shared_dict(chat_id, word_id, 0.1, shared_dict_id)

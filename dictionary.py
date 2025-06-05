@@ -101,7 +101,7 @@ def save_word(chat_id, translation=None):
     preserve_dict_type = (chat_id == ADMIN_ID and dict_type == "common")
     clear_state(chat_id, preserve_dict_type=preserve_dict_type)
 
-def start_activity(chat_id, mode):
+def start_activity(chat_id, mode, exclude_max_rating=False):
     """Start learning or repetition activity"""
     # Зберігаємо поточний тип словника і рівень перед очищенням стану
     dict_type = user_state.get(chat_id, {}).get("dict_type", "personal") 
@@ -151,7 +151,16 @@ def start_activity(chat_id, mode):
                 return False
         else:
             df = db_manager.get_user_words(chat_id, dict_type)
+        
+        # Фільтрація слів з максимальним рейтингом для не-складних рівнів, якщо потрібно
+        if exclude_max_rating and len(df) > 5:  # Якщо слів достатньо багато для фільтрації
+            df_filtered = df[df['priority'] < 4.9]
             
+            # Якщо після фільтрації залишилось достатньо слів, використовуємо фільтрований набір
+            if len(df_filtered) >= 5:
+                df = df_filtered
+                print(f"Filtered out max-rating words, {len(df)} words remaining")
+        
         # Перевіряємо результат
         if df is None or df.empty:
             dict_name = "спільному словнику" if dict_type == "shared" else "загальному словнику" if dict_type == "common" else "персональному словнику"
@@ -165,6 +174,15 @@ def start_activity(chat_id, mode):
             df['id'] = range(1, len(df) + 1)
             
         print(f"Successfully retrieved {len(df)} words from database with columns: {df.columns.tolist()}")
+        
+        # Для складного рівня беремо 30% найтяжчих слів
+        if level == "hard":
+            # Сортуємо за рейтингом у спадаючому порядку
+            df = df.sort_values(by='priority', ascending=False)
+            # Беремо верхні 30%
+            top_words_count = max(1, int(len(df) * 0.3))
+            df = df.head(top_words_count)
+            print(f"Hard level: selected {len(df)} top-rated words")
         
         # Запускаємо відповідну активність
         if mode == 'repeat':

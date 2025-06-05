@@ -26,3 +26,5 @@
 [2025-06-03 08:23:37.693] ERROR: name 'clear_state' is not defined | Context: Critical error in main loop
 [2025-06-03 08:24:37.879] ERROR: name 'clear_state' is not defined | Context: Critical error in main loop
 [2025-06-03 08:24:43.913] ERROR: name 'clear_state' is not defined | Context: Critical error in main loop
+[2025-06-04 01:59:14.655] ERROR: no such table: possessive_articles | Context: Critical error in main loop
+[2025-06-04 01:59:30.006] ERROR: no such table: possessive_articles | Context: Critical error in main loop

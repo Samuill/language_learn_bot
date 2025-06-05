@@ -331,6 +331,15 @@ def update_word_rating(chat_id, word_id, change, dict_type="personal"):
         
         if result:
             current_rating = result[0]
+            
+            # Визначаємо рівень користувача, щоб змінити крок оновлення рейтингу
+            import config
+            level = config.user_state.get(chat_id, {}).get('level', 'easy')
+            
+            # Для складного рівня більше змінюємо рейтинг
+            if level == "hard":
+                change = change * 2  # Подвоюємо зміну для складного рівня
+            
             # Застосовуємо зміну з кроком 0.1
             new_rating = max(min(current_rating + change, 5.0), 0.0)
             # Округлюємо до однієї цифри після коми для стабільного збереження
@@ -343,7 +352,7 @@ def update_word_rating(chat_id, word_id, change, dict_type="personal"):
             WHERE word_id = ?
             ''', (new_rating, word_id))
             
-            print(f"Updated rating for user {chat_id}, word_id {word_id}: {current_rating} -> {new_rating}")
+            print(f"Updated rating for user {chat_id}, word_id {word_id}: {current_rating} -> {new_rating}, level={level}")
         else:
             print(f"Warning: Word {word_id} not found in user_{chat_id} table")
     else:
@@ -802,6 +811,15 @@ def update_word_rating_shared_dict(chat_id, word_id, change, shared_dict_id=None
     result = cursor.fetchone()
     if result:
         current_rating = result[0] or 0.0
+        
+        # Визначаємо рівень користувача, щоб змінити крок оновлення рейтингу
+        import config
+        level = config.user_state.get(chat_id, {}).get('level', 'easy')
+        
+        # Для складного рівня подвоюємо зміну рейтингу
+        if level == "hard":
+            change = change * 2
+            
         # Застосовуємо зміну з обмеженнями
         new_rating = max(min(current_rating + change, 5.0), 0.0)
         # Округлюємо до однієї цифри після коми
@@ -813,6 +831,8 @@ def update_word_rating_shared_dict(chat_id, word_id, change, shared_dict_id=None
         SET {user_col} = ?
         WHERE word_id = ?
         ''', (new_rating, word_id))
+        
+        print(f"Updated shared dict rating for user {chat_id}, word_id {word_id}: {current_rating} -> {new_rating}, level={level}")
         
         conn.commit()
         conn.close()
