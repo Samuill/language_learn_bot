@@ -4,29 +4,56 @@ from utils import clear_state, main_menu_keyboard
 import db_manager
 from german_article_finder import find_german_article  # Додаємо імпорт новою функції
 
-def save_word(chat_id, translation=None):
-    """Save word to dictionary"""
-    dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
-    print(f"Debug: save_word for user {chat_id}, dict_type={dict_type}")
+def save_word(chat_id, manual_translation=None):
+    """Save word to user dictionary"""
+    if chat_id not in user_state:
+        return False
     
-    # Check permissions for common dictionary
+    state = user_state[chat_id]
+    if "word" not in state:
+        return False
+    
+    word = state["word"]
+    
+    # Determine which translation to use
+    translation = manual_translation if manual_translation else state.get("auto_translation", "")
+    
+    # Determine dictionary type
+    dict_type = state.get("dict_type", "personal")
     if dict_type == "common" and chat_id != ADMIN_ID:
-        bot.send_message(
-            chat_id, 
-            "❌ Додати слово неможливо, змініть свій словник на персональний.", 
-            reply_markup=main_menu_keyboard(chat_id)
-        )
-        clear_state(chat_id)
-        return
+        return False
     
-    data = user_state.get(chat_id, {})
-    if not data or "word" not in data:
-        bot.send_message(chat_id, "❌ Помилка: дані слова не знайдено.")
-        clear_state(chat_id)
-        return
-    
-    word = data["word"]
-    translation = translation or data["auto_translation"]
+    if dict_type == "personal":
+        from storage import get_dataframe, save_dataframe, get_user_file_path
+        
+        file_path, language = get_user_file_path(chat_id)
+        try:
+            df = get_dataframe(chat_id)
+            
+            # Перевірка та виправлення структури DataFrame
+            if 'word' not in df.columns:
+                df['word'] = ""
+            if 'translation' not in df.columns:
+                df['translation'] = ""
+            if 'priority' not in df.columns:
+                df['priority'] = 0.0
+            
+            # Check if word already exists
+            if not df[df['word'] == word].empty:
+                return False
+            
+            # Add new word
+            df.loc[len(df)] = {
+                'word': word, 
+                'translation': translation, 
+                'priority': 0.0
+            }
+            
+            save_dataframe(chat_id, df, language)
+            return True
+        except Exception as e:
+            print(f"Error saving word to personal dictionary: {e}")
+            return False
     
     # Пошук артикля у базі німецьких слів
     article, clean_word = find_german_article(word)

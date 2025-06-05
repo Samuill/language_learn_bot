@@ -10,13 +10,7 @@ from dictionary import start_activity
 
 @bot.message_handler(func=lambda message: message.text == "📖 Вчити нові слова")
 def learn_words(message):
-    chat_id = message.chat.id
-    
-    # Зберігаємо поточний рівень
-    level = user_state.get(chat_id, {}).get("level", "easy")
-    
-    # Запускаємо активність з обмеженням на показ слів з максимальним рейтингом для не-складного рівня
-    start_activity(message.chat.id, 'learn', exclude_max_rating=(level != "hard"))
+    start_activity(message.chat.id, 'learn')
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith(('tr_', 'de_')))
 def handle_pairs(call):
@@ -42,28 +36,88 @@ def handle_pairs(call):
         selected_de = call.data[3:]
         correct = any(tr == state['selected_tr'] and de == selected_de for tr, de in state["pairs"])
         
-        df = get_dataframe(chat_id)
-        if correct:
-            bot.answer_callback_query(call.id, "✅ Правильно!")
-            df.loc[df['translation'] == state['selected_tr'], 'priority'] -= 0.001
-            markup = call.message.reply_markup
-            for row in markup.keyboard:
-                for btn in row:
-                    if btn.callback_data in [f'tr_{state["selected_tr"]}', f'de_{selected_de}']:
-                        btn.text += " ✅"
-            bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=markup)
+        try:
+            df = get_dataframe(chat_id)
             
-            if "found_pairs" not in state:
-                state["found_pairs"] = []
-            state["found_pairs"].append((state['selected_tr'], selected_de))
+            # Зробимо деякі перевірки для налагодження
+            print(f"DEBUG: DataFrame columns for user {chat_id}: {df.columns.tolist()}")
             
-            if len(state["found_pairs"]) == len(state["pairs"]):
-                bot.delete_message(chat_id, call.message.message_id)
-                learn_words(call.message)
-        else:
-            bot.answer_callback_query(call.id, "❌ Неправильно!")
-            df.loc[df['translation'] == state['selected_tr'], 'priority'] += 0.001
-        
-        file_path, lang = get_user_file_path(chat_id) if state["dict_type"] == "personal" else (None, None)
-        save_dataframe(chat_id, df, lang if lang else "common")
-        state['selected_tr'] = None
+            # Перевіряємо наявність потрібних колонок
+            if 'translation' not in df.columns:
+                print(f"WARNING: Missing 'translation' column for user {chat_id}")
+                # Знаходимо колонку перекладу на основі мови користувача
+                tran_column = None
+                
+                # Шукаємо можливі варіанти колонок перекладу
+                if 'uk_tran' in df.columns:
+                    tran_column = 'uk_tran'
+                elif 'ru_tran' in df.columns:
+                    tran_column = 'ru_tran'
+                elif len(df.columns) >= 2:
+                    # Якщо є хоча б дві колонки, використовуємо другу як переклад
+                    tran_column = df.columns[1]
+                
+                if tran_column:
+                    print(f"Using column '{tran_column}' as translation")
+                    # Додаємо колонку translation
+                    df['translation'] = df[tran_column]
+                else:
+                    # Якщо не можемо знайти колонку перекладу, додаємо порожню
+                    print(f"Adding empty 'translation' column")
+                    df['translation'] = ''
+                    
+            if 'priority' not in df.columns:
+                print(f"WARNING: Missing 'priority' column for user {chat_id}")
+                # Додаємо колонку пріоритету зі значенням за замовчуванням 0.0
+                df['priority'] = 0.0
+            
+            # Продовжуємо виконання з оновленим DataFrame
+            if correct:
+                bot.answer_callback_query(call.id, "✅ Правильно!")
+                # Безпечне оновлення рейтингу з перевіркою наявності значення у state
+                if 'selected_tr' in state and state['selected_tr'] and 'translation' in df.columns:
+                    try:
+                        # Знаходимо рядки, де переклад збігається з обраним
+                        mask = df['translation'] == state['selected_tr']
+                        if mask.any():
+                            # Оновлюємо рейтинг тільки для знайдених рядків
+                            df.loc[mask, 'priority'] = df.loc[mask, 'priority'] - 0.1
+                    except Exception as e:
+                        print(f"Error updating priority: {e}")
+                
+                markup = call.message.reply_markup
+                for row in markup.keyboard:
+                    for btn in row:
+                        if btn.callback_data in [f'tr_{state["selected_tr"]}', f'de_{selected_de}']:
+                            btn.text += " ✅"
+                bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=markup)
+                
+                if "found_pairs" not in state:
+                    state["found_pairs"] = []
+                state["found_pairs"].append((state['selected_tr'], selected_de))
+                
+                if len(state["found_pairs"]) == len(state["pairs"]):
+                    bot.delete_message(chat_id, call.message.message_id)
+                    learn_words(call.message)
+            else:
+                bot.answer_callback_query(call.id, "❌ Неправильно!")
+                # Безпечне оновлення рейтингу з перевіркою наявності значення
+                if 'selected_tr' in state and state['selected_tr'] and 'translation' in df.columns:
+                    try:
+                        # Знаходимо рядки, де переклад збігається з обраним
+                        mask = df['translation'] == state['selected_tr']
+                        if mask.any():
+                            # Оновлюємо рейтинг тільки для знайдених рядків
+                            df.loc[mask, 'priority'] = df.loc[mask, 'priority'] + 0.1
+                    except Exception as e:
+                        print(f"Error updating priority: {e}")
+            
+            # Збережемо оновлений DataFrame
+            file_path, lang = get_user_file_path(chat_id) if state["dict_type"] == "personal" else (None, None)
+            save_dataframe(chat_id, df, lang if lang else "common")
+            state['selected_tr'] = None
+        except Exception as e:
+            print(f"Error in handle_pairs: {e}")
+            import traceback
+            traceback.print_exc()
+            state['selected_tr'] = None

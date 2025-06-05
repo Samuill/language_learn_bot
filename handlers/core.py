@@ -12,7 +12,40 @@ from config import bot, user_state
 
 def start_learning(chat_id, df):
     """Start learning new words activity"""
-    df = df.sort_values(by="priority", ascending=False)
+    # Перевірка структури DataFrame
+    if df.empty:
+        bot.send_message(chat_id, "📭 У вашому словнику поки немає слів для вивчення.")
+        return False
+    
+    # Перевіряємо наявність потрібних колонок
+    required_columns = ["word", "translation", "priority"]
+    missing_columns = [col for col in required_columns if col not in df.columns]
+    if missing_columns:
+        print(f"ERROR: Missing required columns: {missing_columns}")
+        print(f"Available columns: {df.columns.tolist()}")
+        
+        # Якщо бракує колонки перекладу, але є uk_tran або ru_tran, використовуємо їх
+        if "translation" in missing_columns:
+            if "uk_tran" in df.columns:
+                df["translation"] = df["uk_tran"]
+            elif "ru_tran" in df.columns:
+                df["translation"] = df["ru_tran"]
+        
+        # Додаємо пріоритет, якщо його немає
+        if "priority" in missing_columns:
+            df["priority"] = 0.0
+        
+        # Перевіряємо ще раз після виправлень
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        if missing_columns:
+            bot.send_message(chat_id, "❌ Помилка структури словника. Спробуйте пізніше або зверніться до адміністратора.")
+            return False
+    
+    # Сортуємо за пріоритетом для правильного вибору слів
+    if "priority" in df.columns:
+        df = df.sort_values(by="priority", ascending=False)
+    
+    # Вибираємо слова для вивчення
     words = df.sample(min(10, len(df)))
     
     translations = words['translation'].tolist()
