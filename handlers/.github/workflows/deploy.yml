@@ -1,0 +1,15 @@
+name: Deploy Cluster Update
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Nodes
+        run: |
+          curl -X POST "https://твоє_доменне_ім’я/webhook" \
+            -H "Content-Type: application/json" \
+            -d '{"action": "update"}'
