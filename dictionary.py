@@ -204,12 +204,22 @@ def start_activity(chat_id, mode, exclude_max_rating=False):
         
         # Для складного рівня беремо 30% найтяжчих слів
         if level == "hard":
-            # Сортуємо за рейтингом у спадаючому порядку
+            # Переконаємося, що priority має числовий тип
+            df['priority'] = pd.to_numeric(df['priority'], errors='coerce').fillna(0.0)
+            
+            # Вивід статистики рейтингів для відлагодження
+            print(f"DEBUG priority stats: min={df['priority'].min()}, max={df['priority'].max()}, mean={df['priority'].mean()}")
+            print(f"DEBUG priority distribution: {df['priority'].value_counts().sort_index().to_dict()}")
+            
+            # Сортуємо за рейтингом у спадаючому порядку (найвищі рейтинги спочатку)
             df = df.sort_values(by='priority', ascending=False)
-            # Беремо верхні 30%
+            
+            # Беремо верхні 30% слів
             top_words_count = max(1, int(len(df) * 0.3))
             df = df.head(top_words_count)
-            print(f"Hard level: selected {len(df)} top-rated words")
+            
+            # Показуємо деталі про обрані слова
+            print(f"Hard level: selected {len(df)} top-rated words. Ratings: {df['priority'].tolist()[:5]}")
         
         # Запускаємо відповідну активність
         if mode == 'repeat':

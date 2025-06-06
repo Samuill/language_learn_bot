@@ -218,7 +218,7 @@ def easy_level_keyboard():
 def medium_level_keyboard():
     """Create keyboard for medium level"""
     keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
-    keyboard.add("📖 Вчити нові слова", "🔄 Повторити")
+    keyboard.add("🔤 Вибір правильного написання", "📝 Заповніть пропуски")
     keyboard.add("🏷️ Вивчати артиклі", "🧩 Вивчати присвійні займенники (середній)")
     keyboard.add("↩️ Повернутися до головного меню")
     return keyboard

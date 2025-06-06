@@ -256,7 +256,7 @@ def article_typing_game(message):
         if dict_type == "shared" and shared_dict_id:
             query = f"""
             SELECT w.id, w.word, a.article, a.id as article_id, w.{language}_tran as translation, 
-                   sd.user_{chat_id} as rating
+                   COALESCE(sd.user_{chat_id}, 0.0) as rating
             FROM shared_dict_{shared_dict_id} sd
             JOIN words w ON sd.word_id = w.id
             JOIN article a ON w.article_id = a.id
@@ -264,6 +264,8 @@ def article_typing_game(message):
             ORDER BY sd.user_{chat_id} DESC
             LIMIT 30
             """
+            print(f"DEBUG query for shared dictionary: {query}")
+        
         elif dict_type == "common":
             # Для загального словника рейтинг імітуємо випадковий
             query = f"""
@@ -322,10 +324,20 @@ def article_typing_game(message):
         if shared_dict_id:
             user_state[chat_id]["shared_dict_id"] = shared_dict_id
         
-        # Відправляємо запит на введення артикля
+        # Отримуємо пояснення падежу
+        case_explanation = db_manager.get_case_explanation("Dativ" if random.random() < 0.5 else "Akkusativ", language)
+        
+        # Відправляємо запит на введення артикля з поясненням падежу
+        message_text = (
+            f"🏷️ Введіть артикль (der, die, das) для слова:\n\n"
+            f"<b>{word}</b>\n\n"
+            f"<i>Переклад: {translation}</i>\n\n"
+            f"<i>{case_explanation}</i>"
+        )
+        
         sent_message = bot.send_message(
             chat_id,
-            f"🏷️ Введіть артикль (der, die, das) для слова:\n\n<b>{word}</b>\n\n<i>Переклад: {translation}</i>",
+            message_text,
             parse_mode="HTML"
         )
         
@@ -439,8 +451,8 @@ def handle_article_typing_answer(message):
         else:
             db_manager.update_word_rating(chat_id, word_id, 0.1)
         
-        # Якщо це вже третя спроба, показуємо правильну відповідь і продовжуємо
-        if attempts >= 2:
+        # Якщо це вже друга спроба, показуємо правильну відповідь і продовжуємо
+        if attempts >= 2:  # Змінено з 3 на 2 спроби
             bot.send_message(
                 chat_id,
                 f"❌ Неправильно!\n\nПравильна відповідь: <b>{correct_article}</b>\n\nСлово <b>{word}</b> має артикль <b>{correct_article}</b>.",

@@ -115,47 +115,110 @@ def generate_possessive_exercise(chat_id):
     dict_type = user_state[chat_id].get("dict_type", "personal")
     shared_dict_id = user_state[chat_id].get("shared_dict_id")
     
+    # Перевіряємо наявність таблиці користувача для персонального словника
+    if dict_type == "personal":
+        table_created, has_words = db_manager.ensure_user_table_exists(chat_id)
+        if not has_words:
+            bot.send_message(
+                chat_id, 
+                "📭 У персональному словнику ще немає доданих слів. Спочатку додайте слова.",
+                reply_markup=easy_level_keyboard()
+            )
+            clear_state(chat_id)
+            conn.close()
+            return
+    
     # Query depends on dictionary type
-    if dict_type == "shared" and shared_dict_id:
-        cursor.execute(f'''
-        SELECT w.id, w.word, a.article, w.{language}_tran 
-        FROM shared_dict_{shared_dict_id} sd
-        JOIN words w ON sd.word_id = w.id
-        JOIN article a ON w.article_id = a.id
-        WHERE a.article IN ('der', 'die', 'das') AND w.{language}_tran IS NOT NULL
-        ORDER BY RANDOM() LIMIT 1
-        ''')
-    elif dict_type == "common":
-        cursor.execute(f'''
-        SELECT w.id, w.word, a.article, w.{language}_tran 
-        FROM words w
-        JOIN article a ON w.article_id = a.id
-        WHERE a.article IN ('der', 'die', 'das') AND w.{language}_tran IS NOT NULL
-        ORDER BY RANDOM() LIMIT 1
-        ''')
-    else:  # personal
-        cursor.execute(f'''
-        SELECT w.id, w.word, a.article, w.{language}_tran 
-        FROM user_{chat_id} u
-        JOIN words w ON u.word_id = w.id
-        JOIN article a ON w.article_id = a.id
-        WHERE a.article IN ('der', 'die', 'das') AND w.{language}_tran IS NOT NULL
-        ORDER BY RANDOM() LIMIT 1
-        ''')
-    
-    result = cursor.fetchone()
-    
-    # If no words found with articles, show message
-    if not result:
+    try:
+        if dict_type == "shared" and shared_dict_id:
+            # Check if shared dictionary table exists
+            cursor.execute(f"""
+            SELECT name FROM sqlite_master 
+            WHERE type='table' AND name='shared_dict_{shared_dict_id}'
+            """)
+            if not cursor.fetchone():
+                bot.send_message(
+                    chat_id, 
+                    "❌ Помилка: спільний словник не знайдено.",
+                    reply_markup=easy_level_keyboard()
+                )
+                clear_state(chat_id)
+                conn.close()
+                return
+                
+            cursor.execute(f'''
+            SELECT w.id, w.word, a.article, w.{language}_tran 
+            FROM shared_dict_{shared_dict_id} sd
+            JOIN words w ON sd.word_id = w.id
+            JOIN article a ON w.article_id = a.id
+            WHERE a.article IN ('der', 'die', 'das') AND w.{language}_tran IS NOT NULL
+            ORDER BY RANDOM() LIMIT 1
+            ''')
+            
+        elif dict_type == "common":
+            cursor.execute(f'''
+            SELECT w.id, w.word, a.article, w.{language}_tran 
+            FROM words w
+            JOIN article a ON w.article_id = a.id
+            WHERE a.article IN ('der', 'die', 'das') AND w.{language}_tran IS NOT NULL
+            ORDER BY RANDOM() LIMIT 1
+            ''')
+            
+        else:  # personal
+            cursor.execute(f'''
+            SELECT w.id, w.word, a.article, w.{language}_tran 
+            FROM user_{chat_id} u
+            JOIN words w ON u.word_id = w.id
+            JOIN article a ON w.article_id = a.id
+            WHERE a.article IN ('der', 'die', 'das') AND w.{language}_tran IS NOT NULL
+            ORDER BY RANDOM() LIMIT 1
+            ''')
+        
+        results = cursor.fetchall()
+        
+        # If no words found with articles, show message
+        if not results:
+            bot.send_message(
+                chat_id, 
+                "📭 Недостатньо слів з артиклями у вашому словнику для цієї вправи.",
+                reply_markup=easy_level_keyboard()
+            )
+            clear_state(chat_id)
+            conn.close()
+            return
+        
+        word_id, word, article, translation = results[0]
+        
+    except sqlite3.OperationalError as e:
+        # Handle specific SQL errors for tables not existing
+        print(f"Database error in generate_possessive_exercise: {e}")
+        if "no such table" in str(e):
+            bot.send_message(
+                chat_id, 
+                "📭 Спочатку додайте слова до свого словника, щоб почати виконувати вправи.",
+                reply_markup=easy_level_keyboard()
+            )
+        else:
+            bot.send_message(
+                chat_id, 
+                "❌ Помилка при отриманні даних з бази. Спробуйте пізніше.",
+                reply_markup=easy_level_keyboard()
+            )
+        clear_state(chat_id)
+        conn.close()
+        return
+    except Exception as e:
+        print(f"Error in generate_possessive_exercise: {e}")
+        import traceback
+        traceback.print_exc()
         bot.send_message(
-            chat_id, 
-            "📭 Недостатньо слів з артиклями у вашому словнику для цієї вправи.",
+            chat_id,
+            "❌ Помилка при генерації вправи. Спробуйте пізніше.",
             reply_markup=easy_level_keyboard()
         )
         clear_state(chat_id)
+        conn.close()
         return
-    
-    word_id, word, article, translation = result
     
     # Determine gender from article
     gender = None
@@ -192,6 +255,7 @@ def generate_possessive_exercise(chat_id):
             reply_markup=easy_level_keyboard()
         )
         clear_state(chat_id)
+        conn.close()
         return
     
     correct_form = correct_form_result[0]
@@ -228,7 +292,8 @@ def generate_possessive_exercise(chat_id):
         "number": number,
         "correct_form": correct_form,
         "options": options,
-        "translation": translation
+        "translation": translation,
+        "attempts": 0  # Reset attempts for new exercise
     })
     
     # Step 8: Create the inline keyboard with options
@@ -254,9 +319,8 @@ def generate_possessive_exercise(chat_id):
         f"<i>Переклад: {translation}</i>"
     )
     
-    # Add case explanation for easy level
-    if difficulty == "easy":
-        message_text += f"\n\n<i>{case_explanation}</i>"
+    # Add case explanation for all levels
+    message_text += f"\n\n<i>{case_explanation}</i>"
     
     sent_message = bot.send_message(
         chat_id,
@@ -293,6 +357,7 @@ def handle_possessive_answer(call):
     
     # Get exercise data
     word = user_state[chat_id]["word"]
+    word_id = user_state[chat_id].get("word_id")
     pronoun = user_state[chat_id]["pronoun"]
     case = user_state[chat_id]["case"]
     pronoun_display = get_pronoun_translation(pronoun)
@@ -301,6 +366,28 @@ def handle_possessive_answer(call):
     # Update attempts
     user_state[chat_id]["attempts"] += 1
     attempts = user_state[chat_id]["attempts"]
+    
+    # Для середнього рівня не оновлюємо рейтинг
+    difficulty = user_state[chat_id].get("difficulty", "easy")
+    dict_type = user_state[chat_id].get("dict_type", "personal")
+    shared_dict_id = user_state[chat_id].get("shared_dict_id")
+    
+    # Оновлення рейтингу, але тільки якщо це не середній рівень
+    if difficulty != "medium" and word_id:
+        try:
+            import db_manager
+            rating_change = -0.1 if is_correct else 0.1
+            
+            print(f"DEBUG: Updating rating for {dict_type} dictionary, word_id={word_id}, change={rating_change}")
+            
+            if dict_type == "shared" and shared_dict_id:
+                db_manager.update_word_rating_shared_dict(chat_id, word_id, rating_change, shared_dict_id)
+            elif dict_type == "personal":
+                db_manager.update_word_rating(chat_id, word_id, rating_change)
+        except Exception as e:
+            print(f"ERROR updating word rating in possessive exercise: {e}")
+    elif difficulty == "medium":
+        print(f"DEBUG: Skipping rating update for medium difficulty exercise")
     
     if is_correct:
         # Show success message
@@ -322,7 +409,7 @@ def handle_possessive_answer(call):
         # Show failure message
         bot.answer_callback_query(call.id, "❌ Неправильно!")
         
-        if attempts >= 2:
+        if attempts >= 2:  # Змінено з 3 на 2 спроби
             # After two wrong attempts, show correct answer
             bot.edit_message_text(
                 f"❌ Неправильно!\n\n"

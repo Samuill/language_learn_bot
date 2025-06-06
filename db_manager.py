@@ -675,12 +675,16 @@ def get_shared_dictionary_words(chat_id, shared_dict_id=None):
     # Отримуємо ВСІ слова зі спільного словника, навіть без перекладу поточною мовою
     query = f'''
     SELECT w.id, w.word, w.{language}_tran as translation, w.{other_language}_tran as other_translation,
-           a.article, sd.{user_col} as priority
+           a.article, COALESCE(sd.{user_col}, 0.0) as priority
     FROM shared_dict_{shared_dict_id} sd
     JOIN words w ON sd.word_id = w.id
     LEFT JOIN article a ON w.article_id = a.id
-    ORDER BY sd.{user_col} ASC
+    ORDER BY priority DESC
     '''
+    
+    # Додаємо журнал запиту для відлагодження
+    print(f"DEBUG query: {query.replace('{', '{{').replace('}', '}}')}")
+    
     cursor.execute(query)
     
     # Отримуємо результати
@@ -780,63 +784,152 @@ def update_word_rating_shared_dict(chat_id, word_id, change, shared_dict_id=None
     conn = get_connection()
     cursor = conn.cursor()
     
-    # Якщо shared_dict_id не вказано, отримуємо його з профілю користувача
-    if not shared_dict_id:
-        cursor.execute('SELECT shared_dict_id FROM users WHERE chat_id = ?', (chat_id,))
-        result = cursor.fetchone()
-        if not result or not result[0]:
+    try:
+        # Якщо shared_dict_id не вказано, отримуємо його з профілю користувача
+        if not shared_dict_id:
+            cursor.execute('SELECT shared_dict_id FROM users WHERE chat_id = ?', (chat_id,))
+            result = cursor.fetchone()
+            if not result or not result[0]:
+                print(f"ERROR: No shared_dict_id found for user {chat_id}")
+                conn.close()
+                return False
+            shared_dict_id = result[0]
+        
+        # Debug: Вивід інформації для відлагодження
+        print(f"DEBUG: Updating rating for user={chat_id}, word_id={word_id}, change={change}, shared_dict_id={shared_dict_id}")
+        
+        # Перевіряємо наявність слова в shared_dict таблиці
+        cursor.execute(f"SELECT 1 FROM shared_dict_{shared_dict_id} WHERE word_id = ?", (word_id,))
+        if not cursor.fetchone():
+            print(f"ERROR: Word ID {word_id} not found in shared_dict_{shared_dict_id}")
             conn.close()
             return False
-        shared_dict_id = result[0]
-    
-    user_col = f"user_{chat_id}"
-    
-    # Перевіряємо, чи є колонка для цього користувача
-    cursor.execute(f"PRAGMA table_info(shared_dict_{shared_dict_id})")
-    columns = [col[1] for col in cursor.fetchall()]
-    
-    if user_col not in columns:
-        # Якщо колонки немає, додаємо її
+        
+        user_col = f"user_{chat_id}"
+        
+        # Перевіряємо, чи є колонка для цього користувача
+        cursor.execute(f"PRAGMA table_info(shared_dict_{shared_dict_id})")
+        columns = [col[1] for col in cursor.fetchall()]
+        
+        if user_col not in columns:
+            # Якщо колонки немає, додаємо її
+            print(f"Adding column {user_col} to shared_dict_{shared_dict_id}")
+            cursor.execute(f'''
+            ALTER TABLE shared_dict_{shared_dict_id} ADD COLUMN {user_col} REAL DEFAULT 0.0
+            ''')
+            conn.commit()
+        
+        # Отримуємо поточний рейтинг слова для користувача
         cursor.execute(f'''
-        ALTER TABLE shared_dict_{shared_dict_id} ADD COLUMN {user_col} REAL DEFAULT 0.0
-        ''')
-        conn.commit()
-    
-    # Отримуємо поточний рейтинг слова для користувача
-    cursor.execute(f'''
-    SELECT {user_col} FROM shared_dict_{shared_dict_id} 
-    WHERE word_id = ?
-    ''', (word_id,))
-    
-    result = cursor.fetchone()
-    if result:
-        current_rating = result[0] or 0.0
-        
-        # Визначаємо рівень користувача, щоб змінити крок оновлення рейтингу
-        import config
-        level = config.user_state.get(chat_id, {}).get('level', 'easy')
-        
-        # Для складного рівня подвоюємо зміну рейтингу
-        if level == "hard":
-            change = change * 2
-            
-        # Застосовуємо зміну з обмеженнями
-        new_rating = max(min(current_rating + change, 5.0), 0.0)
-        # Округлюємо до однієї цифри після коми
-        new_rating = round(new_rating, 1)
-        
-        # Оновлюємо рейтинг
-        cursor.execute(f'''
-        UPDATE shared_dict_{shared_dict_id}
-        SET {user_col} = ?
+        SELECT {user_col} FROM shared_dict_{shared_dict_id} 
         WHERE word_id = ?
-        ''', (new_rating, word_id))
+        ''', (word_id,))
         
-        print(f"Updated shared dict rating for user {chat_id}, word_id {word_id}: {current_rating} -> {new_rating}, level={level}")
-        
-        conn.commit()
-        conn.close()
-        return True
+        result = cursor.fetchone()
+        if result:
+            current_rating = result[0] if result[0] is not None else 0.0
+            
+            # Визначаємо рівень користувача, щоб змінити крок оновлення рейтингу
+            import config
+            level = config.user_state.get(chat_id, {}).get('level', 'easy')
+            
+            # Для складного рівня подвоюємо зміну рейтингу
+            if level == "hard":
+                change = change * 2
+                
+            # Застосовуємо зміну з обмеженнями
+            new_rating = max(min(current_rating + change, 5.0), 0.0)
+            # Округлюємо до однієї цифри після коми
+            new_rating = round(new_rating, 1)
+            
+            # Вивід для діагностики
+            print(f"DEBUG SQL: UPDATE shared_dict_{shared_dict_id} SET {user_col} = {new_rating} WHERE word_id = {word_id}")
+            
+            # Оновлюємо рейтинг
+            cursor.execute(f'''
+            UPDATE shared_dict_{shared_dict_id}
+            SET {user_col} = ?
+            WHERE word_id = ?
+            ''', (new_rating, word_id))
+            
+            # Вивід для підтвердження оновлення
+            cursor.execute(f"SELECT {user_col} FROM shared_dict_{shared_dict_id} WHERE word_id = ?", (word_id,))
+            updated_rating = cursor.fetchone()[0]
+            print(f"CONFIRMATION: Updated shared dict rating for user {chat_id}, word_id {word_id}: {current_rating} -> {updated_rating}, level={level}")
+            
+            conn.commit()
+            conn.close()
+            return True
+        else:
+            print(f"ERROR: No rating found for word_id={word_id} in shared_dict_{shared_dict_id}")
+    except Exception as e:
+        print(f"ERROR in update_word_rating_shared_dict: {e}")
+        import traceback
+        traceback.print_exc()
     
     conn.close()
     return False
+
+def ensure_user_table_exists(chat_id):
+    """Check if user's table exists, and create it if it doesn't"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # Check if user table exists
+    cursor.execute(f"""
+    SELECT name FROM sqlite_master 
+    WHERE type='table' AND name='user_{chat_id}'
+    """)
+    
+    if not cursor.fetchone():
+        # Table doesn't exist, create it
+        print(f"Creating table user_{chat_id} for new user")
+        
+        cursor.execute(f'''
+        CREATE TABLE IF NOT EXISTS user_{chat_id} (
+            id INTEGER PRIMARY KEY,
+            word_id INTEGER NOT NULL,
+            rating REAL DEFAULT 0.0,
+            last_practiced TEXT,
+            FOREIGN KEY (word_id) REFERENCES words(id)
+        )
+        ''')
+        
+        # Check if user exists in users table
+        cursor.execute("SELECT 1 FROM users WHERE chat_id = ?", (chat_id,))
+        if not cursor.fetchone():
+            # Add user to users table
+            cursor.execute("""
+            INSERT INTO users (chat_id, last_active, streak) 
+            VALUES (?, datetime('now'), 0)
+            """, (chat_id,))
+            
+        conn.commit()
+        conn.close()
+        return True, False  # Table created, no words
+    
+    # Check if the table has any words
+    cursor.execute(f"SELECT COUNT(*) FROM user_{chat_id}")
+    count = cursor.fetchone()[0]
+    
+    conn.close()
+    return False, count > 0  # Table exists, has words if count > 0
+
+def get_case_explanation(case, language="uk"):
+    """Get explanation for grammatical cases"""
+    explanations = {
+        "Nominativ": {
+            "uk": "Називний відмінок (Nominativ) використовується для підмета речення і відповідає на питання 'хто/що?'",
+            "ru": "Именительный падеж (Nominativ) используется для подлежащего і отвечает на вопрос 'кто/что?'"
+        },
+        "Akkusativ": {
+            "uk": "Знахідний відмінок (Akkusativ) використовується для прямого додатка і відповідає на питання 'кого/що?'",
+            "ru": "Винительный падеж (Akkusativ) используется для прямого дополнения і отвечает на вопрос 'кого/что?'"
+        },
+        "Dativ": {
+            "uk": "Давальний відмінок (Dativ) використовується для непрямого додатка і відповідає на питання 'кому/чому?'",
+            "ru": "Дательный падеж (Dativ) используется для непрямого дополнения і отвечает на вопрос 'кому/чему?'"
+        }
+    }
+    
+    return explanations.get(case, {}).get(language, explanations[case]["uk"])

@@ -141,6 +141,16 @@ def start_article_activity(chat_id):
         
         language = db_manager.get_user_language(chat_id) or "uk"
         
+        # Для персонального словника перевіряємо наявність таблиці користувача
+        if dict_type == "personal":
+            table_created, has_words = db_manager.ensure_user_table_exists(chat_id)
+            if not has_words:
+                # Якщо таблиця порожня або тільки створена
+                from dictionary import return_to_appropriate_menu
+                bot.send_message(chat_id, "📭 У персональному словнику ще немає доданих слів.")
+                return_to_appropriate_menu(chat_id, False, "У словнику немає слів з артиклями для вивчення.")
+                return False
+        
         # Отримуємо всі слова з артиклями, виключаючи артикль з ID=4 (порожній) 
         # і останнє показане слово
         results = None
