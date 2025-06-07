@@ -3,6 +3,7 @@ from config import user_state, bot, ADMIN_ID
 from utils import clear_state, main_menu_keyboard
 import db_manager
 from german_article_finder import find_german_article  # Додаємо імпорт новою функції
+import pandas as pd  # Add missing import for pandas
 
 def save_word(chat_id, manual_translation=None):
     """Save word to user dictionary"""

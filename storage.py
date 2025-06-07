@@ -3,6 +3,7 @@ import os
 import pandas as pd
 import time
 from config import COMMON_DICT_FILE, user_state
+import db_manager
 
 # Створюємо директорію для словників користувачів
 USER_DICT_DIR = "user_dictionaries"
@@ -22,7 +23,6 @@ def get_user_file_path(chat_id):
     
     try:
         # Використовуємо базу даних замість CSV файлів
-        import db_manager
         lang = db_manager.get_user_language(chat_id)
         if lang:
             dummy_path = os.path.join(USER_DICT_DIR, f"{lang}_words_{chat_id}.csv")
@@ -135,3 +135,19 @@ def save_dataframe(chat_id, df, language="uk"):
         import traceback
         traceback.print_exc()
         return False
+
+def update_user_language(chat_id, language):
+    """Update language preference for a user"""
+    conn = db_manager.get_connection()  # Use the db_manager.get_connection function
+    cursor = conn.cursor()
+    
+    # Check if user exists
+    cursor.execute('SELECT 1 FROM users WHERE chat_id = ?', (chat_id,))
+    if cursor.fetchone():
+        cursor.execute('UPDATE users SET language = ? WHERE chat_id = ?', (language, chat_id))
+    else:
+        cursor.execute('INSERT INTO users (chat_id, language) VALUES (?, ?)', (chat_id, language))
+    
+    conn.commit()
+    conn.close()
+    return True

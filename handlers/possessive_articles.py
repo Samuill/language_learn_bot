@@ -6,8 +6,9 @@ Handler for possessive article exercises.
 
 import random
 import telebot
+import sqlite3  # Add missing import for sqlite3
 from config import bot, user_state
-from utils import clear_state, easy_level_keyboard
+from utils import clear_state, easy_level_keyboard, main_menu_keyboard  # Import main_menu_keyboard
 import db_manager
 
 @bot.message_handler(func=lambda message: message.text in ["🧩 Вивчати присвійні займенники", "🧩 Вивчати присвійні займенники (середній)", "🧩 Вивчати присвійні займенники (складний)"])
