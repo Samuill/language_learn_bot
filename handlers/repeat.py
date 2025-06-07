@@ -21,6 +21,8 @@ def handle_answer(call):
     
     _, word, selected_tr = call.data.split('_')
     correct_tr = user_state[chat_id]["current_word"]['translation']
+    dict_type = user_state[chat_id].get("dict_type")
+    shared_dict_id = user_state[chat_id].get("shared_dict_id")
     
     try:
         df = get_dataframe(chat_id)
@@ -37,35 +39,30 @@ def handle_answer(call):
             df['priority'] = 0.0
             
         if selected_tr == correct_tr:
+            # Правильна відповідь
             bot.answer_callback_query(call.id, "✅ Правильно!")
-            # Безпечно оновлюємо рейтинг
-            try:
-                mask = df['word'] == word
-                if mask.any():
-                    df.loc[mask, 'priority'] = df.loc[mask, 'priority'] - 0.1
-            except Exception as e:
-                print(f"Error updating priority: {e}")
-                
-            bot.delete_message(chat_id, call.message.message_id)
-            repeat_words(call.message)
+            
+            # Оновлюємо рейтинг для спільного словника
+            if dict_type == "shared" and shared_dict_id:
+                try:
+                    db_manager.update_word_rating_shared_dict(chat_id, int(word), -0.1, shared_dict_id)
+                    print(f"Updated shared dictionary rating for word {word}: -0.1")
+                except Exception as e:
+                    print(f"Error updating shared dict rating: {e}")
         else:
+            # Неправильна відповідь
             bot.answer_callback_query(call.id, f"❌ Неправильно! Правильно: {correct_tr}")
-            # Безпечно оновлюємо рейтинг
-            try:
-                mask = df['word'] == word
-                if mask.any():
-                    df.loc[mask, 'priority'] = df.loc[mask, 'priority'] + 0.1
-            except Exception as e:
-                print(f"Error updating priority: {e}")
-                
-            markup = call.message.reply_markup
-            for row in markup.keyboard:
-                if row[0].callback_data == call.data:
-                    row[0].text += " ❌"
-            bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=markup)
+            
+            # Оновлюємо рейтинг для спільного словника
+            if dict_type == "shared" and shared_dict_id:
+                try:
+                    db_manager.update_word_rating_shared_dict(chat_id, int(word), 0.1, shared_dict_id)
+                    print(f"Updated shared dictionary rating for word {word}: +0.1")
+                except Exception as e:
+                    print(f"Error updating shared dict rating: {e}")
         
-        file_path, lang = get_user_file_path(chat_id) if user_state[chat_id].get("dict_type") == "personal" else (None, None)
-        save_dataframe(chat_id, df, lang if lang else "common")
+        bot.delete_message(chat_id, call.message.message_id)
+        repeat_words(call.message)
     except Exception as e:
         print(f"Error in handle_answer: {e}")
         import traceback

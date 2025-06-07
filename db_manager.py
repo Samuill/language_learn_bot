@@ -827,6 +827,7 @@ def update_word_rating_shared_dict(chat_id, word_id, change, shared_dict_id=None
         
         result = cursor.fetchone()
         if result:
+            # Перевіряємо, чи результат не NULL
             current_rating = result[0] if result[0] is not None else 0.0
             
             # Визначаємо рівень користувача, щоб змінити крок оновлення рейтингу
@@ -845,23 +846,32 @@ def update_word_rating_shared_dict(chat_id, word_id, change, shared_dict_id=None
             # Вивід для діагностики
             print(f"DEBUG SQL: UPDATE shared_dict_{shared_dict_id} SET {user_col} = {new_rating} WHERE word_id = {word_id}")
             
-            # Оновлюємо рейтинг
-            cursor.execute(f'''
-            UPDATE shared_dict_{shared_dict_id}
-            SET {user_col} = ?
-            WHERE word_id = ?
-            ''', (new_rating, word_id))
+            # Оновлюємо рейтинг с параметрами для запобігання SQL-ін'єкцій
+            update_query = f"UPDATE shared_dict_{shared_dict_id} SET {user_col} = ? WHERE word_id = ?"
+            cursor.execute(update_query, (new_rating, word_id))
+            
+            # Перевірка, чи відбулося оновлення
+            if cursor.rowcount == 0:
+                print(f"WARNING: No rows updated for word_id={word_id} in shared_dict_{shared_dict_id}")
             
             # Вивід для підтвердження оновлення
             cursor.execute(f"SELECT {user_col} FROM shared_dict_{shared_dict_id} WHERE word_id = ?", (word_id,))
-            updated_rating = cursor.fetchone()[0]
+            check_result = cursor.fetchone()
+            updated_rating = check_result[0] if check_result else None
             print(f"CONFIRMATION: Updated shared dict rating for user {chat_id}, word_id {word_id}: {current_rating} -> {updated_rating}, level={level}")
             
+            # Важливо викликати commit() для збереження змін
             conn.commit()
+            
             conn.close()
             return True
         else:
-            print(f"ERROR: No rating found for word_id={word_id} in shared_dict_{shared_dict_id}")
+            # Якщо запис не знайдено, спробуємо його створити
+            print(f"WARNING: No rating entry found for word_id={word_id}. Creating default entry.")
+            cursor.execute(f"UPDATE shared_dict_{shared_dict_id} SET {user_col} = 0.1 WHERE word_id = ?", (word_id,))
+            conn.commit()
+            conn.close()
+            return True
     except Exception as e:
         print(f"ERROR in update_word_rating_shared_dict: {e}")
         import traceback

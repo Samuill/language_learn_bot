@@ -116,6 +116,26 @@ def handle_pairs(call):
             file_path, lang = get_user_file_path(chat_id) if state["dict_type"] == "personal" else (None, None)
             save_dataframe(chat_id, df, lang if lang else "common")
             state['selected_tr'] = None
+            
+            dict_type = state.get("dict_type")
+            shared_dict_id = state.get("shared_dict_id")
+            
+            # Для спільних словників також оновлюємо рейтинг
+            if dict_type == "shared" and shared_dict_id:
+                try:
+                    # Знаходимо ID слова за перекладом
+                    for row in df.itertuples():
+                        if getattr(row, 'translation') == state['selected_tr']:
+                            word_id = getattr(row, 'id')
+                            
+                            # Оновлюємо рейтинг залежно від правильності відповіді
+                            if correct:
+                                db_manager.update_word_rating_shared_dict(chat_id, word_id, -0.1, shared_dict_id)
+                            else:
+                                db_manager.update_word_rating_shared_dict(chat_id, word_id, 0.1, shared_dict_id)
+                            break
+                except Exception as e:
+                    print(f"Error updating shared dict rating: {e}")
         except Exception as e:
             print(f"Error in handle_pairs: {e}")
             import traceback
