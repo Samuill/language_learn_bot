@@ -9,8 +9,13 @@ import telebot
 import pandas as pd
 from config import bot, user_state
 from utils import clear_state, main_menu_keyboard, hard_level_keyboard
+from utils.input_handlers import safe_next_step_handler, sanitize_user_input  # Импорт новых утилит
 import db_manager
 from dictionary import return_to_appropriate_menu
+
+# Додаємо константи для зміни рейтингу на високому рівні
+HARD_RATING_DECREASE = -0.1    # Зменшення рейтингу при правильній відповіді
+HARD_RATING_INCREASE = 0.2     # Збільшення рейтингу при неправильній відповіді
 
 @bot.message_handler(func=lambda message: message.text == "🧩 Складна гра")
 def hard_game(message):
@@ -89,16 +94,16 @@ def word_typing_game(message):
         if shared_dict_id:
             user_state[chat_id]["shared_dict_id"] = shared_dict_id
         
-        # Відправляємо запит на переклад
+        # Відправляємо запит на переклад с использованием безопасного обработчика
         sent_message = bot.send_message(
             chat_id,
             f"📝 Введіть німецький переклад слова:\n\n<b>{word_row['translation']}</b>",
             parse_mode="HTML"
         )
         
-        # Реєструємо обробник для наступного повідомлення
-        bot.register_next_step_handler(sent_message, handle_word_typing_answer)
-        
+        # Используем безопасный обработчик вместо обычного
+        safe_next_step_handler(sent_message, handle_word_typing_answer)
+
     except Exception as e:
         print(f"Error in word_typing_game: {e}")
         import traceback
@@ -109,120 +114,80 @@ def handle_word_typing_answer(message):
     """Handle user's answer in word typing game"""
     chat_id = message.chat.id
     
-    # Перевіряємо, чи є дані гри у стані користувача
+    # Проверка активности игры
     if chat_id not in user_state or user_state[chat_id].get("game") != "word_typing":
         bot.send_message(chat_id, "❌ Помилка: сесія гри закінчилась.", reply_markup=hard_level_keyboard())
         return
     
-    # Список команд меню, які потрібно обробляти як команди, а не відповіді
-    menu_commands = [
-        "🧩 Складна гра", "📝 Введення слів", "🏷️ Введення артиклів", 
-        "↩️ Повернутися до головного меню", "🟢 Легкий рівень", "🟠 Середній рівень", 
-        "🔴 Складний рівень", "👤 Персональний словник", "👥 Спільний словник", 
-        "➕ Додати нове слово", "📖 Вчити нові слова", "🔄 Повторити"
-    ]
+    # Очищаем и безопасно обрабатываем ввод пользователя
+    user_answer = sanitize_user_input(message.text.strip().lower())
     
-    # Якщо користувач ввів команду меню, завершити гру і обробити команду
-    if message.text in menu_commands:
-        # Якщо це команда в межах меню складного рівня, зберігаємо рівень
-        preserve_level = message.text in ["🧩 Складна гра", "📝 Введення слів", "🏷️ Введення артиклів"]
-        
-        # Визначаємо, яке повідомлення показати
-        if preserve_level:
-            reply_markup = hard_level_keyboard()
-            msg_text = "🚫 Гра перервана. Переходимо до іншої активності..."
-        else:
-            reply_markup = main_menu_keyboard(chat_id)
-            msg_text = "🚫 Гра перервана. Виконую команду..."
-            
-        # Повідомлення про завершення гри
-        bot.send_message(
-            chat_id,
-            msg_text,
-            reply_markup=reply_markup
-        )
-        
-        # Очищаємо стан користувача, зберігаючи тип словника та можливо рівень
-        clear_state(chat_id, preserve_dict_type=True, preserve_messages=False, preserve_level=preserve_level)
-        
-        # Створюємо новий об'єкт повідомлення для передачі іншому обробнику
-        from telebot.types import Message
-        
-        new_message = Message(
-            message_id=message.message_id,
-            from_user=message.from_user,
-            date=message.date,
-            chat=message.chat,
-            content_type='text',
-            options={},
-            json_string=None
-        )
-        new_message.text = message.text
-        
-        # Запускаємо бота для обробки команди
-        bot.process_new_messages([new_message])
-        return
-    
-    # Отримуємо дані гри
+    # Получаем данные из состояния
     correct_word = user_state[chat_id]["word"]
     translation = user_state[chat_id]["translation"]
     word_id = user_state[chat_id]["word_id"]
     dict_type = user_state[chat_id]["dict_type"]
     shared_dict_id = user_state[chat_id].get("shared_dict_id")
-    
-    # Обробляємо введену відповідь (видаляємо пробіли та переводимо в нижній регістр)
-    user_answer = message.text.strip().lower()
     correct_answer = correct_word.strip().lower()
     
-    # Перевіряємо відповідь
-    if user_answer == correct_answer:
+    # Проверяем ответ
+    is_correct = user_answer == correct_answer
+    
+    try:
         # Правильна відповідь
-        bot.send_message(
-            chat_id,
-            f"✅ Правильно!\n\n<b>{translation}</b> = <b>{correct_word}</b>",
-            parse_mode="HTML"
-        )
-        
-        # Оновлюємо рейтинг слова - для складного рівня більше зниження рейтингу
-        if dict_type == "shared":
-            if shared_dict_id:
-                db_manager.update_word_rating_shared_dict(chat_id, word_id, -0.2, shared_dict_id)
+        if is_correct:
+            bot.send_message(
+                chat_id,
+                f"✅ Правильно!\n\n<b>{translation}</b> = <b>{correct_word}</b>",
+                parse_mode="HTML"
+            )
+            
+            # Оновлюємо рейтинг слова - для складного рівня зменшення рейтингу
+            rating_change = HARD_RATING_DECREASE
         else:
-            db_manager.update_word_rating(chat_id, word_id, -0.2)
+            # Неправильна відповідь
+            attempts = user_state[chat_id]["attempts"] + 1
+            user_state[chat_id]["attempts"] = attempts
+            
+            # Оновлюємо рейтинг слова - для складного рівня збільшення рейтингу
+            rating_change = HARD_RATING_INCREASE
+            
+            # Якщо це вже третя спроба, показуємо правильну відповідь і продовжуємо
+            if attempts >= 2:
+                bot.send_message(
+                    chat_id,
+                    f"❌ Неправильно!\n\nПравильна відповідь: <b>{correct_word}</b>\n\n<b>{translation}</b> = <b>{correct_word}</b>",
+                    parse_mode="HTML"
+                )
+                # Продовжуємо з новим словом
+                bot.send_message(chat_id, "Продовжуємо...")
+                word_typing_game(message)
+                return
+            else:
+                # Даємо ще одну спробу
+                sent_message = bot.send_message(
+                    chat_id, 
+                    f"❌ Неправильно! Спробуйте ще раз.\n\n<b>{translation}</b>",
+                    parse_mode="HTML"
+                )
+                bot.register_next_step_handler(sent_message, handle_word_typing_answer)
+                return
+        
+        # Застосовуємо зміну рейтингу відповідно до типу словника
+        if dict_type == "shared" and shared_dict_id:
+            db_manager.update_word_rating_shared_dict(chat_id, word_id, rating_change, shared_dict_id)
+            print(f"Updated shared dict rating for word {word_id}: {rating_change}")
+        else:
+            db_manager.update_word_rating(chat_id, word_id, rating_change)
+            print(f"Updated personal dict rating for word {word_id}: {rating_change}")
         
         # Продовжуємо з новим словом
         bot.send_message(chat_id, "Продовжуємо...")
         word_typing_game(message)
-    else:
-        # Неправильна відповідь
-        attempts = user_state[chat_id]["attempts"] + 1
-        user_state[chat_id]["attempts"] = attempts
-        
-        # Оновлюємо рейтинг слова - для складного рівня менший штраф
-        if dict_type == "shared":
-            if shared_dict_id:
-                db_manager.update_word_rating_shared_dict(chat_id, word_id, 0.1, shared_dict_id)
-        else:
-            db_manager.update_word_rating(chat_id, word_id, 0.1)
-        
-        # Якщо це вже третя спроба, показуємо правильну відповідь і продовжуємо
-        if attempts >= 2:
-            bot.send_message(
-                chat_id,
-                f"❌ Неправильно!\n\nПравильна відповідь: <b>{correct_word}</b>\n\n<b>{translation}</b> = <b>{correct_word}</b>",
-                parse_mode="HTML"
-            )
-            # Продовжуємо з новим словом
-            bot.send_message(chat_id, "Продовжуємо...")
-            word_typing_game(message)
-        else:
-            # Даємо ще одну спробу
-            sent_message = bot.send_message(
-                chat_id, 
-                f"❌ Неправильно! Спробуйте ще раз.\n\n<b>{translation}</b>",
-                parse_mode="HTML"
-            )
-            bot.register_next_step_handler(sent_message, handle_word_typing_answer)
+    except Exception as e:
+        print(f"Error processing answer: {e}")
+        import traceback
+        traceback.print_exc()
 
 @bot.message_handler(func=lambda message: message.text == "🏷️ Введення артиклів")
 def article_typing_game(message):
@@ -430,11 +395,10 @@ def handle_article_typing_answer(message):
         )
         
         # Оновлюємо рейтинг слова - для складного рівня більше зниження рейтингу
-        if dict_type == "shared":
-            if shared_dict_id:
-                db_manager.update_word_rating_shared_dict(chat_id, word_id, -0.2, shared_dict_id)
+        if dict_type == "shared" and shared_dict_id:
+            db_manager.update_word_rating_shared_dict(chat_id, word_id, -0.1, shared_dict_id)
         else:
-            db_manager.update_word_rating(chat_id, word_id, -0.2)
+            db_manager.update_word_rating(chat_id, word_id, -0.1)
         
         # Продовжуємо з новим словом
         bot.send_message(chat_id, "Продовжуємо...")
@@ -445,11 +409,10 @@ def handle_article_typing_answer(message):
         user_state[chat_id]["attempts"] = attempts
         
         # Оновлюємо рейтинг слова - для складного рівня менший штраф за помилку
-        if dict_type == "shared":
-            if shared_dict_id:
-                db_manager.update_word_rating_shared_dict(chat_id, word_id, 0.1, shared_dict_id)
+        if dict_type == "shared" and shared_dict_id:
+            db_manager.update_word_rating_shared_dict(chat_id, word_id, 0.2, shared_dict_id)
         else:
-            db_manager.update_word_rating(chat_id, word_id, 0.1)
+            db_manager.update_word_rating(chat_id, word_id, 0.2)
         
         # Якщо це вже друга спроба, показуємо правильну відповідь і продовжуємо
         if attempts >= 2:  # Змінено з 3 на 2 спроби

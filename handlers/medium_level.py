@@ -11,6 +11,11 @@ import pandas as pd
 from config import bot, user_state
 from utils import clear_state, medium_level_keyboard, main_menu_keyboard
 import db_manager
+from utils.input_handlers import safe_next_step_handler, sanitize_user_input
+
+# Константи для зміни рейтингу
+MEDIUM_RATING_DECREASE = -0.1  # Зменшення рейтингу при правильній відповіді
+MEDIUM_RATING_INCREASE = 0.1   # Збільшення рейтингу при неправильній відповіді
 
 # Функція для створення неправильних версій слова
 def create_misspelled_versions(word, num_versions=3):
@@ -188,13 +193,17 @@ def handle_spelling_choice(call):
     shared_dict_id = user_state[chat_id].get("shared_dict_id")
     
     try:
-        if is_correct:
-            # Зменшуємо рейтинг слова (воно стає легшим)
-            if dict_type == "shared" and shared_dict_id:
-                db_manager.update_word_rating_shared_dict(chat_id, word_id, -0.1, shared_dict_id)
-            else:
-                db_manager.update_word_rating(chat_id, word_id, -0.1)
+        # Змінюємо рейтинг в залежності від правильності відповіді
+        rating_change = MEDIUM_RATING_DECREASE if is_correct else MEDIUM_RATING_INCREASE
+        
+        if dict_type == "shared" and shared_dict_id:
+            db_manager.update_word_rating_shared_dict(chat_id, word_id, rating_change, shared_dict_id)
+            print(f"Updated shared dict rating for word {word_id}: {rating_change}")
+        else:
+            db_manager.update_word_rating(chat_id, word_id, rating_change)
+            print(f"Updated personal dict rating for word {word_id}: {rating_change}")
                 
+        if is_correct:
             bot.answer_callback_query(call.id, "✅ Правильно!")
             
             # Оновлюємо повідомлення
@@ -206,12 +215,6 @@ def handle_spelling_choice(call):
                 parse_mode="HTML"
             )
         else:
-            # Збільшуємо рейтинг слова (воно стає важчим)
-            if dict_type == "shared" and shared_dict_id:
-                db_manager.update_word_rating_shared_dict(chat_id, word_id, 0.1, shared_dict_id)
-            else:
-                db_manager.update_word_rating(chat_id, word_id, 0.1)
-                
             bot.answer_callback_query(call.id, "❌ Неправильно!")
             
             # Оновлюємо повідомлення
@@ -225,6 +228,8 @@ def handle_spelling_choice(call):
             )
     except Exception as e:
         print(f"Error updating rating: {e}")
+        import traceback
+        traceback.print_exc()
     
     # Запускаємо нову гру після паузи
     import threading
@@ -396,11 +401,8 @@ def handle_missing_letters_answer(message):
     try:
         if is_correct:
             # Зменшуємо рейтинг слова (воно стає легшим)
-            if dict_type == "shared" and shared_dict_id:
-                db_manager.update_word_rating_shared_dict(chat_id, word_id, -0.1, shared_dict_id)
-            else:
-                db_manager.update_word_rating(chat_id, word_id, -0.1)
-                
+            rating_change = MEDIUM_RATING_DECREASE
+            
             # Відправляємо повідомлення про успіх
             bot.send_message(
                 chat_id,
@@ -413,16 +415,13 @@ def handle_missing_letters_answer(message):
             bot.send_message(chat_id, "Наступне слово...")
             generate_missing_letters_exercise(chat_id)
         else:
+            # Збільшуємо рейтинг слова (воно стає важчим)
+            rating_change = MEDIUM_RATING_INCREASE
+            
             # Збільшуємо кількість спроб
             user_state[chat_id]["attempts"] = user_state[chat_id].get("attempts", 0) + 1
             attempts = user_state[chat_id]["attempts"]
             
-            # Збільшуємо рейтинг слова (воно стає важчим)
-            if dict_type == "shared" and shared_dict_id:
-                db_manager.update_word_rating_shared_dict(chat_id, word_id, 0.1, shared_dict_id)
-            else:
-                db_manager.update_word_rating(chat_id, word_id, 0.1)
-                
             if attempts >= 2:
                 # Після двох спроб показуємо правильну відповідь
                 bot.send_message(
@@ -448,6 +447,15 @@ def handle_missing_letters_answer(message):
                 
                 # Реєструємо обробник для наступної спроби
                 bot.register_next_step_handler_by_chat_id(chat_id, handle_missing_letters_answer)
+        
+        # Оновлюємо рейтинг слова
+        if dict_type == "shared" and shared_dict_id:
+            db_manager.update_word_rating_shared_dict(chat_id, word_id, rating_change, shared_dict_id)
+            print(f"Updated shared dict rating for word {word_id}: {rating_change}")
+        else:
+            db_manager.update_word_rating(chat_id, word_id, rating_change)
+            print(f"Updated personal dict rating for word {word_id}: {rating_change}")
+            
     except Exception as e:
         print(f"Error in handle_missing_letters_answer: {e}")
         import traceback

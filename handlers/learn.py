@@ -6,11 +6,14 @@
 
 from config import bot, user_state
 from storage import get_dataframe, save_dataframe, get_user_file_path
-from dictionary import start_activity
+from handlers.core import start_learning  # Import from core instead of duplicating code
+import db_manager
+from handlers.easy_level import learn_words  # Import learn_words at the top level
 
 @bot.message_handler(func=lambda message: message.text == "📖 Вчити нові слова")
-def learn_words(message):
-    start_activity(message.chat.id, 'learn')
+def learn_words_handler(message):
+    """Handler for learning new words - redirect to easy_level.py"""
+    learn_words(message)  # Use the imported function
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith(('tr_', 'de_')))
 def handle_pairs(call):
@@ -98,7 +101,7 @@ def handle_pairs(call):
                 
                 if len(state["found_pairs"]) == len(state["pairs"]):
                     bot.delete_message(chat_id, call.message.message_id)
-                    learn_words(call.message)
+                    learn_words(call.message)  # Now this will work correctly
             else:
                 bot.answer_callback_query(call.id, "❌ Неправильно!")
                 # Безпечне оновлення рейтингу з перевіркою наявності значення

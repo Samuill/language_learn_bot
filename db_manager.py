@@ -15,15 +15,61 @@ DB_PATH = os.path.join(DB_DIR, "german_words.db")
 
 def get_connection():
     """Get a connection to the database, creating it if needed"""
+    # Убедимся, что директория для базы данных существует
+    if not os.path.exists(DB_DIR):
+        os.makedirs(DB_DIR)
+        
+    # Проверяем существование базы данных
     if not os.path.exists(DB_PATH):
-        
         create_database()
-        
-        # Також виконаємо міграцію даних з CSV, якщо база щойно створена
-        
         migrate_from_csv()
     
+    # Возвращаем соединение
     return sqlite3.connect(DB_PATH)
+
+def execute_query(query, params=None, fetch_mode=None, commit=True):
+    """
+    Безопасно выполняет SQL-запрос и возвращает результат.
+    
+    Args:
+        query: SQL-запрос
+        params: Параметры запроса (список или кортеж)
+        fetch_mode: Режим получения результата ('one', 'all', None)
+        commit: Нужно ли выполнить commit
+    
+    Returns:
+        Результат запроса или None
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    result = None
+    
+    try:
+        if params:
+            cursor.execute(query, params)
+        else:
+            cursor.execute(query)
+            
+        if fetch_mode == 'one':
+            result = cursor.fetchone()
+        elif fetch_mode == 'all':
+            result = cursor.fetchall()
+            
+        if commit:
+            conn.commit()
+            
+    except Exception as e:
+        print(f"SQL Error: {e}")
+        print(f"Query: {query}")
+        if params:
+            print(f"Params: {params}")
+        import traceback
+        traceback.print_exc()
+        
+    finally:
+        conn.close()
+        
+    return result
 
 def user_exists(chat_id):
     """Check if user exists in database"""
@@ -318,7 +364,7 @@ def add_word(chat_id, word, translation, dict_type="personal", article=None):
     return True
 
 def update_word_rating(chat_id, word_id, change, dict_type="personal"):
-    """Update word rating for a user with step 0.1, constrained between 0 and 5"""
+    """Update word rating for a user with appropriate changes based on level"""
     conn = get_connection()
     cursor = conn.cursor()
     
@@ -332,16 +378,22 @@ def update_word_rating(chat_id, word_id, change, dict_type="personal"):
         if result:
             current_rating = result[0]
             
-            # Визначаємо рівень користувача, щоб змінити крок оновлення рейтингу
+            # Визначаємо рівень користувача для правильного масштабування змін рейтингу
             import config
             level = config.user_state.get(chat_id, {}).get('level', 'easy')
             
-            # Для складного рівня більше змінюємо рейтинг
-            if level == "hard":
-                change = change * 2  # Подвоюємо зміну для складного рівня
+            # Масштабуємо зміну рейтингу в залежності від рівня
+            scaled_change = change
+            if abs(change) > 0:  # Захист від зміни нуля
+                if level == "hard" and change > 0:
+                    # Для складного рівня збільшуємо штраф за помилку
+                    scaled_change = 0.2
+                elif level == "hard" and change < 0:
+                    # Залишаємо стандартне зменшення рейтингу для правильної відповіді
+                    scaled_change = -0.1
             
-            # Застосовуємо зміну з кроком 0.1
-            new_rating = max(min(current_rating + change, 5.0), 0.0)
+            # Застосовуємо зміну з обмеженнями 0.0-5.0
+            new_rating = max(min(current_rating + scaled_change, 5.0), 0.0)
             # Округлюємо до однієї цифри після коми для стабільного збереження
             new_rating = round(new_rating, 1)
             
@@ -352,7 +404,7 @@ def update_word_rating(chat_id, word_id, change, dict_type="personal"):
             WHERE word_id = ?
             ''', (new_rating, word_id))
             
-            print(f"Updated rating for user {chat_id}, word_id {word_id}: {current_rating} -> {new_rating}, level={level}")
+            print(f"Updated rating for user {chat_id}, word_id {word_id}: {current_rating} -> {new_rating}, level={level}, scaled_change={scaled_change}")
         else:
             print(f"Warning: Word {word_id} not found in user_{chat_id} table")
     else:
@@ -830,16 +882,22 @@ def update_word_rating_shared_dict(chat_id, word_id, change, shared_dict_id=None
             # Перевіряємо, чи результат не NULL
             current_rating = result[0] if result[0] is not None else 0.0
             
-            # Визначаємо рівень користувача, щоб змінити крок оновлення рейтингу
+            # Визначаємо рівень користувача для правильного масштабування змін рейтингу
             import config
             level = config.user_state.get(chat_id, {}).get('level', 'easy')
             
-            # Для складного рівня подвоюємо зміну рейтингу
-            if level == "hard":
-                change = change * 2
-                
+            # Масштабуємо зміну рейтингу в залежності від рівня
+            scaled_change = change
+            if abs(change) > 0:  # Захист від зміни нуля
+                if level == "hard" and change > 0:
+                    # Для складного рівня збільшуємо штраф за помилку
+                    scaled_change = 0.2
+                elif level == "hard" and change < 0:
+                    # Залишаємо стандартне зменшення рейтингу для правильної відповіді
+                    scaled_change = -0.1
+            
             # Застосовуємо зміну з обмеженнями
-            new_rating = max(min(current_rating + change, 5.0), 0.0)
+            new_rating = max(min(current_rating + scaled_change, 5.0), 0.0)
             # Округлюємо до однієї цифри після коми
             new_rating = round(new_rating, 1)
             
@@ -858,7 +916,7 @@ def update_word_rating_shared_dict(chat_id, word_id, change, shared_dict_id=None
             cursor.execute(f"SELECT {user_col} FROM shared_dict_{shared_dict_id} WHERE word_id = ?", (word_id,))
             check_result = cursor.fetchone()
             updated_rating = check_result[0] if check_result else None
-            print(f"CONFIRMATION: Updated shared dict rating for user {chat_id}, word_id {word_id}: {current_rating} -> {updated_rating}, level={level}")
+            print(f"CONFIRMATION: Updated shared dict rating for user {chat_id}, word_id {word_id}: {current_rating} -> {updated_rating}, level={level}, scaled_change={scaled_change}")
             
             # Важливо викликати commit() для збереження змін
             conn.commit()

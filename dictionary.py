@@ -131,109 +131,57 @@ def save_word(chat_id, manual_translation=None):
 
 def start_activity(chat_id, mode, exclude_max_rating=False):
     """Start learning or repetition activity"""
-    # Зберігаємо поточний тип словника і рівень перед очищенням стану
-    dict_type = user_state.get(chat_id, {}).get("dict_type", "personal") 
-    level = user_state.get(chat_id, {}).get("level", "easy")
-    # Отримуємо shared_dict_id ДО очищення стану
-    shared_dict_id = user_state.get(chat_id, {}).get("shared_dict_id", None)
+    from storage import get_dataframe, save_dataframe, get_user_file_path
+    import db_manager
+    from handlers.core import start_learning, start_repetition  # Import core functions
     
-    print(f"Debug: Starting {mode} activity for user {chat_id} with dict_type={dict_type}, level={level}, shared_dict_id={shared_dict_id}")
-    
-    # Оновлюємо стан користувача і видаляємо повідомлення активності
+    # Clear previous state, preserving dictionary type
+    from utils import clear_state
     clear_state(chat_id, preserve_dict_type=True, preserve_messages=False)
     
-    # Відновлюємо необхідні параметри після очищення
-    new_state = {"dict_type": dict_type, "level": level}
-    if shared_dict_id:
-        new_state["shared_dict_id"] = shared_dict_id
-    user_state[chat_id] = new_state
-    
-    # Якщо це спільний словник, переконаємось, що shared_dict_id правильний
-    if dict_type == "shared":
-        if not shared_dict_id:
-            # Спробуємо отримати shared_dict_id з бази даних
-            conn = db_manager.get_connection()
-            cursor = conn.cursor()
-            cursor.execute("SELECT shared_dict_id FROM users WHERE chat_id = ?", (chat_id,))
-            result = cursor.fetchone()
-            conn.close()
-            
-            if result and result[0]:
-                user_state[chat_id]["shared_dict_id"] = result[0]
-                print(f"Retrieved shared_dict_id={result[0]} from database for user {chat_id}")
+    dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
+    shared_dict_id = user_state.get(chat_id, {}).get("shared_dict_id", None)
+    level = user_state.get(chat_id, {}).get("level", "easy")
     
     try:
-        # Оновлюємо streak користувача
-        streak = db_manager.update_user_streak(chat_id)
-        
-        # Отримуємо слова для користувача з урахуванням типу словника
+        # Get DataFrame based on dictionary type
         df = None
-        if dict_type == "shared":
-            current_shared_dict_id = user_state[chat_id].get("shared_dict_id")
-            if current_shared_dict_id:
-                df = db_manager.get_shared_dictionary_words(chat_id, current_shared_dict_id)
-                print(f"Got {len(df) if df is not None else 0} words from shared dictionary {current_shared_dict_id}")
-            else:
-                print("Error: shared_dict_id is missing for shared dictionary type")
-                bot.send_message(chat_id, "❌ Помилка: не вибрано спільний словник.")
-                return False
+        if dict_type == "shared" and shared_dict_id:
+            df = db_manager.get_shared_dictionary_words(chat_id, shared_dict_id)
         else:
-            df = db_manager.get_user_words(chat_id, dict_type)
+            df = get_dataframe(chat_id, dict_type)
         
-        # Фільтрація слів з максимальним рейтингом для не-складних рівнів, якщо потрібно
-        if exclude_max_rating and len(df) > 5:  # Якщо слів достатньо багато для фільтрації
-            df_filtered = df[df['priority'] < 4.9]
-            
-            # Якщо після фільтрації залишилось достатньо слів, використовуємо фільтрований набір
-            if len(df_filtered) >= 5:
-                df = df_filtered
-                print(f"Filtered out max-rating words, {len(df)} words remaining")
-        
-        # Перевіряємо результат
+        # Check result
         if df is None or df.empty:
             dict_name = "спільному словнику" if dict_type == "shared" else "загальному словнику" if dict_type == "common" else "персональному словнику"
             bot.send_message(chat_id, f"📭 У {dict_name} ще немає доданих слів.")
             return False
-            
-        # Переконуємося, що всі необхідні колонки присутні
-        if 'id' not in df.columns:
-            print(f"WARNING: DataFrame lacks 'id' column!")
-            # Додаємо id колонку зі значеннями за замовчуванням
-            df['id'] = range(1, len(df) + 1)
-            
-        print(f"Successfully retrieved {len(df)} words from database with columns: {df.columns.tolist()}")
         
-        # Для складного рівня беремо 30% найтяжчих слів
+        # For hard level, select top 30% words with highest ratings
         if level == "hard":
-            # Переконаємося, що priority має числовий тип
+            # Make sure 'priority' column is numeric
             df['priority'] = pd.to_numeric(df['priority'], errors='coerce').fillna(0.0)
             
-            # Вивід статистики рейтингів для відлагодження
-            print(f"DEBUG priority stats: min={df['priority'].min()}, max={df['priority'].max()}, mean={df['priority'].mean()}")
-            print(f"DEBUG priority distribution: {df['priority'].value_counts().sort_index().to_dict()}")
-            
-            # Сортуємо за рейтингом у спадаючому порядку (найвищі рейтинги спочатку)
+            # Sort by priority in descending order
             df = df.sort_values(by='priority', ascending=False)
             
-            # Беремо верхні 30% слів
+            # Take top 30% of words
             top_words_count = max(1, int(len(df) * 0.3))
             df = df.head(top_words_count)
-            
-            # Показуємо деталі про обрані слова
-            print(f"Hard level: selected {len(df)} top-rated words. Ratings: {df['priority'].tolist()[:5]}")
+            print(f"Hard level: selected {len(df)} top-rated words")
         
-        # Запускаємо відповідну активність
-        if mode == 'repeat':
-            from handlers import start_repetition
-            return start_repetition(chat_id, df)
-        elif mode == 'learn':
-            from handlers import start_learning
+        # Call the appropriate core function based on mode
+        if mode == 'learn':
             return start_learning(chat_id, df)
+        elif mode == 'repeat':
+            return start_repetition(chat_id, df)
+        else:
+            print(f"Error: Unknown activity mode: {mode}")
+            return False
     except Exception as e:
-        print(f"ERROR using SQLite database: {e}")
+        print(f"Error starting activity: {e}")
         import traceback
         traceback.print_exc()
-        bot.send_message(chat_id, f"❌ Помилка при доступі до бази даних.")
         return False
 
 def return_to_appropriate_menu(chat_id, success=True, message=None):

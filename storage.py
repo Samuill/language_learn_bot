@@ -4,6 +4,7 @@ import pandas as pd
 import time
 from config import COMMON_DICT_FILE, user_state
 import db_manager
+from utils.path_helpers import get_user_params_path
 
 # Створюємо директорію для словників користувачів
 USER_DICT_DIR = "user_dictionaries"

@@ -7,9 +7,19 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-# TOKEN = "7616425414:AAFaZCuYss9UyNSXm_MJCd42rLjAKNWy0Mc"
-TOKEN = "7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw"
-ADMIN_ID = 476376623  # ID адміністратора
+# Try to load environment variables, fallback to hardcoded values if dotenv is not installed
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+    print("Using environment variables from .env file")
+    TOKEN = os.getenv('BOT_TOKEN', '7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw')
+    ADMIN_ID = int(os.getenv('ADMIN_ID', '476376623'))
+except ImportError:
+    print("WARNING: python-dotenv not installed. Using hardcoded values.")
+    print("Please install python-dotenv: pip install python-dotenv")
+    # Fallback to hardcoded values
+    TOKEN = '7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw'
+    ADMIN_ID = 476376623
 
 # Глобальні об'єкти
 bot = telebot.TeleBot(TOKEN, num_threads=4)  # Збільшуємо кількість потоків

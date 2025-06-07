@@ -6,9 +6,10 @@ Handler for possessive article exercises.
 
 import random
 import telebot
-import sqlite3  # Add missing import for sqlite3
+import sqlite3
 from config import bot, user_state
-from utils import clear_state, easy_level_keyboard, main_menu_keyboard  # Import main_menu_keyboard
+from utils import clear_state, easy_level_keyboard, main_menu_keyboard
+from utils.input_handlers import handle_exit_from_activity  # Импорт новой утилиты
 import db_manager
 
 @bot.message_handler(func=lambda message: message.text in ["🧩 Вивчати присвійні займенники", "🧩 Вивчати присвійні займенники (середній)", "🧩 Вивчати присвійні займенники (складний)"])
@@ -437,34 +438,20 @@ def handle_possessive_answer(call):
                 reply_markup=markup
             )
 
-# Додаємо обробник загальних команд меню для виходу з гри
+# Заменим обработчик выхода на новый унифицированный
 @bot.message_handler(func=lambda message: user_state.get(message.chat.id, {}).get("exercise") == "possessive" and 
                     message.text in ["↩️ Повернутися до головного меню", "🟢 Легкий рівень", "🟠 Середній рівень", "🔴 Складний рівень"])
 def exit_possessive_exercise(message):
     """Handle exit from possessive exercise"""
     chat_id = message.chat.id
     
-    # Видаляємо всі активні повідомлення гри
-    if "active_messages" in user_state[chat_id]:
+    # Удаляем активные сообщения игры
+    if chat_id in user_state and "active_messages" in user_state[chat_id]:
         for msg_id in user_state[chat_id]["active_messages"]:
             try:
                 bot.delete_message(chat_id, msg_id)
             except Exception as e:
                 print(f"Error deleting message {msg_id}: {e}")
     
-    # Визначаємо, куди повертатися
-    if message.text == "↩️ Повернутися до головного меню":
-        clear_state(chat_id, preserve_dict_type=True)
-        bot.send_message(chat_id, "Головне меню:", reply_markup=main_menu_keyboard(chat_id))
-    elif message.text == "🟢 Легкий рівень":
-        clear_state(chat_id, preserve_dict_type=True)
-        from utils import easy_level_keyboard
-        bot.send_message(chat_id, "🟢 Легкий рівень - оберіть активність:", reply_markup=easy_level_keyboard())
-    elif message.text == "🟠 Середній рівень":
-        clear_state(chat_id, preserve_dict_type=True)
-        from utils import medium_level_keyboard
-        bot.send_message(chat_id, "🟠 Середній рівень - оберіть активність:", reply_markup=medium_level_keyboard())
-    elif message.text == "🔴 Складний рівень":
-        clear_state(chat_id, preserve_dict_type=True)
-        from utils import hard_level_keyboard
-        bot.send_message(chat_id, "🔴 Складний рівень - оберіть активність:", reply_markup=hard_level_keyboard())
+    # Используем общий обработчик выхода
+    handle_exit_from_activity(message)
