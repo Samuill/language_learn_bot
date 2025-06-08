@@ -10,16 +10,36 @@ DB_DIR = "database"
 DB_PATH = os.path.join(DB_DIR, "german_words.db")
 
 def create_database():
-    """Create the SQLite database with all necessary tables"""
-    # Створюємо директорію для бази даних, якщо не існує
-    if not os.path.exists(DB_DIR):
-        os.makedirs(DB_DIR)
-    
-    print(f"Initializing database at {DB_PATH}")
-    
-    # Підключаємось до бази даних (створюється автоматично, якщо не існує)
+    """Create the database schema if it doesn't exist"""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
+    
+    # Create users table
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS users (
+        chat_id INTEGER PRIMARY KEY,
+        language TEXT DEFAULT 'uk',
+        last_active TEXT,
+        streak INTEGER DEFAULT 0,
+        shared_dict_id INTEGER,
+        shared_dict_admin INTEGER DEFAULT 0
+    )
+    ''')
+    
+    # Create words table with support for multiple languages
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS words (
+        id INTEGER PRIMARY KEY,
+        article_id INTEGER,
+        word TEXT NOT NULL,
+        en_tran TEXT,
+        uk_tran TEXT,
+        ru_tran TEXT,
+        tr_tran TEXT,
+        ar_tran TEXT,
+        FOREIGN KEY (article_id) REFERENCES article(id)
+    )
+    ''')
     
     # Створюємо таблицю для артиклів
     cursor.execute('''
@@ -36,34 +56,8 @@ def create_database():
     except sqlite3.IntegrityError:
         pass  # Ігноруємо помилки унікальності, якщо артиклі вже існують
     
-    # Створюємо таблицю для слів
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS words (
-        id INTEGER PRIMARY KEY,
-        article_id INTEGER,
-        word TEXT NOT NULL,
-        ru_tran TEXT,
-        uk_tran TEXT,
-        tr_tran TEXT,
-        ar_tran TEXT,
-        FOREIGN KEY (article_id) REFERENCES article(id),
-        UNIQUE(word, article_id)
-    )
-    ''')
-    
     # Створюємо індекс для швидкого пошуку слів
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_word ON words(word)')
-    
-    # Створюємо таблицю для відстеження користувачів
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY,
-        chat_id INTEGER UNIQUE,
-        language TEXT,
-        last_active TEXT,
-        streak INTEGER DEFAULT 0
-    )
-    ''')
     
     # Зберігаємо зміни і закриваємо з'єднання
     conn.commit()

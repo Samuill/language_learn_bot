@@ -5,10 +5,12 @@ import os
 import sys
 import signal
 import traceback
+import telebot
 import sqlite3  # Додаємо імпорт sqlite3
 from config import bot, scheduler, user_state, DEBUG_MODE
 from scheduler import setup_scheduler
 import handlers  # Import handlers to register them
+from utils.language_utils import create_language_keyboard  # Додаємо імпорт для клавіатури мов
 
 # Шлях до PID файлу для запобігання запуску кількох екземплярів бота
 PID_FILE = "bot.pid"
@@ -64,6 +66,33 @@ def reset_dictionaries():
         if "dict_type" in user_state[chat_id]:
             user_state[chat_id]["dict_type"] = "personal"
 
+@bot.message_handler(commands=['language', 'lang', 'change_language'])
+def change_language_command(message):
+    """Handle language change command"""
+    chat_id = message.chat.id
+    
+    print(f"Language command received from user {chat_id}")
+    
+    # Set state for language selection
+    user_state[chat_id] = {
+        "state": "language_selection",
+        "dict_type": user_state.get(chat_id, {}).get("dict_type", "personal"),
+        "shared_dict_id": user_state.get(chat_id, {}).get("shared_dict_id")
+    }
+    
+    print(f"Updated user state: {user_state[chat_id]}")
+    
+    # Show language selection keyboard
+    from utils.language_utils import create_language_keyboard
+    keyboard = create_language_keyboard()
+    
+    print(f"Sending language selection keyboard to user {chat_id}")
+    bot.send_message(
+        chat_id, 
+        "Please select your language / Оберіть мову / Выберите язык:", 
+        reply_markup=keyboard
+    )
+
 def main():
     """Main function to run the bot"""
     # Перевірка, чи вже запущено екземпляр бота
@@ -115,28 +144,38 @@ def main():
         from debug_logger import log_error, log_dict_operation
         print(f"Debug logging enabled. Logs will be saved to logs/debug.log")
     
+    # Register command handlers
+    bot.set_my_commands([
+        telebot.types.BotCommand("/start", "Start the bot"),
+        telebot.types.BotCommand("/language", "Change language")
+    ])
+    
+    print(f"Bot started at {time.strftime('%Y-%m-%d %H:%M:%S')}...")
+    print("Press Ctrl+C to stop the bot")
+    
+    # Start polling in a try-except block
     while True:
         try:
-            print(f"Bot started at {time.strftime('%Y-%m-%d %H:%M:%S')}...")
-            # Збільшуємо таймаут до 60 секунд (замість 25 за замовчуванням)
-            bot.polling(none_stop=True, interval=1, timeout=60, long_polling_timeout=60)
+            bot.polling(none_stop=True, interval=1, timeout=60)
+            break  # If polling exits normally, break the loop
         except requests.exceptions.ConnectionError:
-            print("Помилка з'єднання. Повторна спроба через 5 секунд...")
+            print("Connection error. Retrying in 5 seconds...")
             time.sleep(5)
         except requests.exceptions.ReadTimeout:
-            print("Таймаут читання. Повторна спроба через 5 секунд...")
+            print("Read timeout. Retrying in 5 seconds...")
             time.sleep(5)
         except Exception as e:
-            print(f"Критична помилка: {e}")
-            print(f"Тип помилки: {type(e).__name__}")
+            print(f"Critical error: {e}")
             traceback.print_exc()
-            
-            # Log error to debug log
             if DEBUG_MODE:
                 from debug_logger import log_error
                 log_error(e, "Critical error in main loop")
-                
             time.sleep(5)
 
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    try:
+        print("Bot is starting...")
+        main()  # Call the main function instead of trying to poll directly
+    except Exception as e:
+        print(f"Error: {e}")
+        traceback.print_exc()

@@ -1,17 +1,28 @@
 # -*- coding: utf-8 -*-
 
 """
-Функции для создания клавиатур.
+Функції для створення клавіш.
 """
 
 import telebot
 from config import user_state, ADMIN_ID
 
 def main_menu_keyboard(chat_id=None):
-    """Create main menu keyboard with dictionary selection"""
+    """Створити головне меню клавіатури з вибором словника"""
     keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
     
-    # Add dictionary selector button
+    # Отримати мову користувача
+    try:
+        import db_manager
+        language_code = db_manager.get_user_language(chat_id) or "en"
+    except Exception as e:
+        print(f"Error getting user language: {e}")
+        language_code = "en"
+    
+    # Імпортувати функції локалізації
+    from utils.language_utils import get_localized_text, get_language_flag
+    
+    # Додаємо кнопку вибору словника
     dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
     shared_dict_id = user_state.get(chat_id, {}).get("shared_dict_id", None)
     
@@ -113,7 +124,7 @@ def main_menu_keyboard(chat_id=None):
     return keyboard
 
 def shared_dictionary_keyboard():
-    """Create keyboard for shared dictionary options"""
+    """Створити клавіатуру для параметрів спільного словника"""
     keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
     keyboard.add("🆕 Створити спільний словник", "🔑 Вступити до спільного словника")
     keyboard.add("📋 Мої спільні словники")
@@ -121,7 +132,7 @@ def shared_dictionary_keyboard():
     return keyboard
 
 def easy_level_keyboard():
-    """Create keyboard for easy level"""
+    """Створити клавіатуру для легкого рівня"""
     keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
     keyboard.add("📖 Вчити нові слова", "🔄 Повторити")
     keyboard.add("🏷️ Вивчати артиклі", "🧩 Вивчати присвійні займенники")
@@ -129,7 +140,7 @@ def easy_level_keyboard():
     return keyboard
 
 def medium_level_keyboard():
-    """Create keyboard for medium level"""
+    """Створити клавіатуру для середнього рівня"""
     keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
     keyboard.add("🔤 Вибір правильного написання", "📝 Заповніть пропуски")
     keyboard.add("🏷️ Вивчати артиклі", "🧩 Вивчати присвійні займенники (середній)")
@@ -137,7 +148,7 @@ def medium_level_keyboard():
     return keyboard
 
 def hard_level_keyboard():
-    """Create keyboard for hard level"""
+    """Створити клавіатуру для складного рівня"""
     keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
     keyboard.add("🧩 Складна гра", "📝 Введення слів")
     keyboard.add("🏷️ Введення артиклів", "🧩 Вивчати присвійні займенники (складний)")
@@ -145,13 +156,13 @@ def hard_level_keyboard():
     return keyboard
 
 def main_menu_cancel():
-    """Create cancel menu keyboard"""
+    """Створити клавіатуру для скасування меню"""
     keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
     keyboard.add("✖️ Відміна")  # Додаємо хрестик для візуального виділення
     return keyboard
 
 def language_selection_keyboard():
-    """Create language selection keyboard"""
+    """Створити клавіатуру для вибору мови"""
     keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
     keyboard.add("🇺🇦 Українська", "🇷🇺 Російська")
     return keyboard

@@ -6,6 +6,7 @@ from config import bot, translator, user_state, ADMIN_ID, scheduler  # Дода�
 from utils import clear_state, track_activity, main_menu_keyboard, main_menu_cancel, language_selection_keyboard, easy_level_keyboard, shared_dictionary_keyboard
 from storage import get_dataframe, save_dataframe, get_user_file_path
 from dictionary import save_word, toggle_dictionary, start_activity, return_to_appropriate_menu, set_dictionary_type
+from utils.language_utils import get_text, is_command
 
 def start_learning(chat_id, df):
     """Start learning new words activity"""
@@ -571,7 +572,7 @@ def easy_level(message):
         user_state[chat_id] = {"dict_type": dict_type, "level": "easy"}
     
     from utils import easy_level_keyboard
-    bot.send_message(chat_id, "🟢 Легкий рівень - оберіть активність:", 
+    bot.send_message(chat_id,  get_text("easy_level_select_activity",chat_id), 
                    reply_markup=easy_level_keyboard())
 
 @bot.message_handler(func=lambda message: message.text == "🟠 Середній рівень")

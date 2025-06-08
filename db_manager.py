@@ -8,6 +8,7 @@ import sqlite3
 import pandas as pd
 from config import ADMIN_ID
 from db_init import create_user_table, create_database, migrate_from_csv
+from utils.logging_utils import log_language, log_error, log_language_event
 
 # Шлях до бази даних
 DB_DIR = "database"
@@ -108,40 +109,95 @@ def initialize_user(chat_id, language):
     
     return True
 
+def set_user_language(chat_id, language):
+    """
+    Set or update user language
+    
+    Args:
+        chat_id: User's chat ID
+        language: Language code (en, uk, ru, tr, ar)
+        
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    print(f"DB: Setting language for user {chat_id} to {language}")
+    
+    # Validate inputs
+    if not chat_id or not language:
+        print(f"DB ERROR: Invalid input - chat_id: {chat_id}, language: {language}")
+        return False
+    
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        
+        # For debugging, output the database structure
+        try:
+            cursor.execute("PRAGMA table_info(users)")
+            columns = cursor.fetchall()
+            print(f"DB DEBUG: Users table columns: {columns}")
+        except Exception as e:
+            print(f"DB ERROR checking table structure: {e}")
+        
+        # Check if user exists
+        cursor.execute('SELECT 1 FROM users WHERE chat_id = ?', (chat_id,))
+        user_exists = cursor.fetchone() is not None
+        
+        if user_exists:
+            print(f"DB: User {chat_id} exists, updating language to {language}")
+            cursor.execute('UPDATE users SET language = ? WHERE chat_id = ?', (language, chat_id))
+        else:
+            print(f"DB: User {chat_id} doesn't exist, creating new user with language {language}")
+            cursor.execute('INSERT INTO users (chat_id, language) VALUES (?, ?)', (chat_id, language))
+            create_user_table(chat_id)
+        
+        # Check update success
+        rows_affected = cursor.rowcount
+        print(f"DB: Updated {rows_affected} rows")
+        
+        conn.commit()
+        
+        # Verify update
+        cursor.execute('SELECT language FROM users WHERE chat_id = ?', (chat_id,))
+        result = cursor.fetchone()
+        if result:
+            print(f"DB: Verified language for user {chat_id}: {result[0]}")
+            conn.close()
+            return True
+        
+        print(f"DB: Could not verify language update for user {chat_id}")
+        conn.close()
+        return False
+        
+    except Exception as e:
+        print(f"DB ERROR setting language: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
 def get_user_language(chat_id):
     """Get user language from database"""
+    log_language("GET_LANG", chat_id, "Retrieving language from database")
+    
     conn = get_connection()
     cursor = conn.cursor()
     
-    cursor.execute('SELECT language FROM users WHERE chat_id = ?', (chat_id,))
-    result = cursor.fetchone()
-    
-    conn.close()
-    
-    if result:
-        return result[0]
-    else:
-        return None
-
-def set_user_language(chat_id, language):
-    """Set or update user language"""
-    conn = get_connection()
-    cursor = conn.cursor()
-    
-    # Check if user exists
-    cursor.execute('SELECT 1 FROM users WHERE chat_id = ?', (chat_id,))
-    if cursor.fetchone():
-        cursor.execute('UPDATE users SET language = ? WHERE chat_id = ?', (language, chat_id))
-    else:
-        cursor.execute('INSERT INTO users (chat_id, language) VALUES (?, ?)', (chat_id, language))
+    try:
+        cursor.execute('SELECT language FROM users WHERE chat_id = ?', (chat_id,))
+        result = cursor.fetchone()
         
-        # Create user table
-        create_user_table(chat_id)
-    
-    conn.commit()
-    conn.close()
-    
-    return language
+        if result and result[0]:
+            language = result[0]
+            log_language("GET_LANG_RESULT", chat_id, f"Found language: {language}")
+            return language
+        else:
+            log_language("GET_LANG_NONE", chat_id, "No language found or user does not exist")
+            return None
+    except Exception as e:
+        log_error(e, f"Error getting language for user {chat_id}")
+        return None
+    finally:
+        conn.close()
 
 def get_user_words(chat_id, dict_type="personal"):
     """Get words for a user as a DataFrame"""
@@ -151,15 +207,26 @@ def get_user_words(chat_id, dict_type="personal"):
     # Визначаємо, який словник використовувати
     if dict_type == "common":
         # Загальний словник - вибираємо всі слова
-        language = get_user_language(chat_id) or "uk"
+        language = get_user_language(chat_id) or "en"
         print(f"Getting common dictionary words for user {chat_id} in language {language}")
         
-        query = f'''
-        SELECT w.id, w.word, w.{language}_tran as translation, a.article, 0.0 as priority
-        FROM words w
-        LEFT JOIN article a ON w.article_id = a.id
-        WHERE w.{language}_tran IS NOT NULL
-        '''
+        # Handle different languages
+        if language in ["en", "uk", "ru", "tr", "ar"]:
+            query = f'''
+            SELECT w.id, w.word, w.{language}_tran as translation, a.article, 0.0 as priority
+            FROM words w
+            LEFT JOIN article a ON w.article_id = a.id
+            WHERE w.{language}_tran IS NOT NULL
+            '''
+        else:
+            # Fallback to English if language not supported
+            query = '''
+            SELECT w.id, w.word, w.en_tran as translation, a.article, 0.0 as priority
+            FROM words w
+            LEFT JOIN article a ON w.article_id = a.id
+            WHERE w.en_tran IS NOT NULL
+            '''
+        
         cursor.execute(query)
     else:
         # Персональний словник - вибираємо слова користувача

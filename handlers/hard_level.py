@@ -12,6 +12,7 @@ from utils import clear_state, main_menu_keyboard, hard_level_keyboard
 from utils.input_handlers import safe_next_step_handler, sanitize_user_input  # Импорт новых утилит
 import db_manager
 from dictionary import return_to_appropriate_menu
+from utils.language_utils import get_text, is_command 
 
 # Додаємо константи для зміни рейтингу на високому рівні
 HARD_RATING_DECREASE = -0.1    # Зменшення рейтингу при правильній відповіді
@@ -58,7 +59,7 @@ def word_typing_game(message):
             if shared_dict_id:
                 df = db_manager.get_shared_dictionary_words(chat_id, shared_dict_id)
             else:
-                bot.send_message(chat_id, "❌ Не вказано спільний словник", reply_markup=hard_level_keyboard())
+                bot.send_message(chat_id, get_text("no_dictionary",chat_id), reply_markup=hard_level_keyboard())
                 return
         else:
             df = db_manager.get_user_words(chat_id, dict_type)
@@ -66,7 +67,7 @@ def word_typing_game(message):
         # Перевіряємо наявність слів
         if df is None or df.empty:
             dict_name = "спільному словнику" if dict_type == "shared" else "загальному словнику" if dict_type == "common" else "персональному словнику"
-            bot.send_message(chat_id, f"📭 У {dict_name} ще немає доданих слів.", reply_markup=hard_level_keyboard())
+            bot.send_message(chat_id,get_text("in",chat_id) + f"{dict_name}"+ get_text("no_words",chat_id), reply_markup=hard_level_keyboard())
             return
             
         # Для складного рівня вибираємо слова з найвищим рейтингом
@@ -108,7 +109,7 @@ def word_typing_game(message):
         print(f"Error in word_typing_game: {e}")
         import traceback
         traceback.print_exc()
-        bot.send_message(chat_id, "❌ Помилка при запуску гри.", reply_markup=hard_level_keyboard())
+        bot.send_message(chat_id,get_text("error_occurred",chat_id), reply_markup=hard_level_keyboard())
 
 def handle_word_typing_answer(message):
     """Handle user's answer in word typing game"""
@@ -116,7 +117,7 @@ def handle_word_typing_answer(message):
     
     # Проверка активности игры
     if chat_id not in user_state or user_state[chat_id].get("game") != "word_typing":
-        bot.send_message(chat_id, "❌ Помилка: сесія гри закінчилась.", reply_markup=hard_level_keyboard())
+        bot.send_message(chat_id, get_text("game_not_stop",chat_id), reply_markup=hard_level_keyboard())
         return
     
     # Очищаем и безопасно обрабатываем ввод пользователя
@@ -160,7 +161,7 @@ def handle_word_typing_answer(message):
                     parse_mode="HTML"
                 )
                 # Продовжуємо з новим словом
-                bot.send_message(chat_id, "Продовжуємо...")
+                bot.send_message(chat_id, get_text("continue_game",chat_id))
                 word_typing_game(message)
                 return
             else:
@@ -182,7 +183,7 @@ def handle_word_typing_answer(message):
             print(f"Updated personal dict rating for word {word_id}: {rating_change}")
         
         # Продовжуємо з новим словом
-        bot.send_message(chat_id, "Продовжуємо...")
+        bot.send_message(chat_id, get_text("continue_game",chat_id))
         word_typing_game(message)
     except Exception as e:
         print(f"Error processing answer: {e}")
@@ -265,7 +266,7 @@ def article_typing_game(message):
             result = random.choice(top_results)
         else:
             # Якщо результатів немає, повідомляємо про це
-            bot.send_message(chat_id, "📭 У словнику немає слів з артиклями для вивчення.", 
+            bot.send_message(chat_id, get_text("in", chat_id) + get_text("dictionary", chat_id) + get_text("no_words", chat_id),
                            reply_markup=hard_level_keyboard())
             conn.close()
             return
@@ -315,7 +316,7 @@ def article_typing_game(message):
         print(f"Error in article_typing_game: {e}")
         import traceback
         traceback.print_exc()
-        bot.send_message(chat_id, "❌ Помилка при запуску гри.", reply_markup=hard_level_keyboard())
+        bot.send_message(chat_id,get_text("error_occurred", chat_id), reply_markup=hard_level_keyboard())
 
 def handle_article_typing_answer(message):
     """Handle user's answer in article typing game"""
@@ -323,7 +324,7 @@ def handle_article_typing_answer(message):
     
     # Перевіряємо, чи є дані гри у стані користувача
     if chat_id not in user_state or user_state[chat_id].get("game") != "article_typing":
-        bot.send_message(chat_id, "❌ Помилка: сесія гри закінчилась.", reply_markup=hard_level_keyboard())
+        bot.send_message(chat_id, get_text("game_not_stop",chat_id), reply_markup=hard_level_keyboard())
         return
     
     # Список команд меню, які потрібно обробляти як команди, а не відповіді
@@ -342,15 +343,15 @@ def handle_article_typing_answer(message):
         # Визначаємо, яке повідомлення показати
         if preserve_level:
             reply_markup = hard_level_keyboard()
-            msg_text = "🚫 Гра перервана. Переходимо до іншої активності..."
+           # msg_text = "🚫 Гра перервана. Переходимо до іншої активності..."
         else:
             reply_markup = main_menu_keyboard(chat_id)
-            msg_text = "🚫 Гра перервана. Виконую команду..."
+           # msg_text = "🚫 Гра перервана. Виконую команду..."
             
         # Повідомлення про завершення гри
         bot.send_message(
             chat_id,
-            msg_text,
+            #msg_text,
             reply_markup=reply_markup
         )
         
@@ -401,7 +402,7 @@ def handle_article_typing_answer(message):
             db_manager.update_word_rating(chat_id, word_id, -0.1)
         
         # Продовжуємо з новим словом
-        bot.send_message(chat_id, "Продовжуємо...")
+        bot.send_message(chat_id, get_text("continue_game",chat_id))
         article_typing_game(message)
     else:
         # Неправильна відповідь
@@ -422,7 +423,7 @@ def handle_article_typing_answer(message):
                 parse_mode="HTML"
             )
             # Продовжуємо з новим словом
-            bot.send_message(chat_id, "Продовжуємо...")
+            bot.send_message(chat_id, get_text("continue_game",chat_id))
             article_typing_game(message)
         else:
             # Даємо ще одну спробу

@@ -9,6 +9,7 @@ from storage import get_dataframe, save_dataframe, get_user_file_path
 from handlers.core import start_learning  # Import from core instead of duplicating code
 import db_manager
 from handlers.easy_level import learn_words  # Import learn_words at the top level
+from utils.language_utils import get_text,is_command
 
 @bot.message_handler(func=lambda message: message.text == "📖 Вчити нові слова")
 def learn_words_handler(message):
@@ -19,21 +20,21 @@ def learn_words_handler(message):
 def handle_pairs(call):
     chat_id = call.message.chat.id
     if chat_id not in user_state or "pairs" not in user_state[chat_id]:
-        bot.answer_callback_query(call.id, "❗ Спочатку оберіть розділ 'Вчити нові слова'")
+        bot.answer_callback_query(call.id, get_text("try_exception", chat_id))
         return
     
     state = user_state[chat_id]
     
     if call.data.startswith('tr_'):
         if state.get('selected_tr'):
-            bot.answer_callback_query(call.id, "⏳ Спочатку завершіть поточний вибір")
+            bot.answer_callback_query(call.id, get_text("wait_for_selection", chat_id))
             return
         state['selected_tr'] = call.data[3:]
         bot.answer_callback_query(call.id, f"Обрано: {state['selected_tr']}")
     
     elif call.data.startswith('de_'):
         if not state.get('selected_tr'):
-            bot.answer_callback_query(call.id, "❗ Спочатку оберіть переклад")
+            bot.answer_callback_query(call.id, get_text("select_translation_first", chat_id))
             return
         
         selected_de = call.data[3:]
@@ -76,7 +77,7 @@ def handle_pairs(call):
             
             # Продовжуємо виконання з оновленим DataFrame
             if correct:
-                bot.answer_callback_query(call.id, "✅ Правильно!")
+                bot.answer_callback_query(call.id, get_text("correct", chat_id))
                 # Безпечне оновлення рейтингу з перевіркою наявності значення у state
                 if 'selected_tr' in state and state['selected_tr'] and 'translation' in df.columns:
                     try:
@@ -103,7 +104,7 @@ def handle_pairs(call):
                     bot.delete_message(chat_id, call.message.message_id)
                     learn_words(call.message)  # Now this will work correctly
             else:
-                bot.answer_callback_query(call.id, "❌ Неправильно!")
+                bot.answer_callback_query(call.id, get_text("incorrect", chat_id))
                 # Безпечне оновлення рейтингу з перевіркою наявності значення
                 if 'selected_tr' in state and state['selected_tr'] and 'translation' in df.columns:
                     try:

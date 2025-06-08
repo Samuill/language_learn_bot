@@ -8,7 +8,7 @@ from config import bot, user_state, ADMIN_ID
 from utils import main_menu_keyboard, clear_state  # Добавляем импорт clear_state
 from dictionary import toggle_dictionary, set_dictionary_type
 import db_manager
-
+from utils.language_utils import get_text, is_command 
 @bot.message_handler(func=lambda message: message.text in ["🌐 Загальний словник", "👤 Персональний словник"])
 def switch_dictionary(message):
     toggle_dictionary(message.chat.id)
@@ -58,7 +58,7 @@ def easy_level(message):
         user_state[chat_id] = {"dict_type": dict_type, "level": "easy"}
     
     from utils import easy_level_keyboard
-    bot.send_message(chat_id, "🟢 Легкий рівень - оберіть активність:", 
+    bot.send_message(chat_id, get_text("easy_level_select_activity", chat_id), 
                    reply_markup=easy_level_keyboard())
 
 @bot.message_handler(func=lambda message: message.text == "🟠 Середній рівень")
@@ -78,7 +78,7 @@ def medium_level(message):
     
     # Show medium level menu with activities
     from utils import medium_level_keyboard
-    bot.send_message(chat_id, "🟠 Середній рівень - оберіть активність:", 
+    bot.send_message(chat_id, get_text("meduim_level_select_activity", chat_id), 
                     reply_markup=medium_level_keyboard())
 
 @bot.message_handler(func=lambda message: message.text == "🔴 Складний рівень")
@@ -98,5 +98,5 @@ def hard_level(message):
     
     # Show hard level menu
     from utils import hard_level_keyboard
-    bot.send_message(chat_id, "🔴 Складний рівень - оберіть активність:", 
+    bot.send_message(chat_id, get_text("hard_level_select_activity", chat_id), 
                    reply_markup=hard_level_keyboard())

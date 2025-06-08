@@ -1,0 +1,14 @@
+[2025-06-08 00:20:13] [LANG] [User SYSTEM] KEYBOARD: Creating language selection keyboard
+[2025-06-08 00:20:13] [LANG] [User SYSTEM] KEYBOARD_BUTTONS: Adding buttons: [('🇬🇧', 'English'), ('🇺🇦', 'Українська'), ('🇷🇺', 'Русский'), ('🇹🇷', 'Türkçe'), ('🇸🇾', 'العربية')]
+[2025-06-08 00:20:13] [LANG] [User SYSTEM] KEYBOARD_ROW: Added row: ['🇬🇧 English', '🇺🇦 Українська']
+[2025-06-08 00:20:13] [LANG] [User SYSTEM] KEYBOARD_ROW: Added row: ['🇷🇺 Русский', '🇹🇷 Türkçe']
+[2025-06-08 00:20:13] [LANG] [User SYSTEM] KEYBOARD_ROW: Added final row: ['🇸🇾 العربية']
+[2025-06-08 00:20:56] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 00:20:56] [LANG] [User 476376623] GET_LANG_RESULT: Found language: uk
+[2025-06-08 00:20:56] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 00:20:56] [LANG] [User 476376623] GET_LANG_RESULT: Found language: uk
+[2025-06-08 00:21:34] [LANG] [User SYSTEM] KEYBOARD: Creating language selection keyboard
+[2025-06-08 00:21:34] [LANG] [User SYSTEM] KEYBOARD_BUTTONS: Adding buttons: [('🇬🇧', 'English'), ('🇺🇦', 'Українська'), ('🇷🇺', 'Русский'), ('🇹🇷', 'Türkçe'), ('🇸🇾', 'العربية')]
+[2025-06-08 00:21:34] [LANG] [User SYSTEM] KEYBOARD_ROW: Added row: ['🇬🇧 English', '🇺🇦 Українська']
+[2025-06-08 00:21:34] [LANG] [User SYSTEM] KEYBOARD_ROW: Added row: ['🇷🇺 Русский', '🇹🇷 Türkçe']
+[2025-06-08 00:21:34] [LANG] [User SYSTEM] KEYBOARD_ROW: Added final row: ['🇸🇾 العربية']

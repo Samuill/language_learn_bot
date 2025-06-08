@@ -17,8 +17,9 @@ from . import shared_dicts
 from . import admin
 from . import hard_level  # Додаємо імпорт нового модуля
 from . import possessive_articles  # Import the new possessive articles module
+from . import easy_level
+from . import start        # ← Register the language-selection and /start handlers
 from . import medium_level  # Import the new medium level module
-from . import easy_level  # Import the new easy_level module
 
 # Експортуємо функції, що потрібні в інших модулях
 from .core import start_learning, start_repetition, start_article_activity

@@ -1,0 +1,205 @@
+[2025-06-08 00:25:00] [LANG] [User SYSTEM] KEYBOARD: Creating language selection keyboard
+[2025-06-08 00:25:00] [LANG] [User SYSTEM] KEYBOARD_BUTTONS: Adding buttons: [('🇬🇧', 'English'), ('🇺🇦', 'Українська'), ('🇷🇺', 'Русский'), ('🇹🇷', 'Türkçe'), ('🇸🇾', 'العربية')]
+[2025-06-08 00:25:00] [LANG] [User SYSTEM] KEYBOARD_ROW: Added row: ['🇬🇧 English', '🇺🇦 Українська']
+[2025-06-08 00:25:00] [LANG] [User SYSTEM] KEYBOARD_ROW: Added row: ['🇷🇺 Русский', '🇹🇷 Türkçe']
+[2025-06-08 00:25:00] [LANG] [User SYSTEM] KEYBOARD_ROW: Added final row: ['🇸🇾 العربية']
+[2025-06-08 00:25:12] [LANG] [User SYSTEM] KEYBOARD: Creating language selection keyboard
+[2025-06-08 00:25:12] [LANG] [User SYSTEM] KEYBOARD_BUTTONS: Adding buttons: [('🇬🇧', 'English'), ('🇺🇦', 'Українська'), ('🇷🇺', 'Русский'), ('🇹🇷', 'Türkçe'), ('🇸🇾', 'العربية')]
+[2025-06-08 00:25:12] [LANG] [User SYSTEM] KEYBOARD_ROW: Added row: ['🇬🇧 English', '🇺🇦 Українська']
+[2025-06-08 00:25:12] [LANG] [User SYSTEM] KEYBOARD_ROW: Added row: ['🇷🇺 Русский', '🇹🇷 Türkçe']
+[2025-06-08 00:25:12] [LANG] [User SYSTEM] KEYBOARD_ROW: Added final row: ['🇸🇾 العربية']
+[2025-06-08 00:26:12] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 00:26:12] [LANG] [User 476376623] GET_LANG_RESULT: Found language: uk
+[2025-06-08 00:26:12] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 00:26:12] [LANG] [User 476376623] GET_LANG_RESULT: Found language: uk
+[2025-06-08 00:30:01] [LANG] [User SYSTEM] KEYBOARD: Creating language selection keyboard
+[2025-06-08 00:30:01] [LANG] [User SYSTEM] KEYBOARD_BUTTONS: Adding buttons: [('🇬🇧', 'English'), ('🇺🇦', 'Українська'), ('🇷🇺', 'Русский'), ('🇹🇷', 'Türkçe'), ('🇸🇾', 'العربية')]
+[2025-06-08 00:30:01] [LANG] [User SYSTEM] KEYBOARD_ROW: Added row: ['🇬🇧 English', '🇺🇦 Українська']
+[2025-06-08 00:30:01] [LANG] [User SYSTEM] KEYBOARD_ROW: Added row: ['🇷🇺 Русский', '🇹🇷 Türkçe']
+[2025-06-08 00:30:01] [LANG] [User SYSTEM] KEYBOARD_ROW: Added final row: ['🇸🇾 العربية']
+[2025-06-08 00:30:08] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 00:30:08] [LANG] [User 476376623] GET_LANG_RESULT: Found language: uk
+[2025-06-08 00:30:08] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 00:30:08] [LANG] [User 476376623] GET_LANG_RESULT: Found language: uk
+[2025-06-08 00:30:38] [LANG] [User SYSTEM] KEYBOARD: Creating language selection keyboard
+[2025-06-08 00:30:38] [LANG] [User SYSTEM] KEYBOARD_BUTTONS: Adding buttons: [('🇬🇧', 'English'), ('🇺🇦', 'Українська'), ('🇷🇺', 'Русский'), ('🇹🇷', 'Türkçe'), ('🇸🇾', 'العربية')]
+[2025-06-08 00:30:38] [LANG] [User SYSTEM] KEYBOARD_ROW: Added row: ['🇬🇧 English', '🇺🇦 Українська']
+[2025-06-08 00:30:38] [LANG] [User SYSTEM] KEYBOARD_ROW: Added row: ['🇷🇺 Русский', '🇹🇷 Türkçe']
+[2025-06-08 00:30:38] [LANG] [User SYSTEM] KEYBOARD_ROW: Added final row: ['🇸🇾 العربية']
+[2025-06-08 00:30:43] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 00:30:43] [LANG] [User 476376623] GET_LANG_RESULT: Found language: uk
+[2025-06-08 00:30:43] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 00:30:43] [LANG] [User 476376623] GET_LANG_RESULT: Found language: uk
+[2025-06-08 00:35:42] [LANG] [User SYSTEM] KEYBOARD: Creating language selection keyboard
+[2025-06-08 00:35:42] [LANG] [User SYSTEM] KEYBOARD_BUTTONS: Adding buttons: [('🇬🇧', 'English'), ('🇺🇦', 'Українська'), ('🇷🇺', 'Русский'), ('🇹🇷', 'Türkçe'), ('🇸🇾', 'العربية')]
+[2025-06-08 00:35:42] [LANG] [User SYSTEM] KEYBOARD_ROW: Added row: ['🇬🇧 English', '🇺🇦 Українська']
+[2025-06-08 00:35:42] [LANG] [User SYSTEM] KEYBOARD_ROW: Added row: ['🇷🇺 Русский', '🇹🇷 Türkçe']
+[2025-06-08 00:35:42] [LANG] [User SYSTEM] KEYBOARD_ROW: Added final row: ['🇸🇾 العربية']
+[2025-06-08 00:36:23] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 00:36:23] [LANG] [User 476376623] GET_LANG_RESULT: Found language: uk
+[2025-06-08 00:36:23] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 00:36:23] [LANG] [User 476376623] GET_LANG_RESULT: Found language: uk
+[2025-06-08 00:44:09] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 00:44:09] [LANG] [User 476376623] GET_LANG_RESULT: Found language: en
+[2025-06-08 00:44:09] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 00:44:09] [LANG] [User 476376623] GET_LANG_RESULT: Found language: en
+[2025-06-08 00:44:18] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 00:44:18] [LANG] [User 476376623] GET_LANG_RESULT: Found language: en
+[2025-06-08 00:44:20] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 00:44:20] [LANG] [User 476376623] GET_LANG_RESULT: Found language: en
+[2025-06-08 00:44:29] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 00:44:29] [LANG] [User 476376623] GET_LANG_RESULT: Found language: tr
+[2025-06-08 00:44:29] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 00:44:29] [LANG] [User 476376623] GET_LANG_RESULT: Found language: tr
+[2025-06-08 00:44:34] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 00:44:34] [LANG] [User 476376623] GET_LANG_RESULT: Found language: tr
+[2025-06-08 00:44:56] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 00:44:56] [LANG] [User 476376623] GET_LANG_RESULT: Found language: tr
+[2025-06-08 00:44:56] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 00:44:56] [LANG] [User 476376623] GET_LANG_RESULT: Found language: tr
+[2025-06-08 00:46:21] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 00:46:21] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ru
+[2025-06-08 00:46:21] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 00:46:21] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ru
+[2025-06-08 00:46:28] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 00:46:28] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ru
+[2025-06-08 00:46:32] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 00:46:32] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ru
+[2025-06-08 00:46:35] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 00:46:35] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ru
+[2025-06-08 00:46:39] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 00:46:39] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ru
+[2025-06-08 00:46:43] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 00:46:43] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ru
+[2025-06-08 00:57:03] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 00:57:03] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ru
+[2025-06-08 00:57:06] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 00:57:06] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ru
+[2025-06-08 00:57:12] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 00:57:12] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-08 00:57:12] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 00:57:12] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-08 00:57:32] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 00:57:32] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-08 00:57:35] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 00:57:35] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-08 00:57:36] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 00:57:36] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-08 00:57:40] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 00:57:40] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-08 00:57:46] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 00:57:46] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-08 00:57:50] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 00:57:50] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-08 00:57:56] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 00:57:56] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-08 01:08:15] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 01:08:15] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-08 01:08:15] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 01:08:15] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-08 01:08:22] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 01:08:22] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-08 01:08:24] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 01:08:24] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-08 01:08:30] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 01:08:30] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-08 01:08:32] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 01:08:32] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-08 01:08:32] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 01:08:32] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-08 01:08:43] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 01:08:43] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-08 01:09:03] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 01:09:03] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-08 01:09:06] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 01:09:06] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-08 01:09:26] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 01:09:26] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-08 01:09:37] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 01:09:37] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-08 01:09:41] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 01:09:41] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-08 01:10:05] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 01:10:05] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-08 01:10:10] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 01:10:10] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-08 01:10:13] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 01:10:13] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-08 01:10:15] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 01:10:15] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-08 01:10:19] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 01:10:19] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-08 01:10:21] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 01:10:21] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-08 18:48:41] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 18:48:41] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-08 18:48:41] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 18:48:41] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-08 18:50:08] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 18:50:08] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-08 18:50:08] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 18:50:08] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-08 18:50:11] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 18:50:11] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-08 18:50:12] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 18:50:12] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-08 18:51:10] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 18:51:10] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-08 22:24:18] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 22:24:18] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-08 22:24:21] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 22:24:21] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-08 22:24:21] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 22:24:21] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-08 22:24:21] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 22:24:21] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-08 22:24:23] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 22:24:23] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-08 22:24:25] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 22:24:25] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-08 22:24:33] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-08 22:24:33] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-09 00:10:26] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-09 00:10:26] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-09 00:10:26] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-09 00:10:26] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-09 00:10:29] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-09 00:10:29] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-09 00:10:29] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-09 00:10:29] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-09 00:10:29] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-09 00:10:29] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-09 00:10:51] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-09 00:10:51] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-09 00:10:51] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-09 00:10:51] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-09 00:10:51] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-09 00:10:51] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-09 00:10:56] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-09 00:10:56] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-09 00:10:56] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-09 00:10:56] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-09 00:10:56] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-09 00:10:56] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-09 00:10:56] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-09 00:10:56] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-09 00:10:56] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-09 00:10:56] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-09 00:11:23] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-09 00:11:23] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-09 00:11:23] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-09 00:11:23] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-09 00:11:23] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-09 00:11:23] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-09 00:11:30] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-09 00:11:30] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-09 00:11:30] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-09 00:11:30] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-09 00:11:30] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-09 00:11:30] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-09 00:11:30] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-09 00:11:30] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-09 00:11:30] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-09 00:11:30] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar
+[2025-06-09 00:11:32] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-09 00:11:32] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ar

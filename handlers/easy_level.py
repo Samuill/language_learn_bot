@@ -10,8 +10,9 @@ import pandas as pd
 from config import bot, user_state
 import db_manager
 from dictionary import return_to_appropriate_menu
+from utils.language_utils import get_text, is_command  # add is_command here
 
-@bot.message_handler(func=lambda message: message.text == "📖 Вчити нові слова")
+@bot.message_handler(func=lambda message: is_command(message, "learning_new_words"))
 def learn_words(message):
     """Handler for learning new words activity"""
     chat_id = message.chat.id
@@ -21,12 +22,18 @@ def learn_words(message):
     shared_dict_id = user_state.get(chat_id, {}).get("shared_dict_id", None)
     
     try:
-        # Get dataframe from the appropriate dictionary
+        # Get dataframe from the appropriate dictionary - FIX THE DICTIONARY ACCESS
         if dict_type == "shared" and shared_dict_id:
+            # For shared dictionary
             df = db_manager.get_shared_dictionary_words(chat_id, shared_dict_id)
+        elif dict_type == "common":
+            # For common dictionary - get directly from database instead of deprecated get_dataframe
+            df = db_manager.get_user_words(chat_id, "common")
+            print(f"Got common dictionary for user {chat_id}: {len(df)} words")
         else:
-            from storage import get_dataframe
-            df = get_dataframe(chat_id, dict_type)
+            # For personal dictionary
+            df = db_manager.get_user_words(chat_id, "personal") 
+            print(f"Got personal dictionary for user {chat_id}: {len(df)} words")
         
         if df is None or df.empty:
             dict_name = "спільному словнику" if dict_type == "shared" else "загальному словнику" if dict_type == "common" else "персональному словнику"
@@ -43,7 +50,11 @@ def learn_words(message):
         print(f"Error in learn_words: {e}")
         import traceback
         traceback.print_exc()
-        bot.send_message(chat_id, "❌ Помилка при запуску активності вивчення.")
+        
+        # Replace hardcoded Ukrainian string with localized text
+        from utils.language_utils import get_localized_text
+        error_message = get_localized_text("error_learning_activity", chat_id)
+        bot.send_message(chat_id, error_message)
 
 def start_learning(chat_id, df):
     """Start learning new words activity"""
@@ -102,7 +113,11 @@ def start_learning(chat_id, df):
         "dict_type": user_state.get(chat_id, {}).get("dict_type", "personal")
     }
     
-    sent_message = bot.send_message(chat_id, "🔍 Оберіть пару слів:", reply_markup=markup)
+    sent_message = bot.send_message(
+        chat_id,
+        get_text("select_pair", chat_id),  # was "🔍 Оберіть пару слів:"
+        reply_markup=markup
+    )
     user_state[chat_id]["message_id"] = sent_message.message_id
     return True
 
@@ -110,21 +125,21 @@ def start_learning(chat_id, df):
 def handle_pairs(call):
     chat_id = call.message.chat.id
     if chat_id not in user_state or "pairs" not in user_state[chat_id]:
-        bot.answer_callback_query(call.id, "❗ Спочатку оберіть розділ 'Вчити нові слова'")
+        bot.answer_callback_query(call.id, get_text("error_exception", chat_id))
         return
     
     state = user_state[chat_id]
     
     if call.data.startswith('tr_'):
         if state.get('selected_tr'):
-            bot.answer_callback_query(call.id, "⏳ Спочатку завершіть поточний вибір")
+            bot.answer_callback_query(call.id, get_text("wait_for_selection", chat_id))  # was "⏳ Спочатку завершіть поточний вибір"
             return
         state['selected_tr'] = call.data[3:]
-        bot.answer_callback_query(call.id, f"Обрано: {state['selected_tr']}")
+        bot.answer_callback_query(call.id,get_text("selected",chat_id) + f"{state['selected_tr']}")
     
     elif call.data.startswith('de_'):
         if not state.get('selected_tr'):
-            bot.answer_callback_query(call.id, "❗ Спочатку оберіть переклад")
+            bot.answer_callback_query(call.id, get_text("select_translation_first", chat_id))  # was "❗ Спочатку оберіть переклад"
             return
         
         selected_de = call.data[3:]
@@ -161,7 +176,7 @@ def handle_pairs(call):
                 save_dataframe(chat_id, df, lang if lang else "common")
             
             if correct:
-                bot.answer_callback_query(call.id, "✅ Правильно!")
+                bot.answer_callback_query(call.id, get_text("correct",chat_id))
                 
                 markup = call.message.reply_markup
                 for row in markup.keyboard:
@@ -178,17 +193,17 @@ def handle_pairs(call):
                     bot.delete_message(chat_id, call.message.message_id)
                     learn_words(call.message)
             else:
-                bot.answer_callback_query(call.id, "❌ Неправильно!")
+                bot.answer_callback_query(call.id, get_text("correct",chat_id))
             
             state['selected_tr'] = None
         except Exception as e:
             print(f"ERROR in handle_pairs: {e}")
             import traceback
             traceback.print_exc()
-            bot.answer_callback_query(call.id, "❌ Помилка обробки даних")
+            bot.answer_callback_query(call.id, get_text("error_activity",chat_id))
             state['selected_tr'] = None
 
-@bot.message_handler(func=lambda message: message.text == "🔄 Повторити")
+@bot.message_handler(func=lambda message: is_command(message, "repetition"))
 def repeat_words(message):
     """Handler for the repeat words command"""
     chat_id = message.chat.id
@@ -198,12 +213,17 @@ def repeat_words(message):
     shared_dict_id = user_state.get(chat_id, {}).get("shared_dict_id", None)
     
     try:
-        # Get dataframe from the appropriate dictionary
+        # Get dataframe from the appropriate dictionary - FIX THE DICTIONARY ACCESS
         if dict_type == "shared" and shared_dict_id:
             df = db_manager.get_shared_dictionary_words(chat_id, shared_dict_id)
+        elif dict_type == "common":
+            # For common dictionary - direct database access
+            df = db_manager.get_user_words(chat_id, "common")
+            print(f"Got common dictionary for repetition: {len(df)} words")
         else:
-            from storage import get_dataframe
-            df = get_dataframe(chat_id, dict_type)
+            # For personal dictionary - direct database access
+            df = db_manager.get_user_words(chat_id, "personal")
+            print(f"Got personal dictionary for repetition: {len(df)} words")
         
         if df is None or df.empty:
             dict_name = "спільному словнику" if dict_type == "shared" else "загальному словнику" if dict_type == "common" else "персональному словнику"
@@ -220,7 +240,7 @@ def repeat_words(message):
         print(f"Error in repeat_words: {e}")
         import traceback
         traceback.print_exc()
-        bot.send_message(chat_id, "❌ Помилка при запуску активності повторення.")
+        bot.send_message(chat_id, get_text("error_activity", chat_id))
 
 def start_repetition(chat_id, df):
     """Start repetition activity"""
@@ -241,7 +261,10 @@ def start_repetition(chat_id, df):
             callback_data=f"ans_{word['word']}_{tr}"
         ))
     
-    sent_message = bot.send_message(chat_id, f"📖 Оберіть переклад для слова: {word['word']}", reply_markup=markup)
+    # Localize the message
+    message_text = get_text("select_translation", chat_id).format(word=word['word'])
+    sent_message = bot.send_message(chat_id, message_text, reply_markup=markup)
+    
     user_state[chat_id] = {
         "current_word": word,
         "message_id": sent_message.message_id,
@@ -253,7 +276,7 @@ def start_repetition(chat_id, df):
 def handle_answer(call):
     chat_id = call.message.chat.id
     if chat_id not in user_state:
-        bot.answer_callback_query(call.id, "❗ Спочатку оберіть розділ 'Повторити'")
+        bot.answer_callback_query(call.id, get_text("error_exception", chat_id))
         return
     
     # Разбираем данные из callback
@@ -298,9 +321,12 @@ def handle_answer(call):
                 save_dataframe(chat_id, df, lang if lang else "common")
         
         if is_correct:
-            bot.answer_callback_query(call.id, "✅ Правильно!")
+            from utils.language_utils import get_text
+            bot.answer_callback_query(call.id, get_text("correct", chat_id))
         else:
-            bot.answer_callback_query(call.id, f"❌ Неправильно! Правильно: {correct_tr}")
+            from utils.language_utils import get_text
+            incorrect_msg = get_text("incorrect", chat_id) + f" {correct_tr}"
+            bot.answer_callback_query(call.id, incorrect_msg)
             
         # Удаляем сообщение и продолжаем игру
         bot.delete_message(chat_id, call.message.message_id)
@@ -310,7 +336,7 @@ def handle_answer(call):
         import traceback
         traceback.print_exc()
 
-@bot.message_handler(func=lambda message: message.text == "🏷️ Вивчати артиклі")
+@bot.message_handler(func=lambda message: is_command(message, "learn_articles"))
 def learn_articles(message):
     """Handler for learning articles activity"""
     chat_id = message.chat.id
@@ -527,7 +553,7 @@ def start_article_activity(chat_id):
         print(f"Error in start_article_activity: {e}")
         import traceback
         traceback.print_exc()
-        bot.send_message(chat_id, "❌ Помилка при запуску активності вивчення артиклів.")
+        bot.send_message(chat_id, get_text("error_occupated", chat_id))
         return False
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("art_"))
@@ -536,7 +562,7 @@ def handle_article_answer(call):
     chat_id = call.message.chat.id
     
     if chat_id not in user_state:
-        bot.answer_callback_query(call.id, "❗ Спочатку оберіть розділ 'Вивчати артиклі'")
+        bot.answer_callback_query(call.id, get_text("error_exception", chat_id))
         return
     
     # Получаем данные из callback і стану
@@ -554,11 +580,12 @@ def handle_article_answer(call):
     
     try:
         if is_correct:
-            bot.answer_callback_query(call.id, "✅ Правильно!")
+            bot.answer_callback_query(call.id, get_text("correct", chat_id))
             rating_change = -0.1  # Уменьшаем рейтинг для правильных ответов
         else:
-            bot.answer_callback_query(call.id, f"❌ Неправильно! Правильно: {correct_article}")
-            rating_change = 0.1   # Увеличиваем рейтинг для неправильных ответов
+            incorrect_msg = get_text("incorrect", chat_id) + f" {correct_article}"
+            bot.answer_callback_query(call.id, incorrect_msg)
+            rating_change = 0.1   # Увеличиваем рейтинг для неправильних відповідей
             
         # Обновляем рейтинг в зависимости от типа словаря
         if dict_type == "shared" and shared_dict_id:
