@@ -29,3 +29,7 @@
 [2025-06-04 01:59:14.655] ERROR: no such table: possessive_articles | Context: Critical error in main loop
 [2025-06-04 01:59:30.006] ERROR: no such table: possessive_articles | Context: Critical error in main loop
 [2025-06-06 20:52:09.613] ERROR: no such table: user_871307030 | Context: Critical error in main loop
+[2025-06-09 09:02:55.140] ERROR: Scheduler is not running | Context: Critical error in main loop
+[2025-06-09 09:03:19.192] ERROR: Scheduler is not running | Context: Critical error in main loop
+[2025-06-09 09:03:43.247] ERROR: Scheduler is not running | Context: Critical error in main loop
+[2025-06-09 09:09:01.150] ERROR: Scheduler is not running | Context: Critical error in main loop

@@ -12,6 +12,7 @@ from scheduler import setup_scheduler
 import handlers  # Import handlers to register them
 from utils.language_utils import create_language_keyboard  # Додаємо імпорт для клавіатури мов
 from utils.logger import log_action, log_error
+from apscheduler.schedulers.base import SchedulerNotRunningError
 
 # Шлях до PID файлу для запобігання запуску кількох екземплярів бота
 PID_FILE = "bot.pid"
@@ -55,10 +56,26 @@ def cleanup():
         pass
 
 def signal_handler(sig, frame):
-    """Обробник сигналів для коректного завершення"""
-    print("Завершення роботи бота...")
-    cleanup()
-    scheduler.shutdown(wait=False)
+    """Handle termination signals to shutdown bot and scheduler gracefully"""
+    print("Termination signal received. Shutting down...")
+    log_action("Bot stopping", {"reason": "signal received"})
+    
+    try:
+        bot.stop_polling()
+        print("Bot polling stopped")
+    except Exception as e:
+        print(f"Error stopping bot: {e}")
+    
+    try:
+        scheduler.shutdown(wait=False)
+        print("Scheduler shutdown")
+    except SchedulerNotRunningError:
+        print("Scheduler was not running")
+    except Exception as e:
+        print(f"Error shutting down scheduler: {e}")
+    
+    log_action("Bot stopped")
+    print("Bot has been stopped gracefully")
     sys.exit(0)
 
 def reset_dictionaries():
