@@ -11,6 +11,7 @@ from config import bot, scheduler, user_state, DEBUG_MODE
 from scheduler import setup_scheduler
 import handlers  # Import handlers to register them
 from utils.language_utils import create_language_keyboard  # Додаємо імпорт для клавіатури мов
+from utils.logger import log_action, log_error
 
 # Шлях до PID файлу для запобігання запуску кількох екземплярів бота
 PID_FILE = "bot.pid"
@@ -179,3 +180,54 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"Error: {e}")
         traceback.print_exc()
+
+# -*- coding: utf-8 -*-
+
+import os
+from dotenv import load_dotenv
+from config import bot, scheduler
+import db_manager
+from utils.language_utils import create_language_keyboard
+from utils.logger import log_action, log_error
+
+# Load environment variables from .env file
+load_dotenv()
+print("Using environment variables from .env file")
+
+# Логуємо запуск бота
+log_action("Bot starting", {"version": "1.0", "environment": os.environ.get("ENVIRONMENT", "production")})
+
+# Set up database
+try:
+    db_manager.setup_database()
+    log_action("Database setup complete")
+except Exception as e:
+    log_error(e, "Error setting up database")
+    raise
+
+# Import handlers to register them
+try:
+    import handlers
+    log_action("Handlers registered successfully")
+except Exception as e:
+    log_error(e, "Error registering handlers")
+    raise
+
+# Start the bot
+if __name__ == "__main__":
+    # Start the scheduler in a background thread
+    scheduler.start()
+    log_action("Scheduler started")
+    
+    print("Bot started!")
+    log_action("Bot polling started")
+    
+    try:
+        # Start the bot in polling mode
+        bot.polling(none_stop=True)
+    except Exception as e:
+        log_error(e, "Bot polling error")
+        import traceback
+        traceback.print_exc()
+    finally:
+        log_action("Bot stopped")

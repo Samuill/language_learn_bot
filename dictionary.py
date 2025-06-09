@@ -4,7 +4,7 @@ from utils import clear_state, main_menu_keyboard
 import db_manager
 from german_article_finder import find_german_article  # Додаємо імпорт новою функції
 import pandas as pd  # Add missing import for pandas
-
+from utils.language_utils import get_text
 def save_word(chat_id, manual_translation=None):
     """Save word to user dictionary"""
     if chat_id not in user_state:
@@ -133,7 +133,9 @@ def start_activity(chat_id, mode, exclude_max_rating=False):
     """Start learning or repetition activity"""
     from storage import get_dataframe, save_dataframe, get_user_file_path
     import db_manager
-    from handlers.core import start_learning, start_repetition  # Import core functions
+    
+    # Оновлений імпорт - з easy_level замість core
+    from handlers.easy_level import start_learning, start_repetition  
     
     # Clear previous state, preserving dictionary type
     from utils import clear_state
@@ -251,14 +253,14 @@ def set_dictionary_type(chat_id, dict_type):
                 # Показуємо меню з вибраним словником
                 bot.send_message(
                     chat_id,
-                    f"📚 Обрано спільний словник: <b>{dict_name}</b>",
+                    get_text("selected_text",chat_id) + f"<b>{dict_name}</b>",
                     parse_mode="HTML",
                     reply_markup=main_menu_keyboard(chat_id)
                 )
             else:
                 # Користувач ще не вибрав спільний словник
                 from utils import shared_dictionary_keyboard
-                bot.send_message(chat_id, "👥 Спільні словники - оберіть опцію:",
+                bot.send_message(chat_id, get_text("select_option", chat_id),
                             reply_markup=shared_dictionary_keyboard())
     except Exception as e:
         print(f"Error in set_dictionary_type: {e}")

@@ -1,128 +1,154 @@
 # -*- coding: utf-8 -*-
 
 """
-Утилиты для безопасной обработки пользовательского ввода.
+Утиліти для обробки введення користувача.
 """
 
-import re
-from telebot.types import Message
+import telebot
 from config import bot, user_state
-from utils import clear_state, main_menu_keyboard, easy_level_keyboard, medium_level_keyboard, hard_level_keyboard
+from utils.language_utils import get_text
 
-# Список всех возможных команд бота
-MENU_COMMANDS = [
-    # Главное меню
-    "➕ Додати нове слово", "🟢 Легкий рівень", "🟠 Середній рівень", 
-    "🔴 Складний рівень", "👤 Персональний словник", "👥 Спільний словник",
-    
-    # Легкий уровень
-    "📖 Вчити нові слова", "🔄 Повторити", "🏷️ Вивчати артиклі", 
-    "🧩 Вивчати присвійні займенники",
-    
-    # Средний уровень
-    "🔤 Вибір правильного написання", "📝 Заповніть пропуски",
-    "🧩 Вивчати присвійні займенники (середній)",
-    
-    # Сложный уровень
-    "🧩 Складна гра", "📝 Введення слів", "🏷️ Введення артиклів",
-    "🧩 Вивчати присвійні займенники (складний)",
-    
-    # Общие команды
-    "↩️ Повернутися до головного меню", "✖️ Відміна",
-    
-    # Команды словарей
-    "🆕 Створити спільний словник", "🔑 Вступити до спільного словника",
-    "📋 Мої спільні словники"
+# Список команд, які можуть бути використані для виходу з активності
+EXIT_COMMANDS = [
+    "↩️ Повернутися до головного меню", 
+    "🟢 Легкий рівень", 
+    "🟠 Середній рівень", 
+    "🔴 Складний рівень",
+    "✖️ Відміна",
+    "Відміна"
 ]
 
-def is_menu_command(text):
-    """Проверяет, является ли текст командой меню"""
-    return text in MENU_COMMANDS
-
-def safe_next_step_handler(message, handler_func, allowed_commands=None):
-    """
-    Безопасно регистрирует обработчик следующего шага, с защитой от команд меню.
+def is_system_command(message):
+    """Check if message text is a system command or menu button
     
     Args:
-        message: Сообщение бота, на которое ожидается ответ
-        handler_func: Функция-обработчик обычного ответа пользователя
-        allowed_commands: Список разрешенных команд (опционально)
+        message: Telegram message
+        
+    Returns:
+        bool: True if message is a system command
     """
-    if allowed_commands is None:
-        allowed_commands = []
-    
-    def wrapper(message):
-        chat_id = message.chat.id
+    if not hasattr(message, 'text') or not message.text:
+        return False
         
-        # Проверяем, не является ли сообщение командой меню
-        if message.text in MENU_COMMANDS and message.text not in allowed_commands:
-            # Обрабатываем выход из текущей активности
-            handle_exit_from_activity(message)
-            return
+    # Перевірка команд з / на початку
+    if message.text.startswith('/'):
+        return True
+    
+    # Перевірка основних кнопок меню
+    if message.text in [
+        "➕ Додати нове слово", "📖 Вчити нові слова", "🔄 Повторити",
+        "🧩 Складна гра", "📝 Введення слів", "🏷️ Введення артиклів",
+        "👤 Персональний словник", "👥 Спільний словник",
+        "🔤 Вибір правильного написання", "📝 Заповніть пропуски"
+    ] + EXIT_COMMANDS:
+        return True
+    
+    # Перевірка команд вибору мови
+    if message.text.startswith(('🇬🇧', '🇺🇦', '🇷🇺', '🇹🇷', '🇸🇾')):
+        return True
         
-        # Вызываем оригинальный обработчик
-        handler_func(message)
-    
-    # Регистрируем обертку как обработчик
-    bot.register_next_step_handler(message, wrapper)
-
-def handle_exit_from_activity(message):
-    """Обрабатывает выход из любой активности по команде меню"""
-    chat_id = message.chat.id
-    command = message.text
-    
-    # Определяем, нужно ли сохранять информацию о уровне
-    preserve_level = command in ["🧩 Складна гра", "📝 Введення слів", "🏷️ Введення артиклів",
-                                "🔤 Вибір правильного написання", "📝 Заповніть пропуски",
-                                "📖 Вчити нові слова", "🔄 Повторити", "🏷️ Вивчати артиклі", 
-                                "🧩 Вивчати присвійні займенники", "🧩 Вивчати присвійні займенники (середній)",
-                                "🧩 Вивчати присвійні займенники (складний)"]
-    
-    # Очищаем состояние, сохраняя тип словаря и возможно уровень
-    clear_state(chat_id, preserve_dict_type=True, preserve_messages=False, preserve_level=preserve_level)
-    
-    # Обрабатываем команду
-    if command == "↩️ Повернутися до головного меню":
-        bot.send_message(chat_id, "Головне меню:", reply_markup=main_menu_keyboard(chat_id))
-    elif command == "🟢 Легкий рівень":
-        bot.send_message(chat_id, "🟢 Легкий рівень - оберіть активність:", reply_markup=easy_level_keyboard())
-    elif command == "🟠 Середній рівень":
-        bot.send_message(chat_id, "🟠 Середній рівень - оберіть активність:", reply_markup=medium_level_keyboard())
-    elif command == "🔴 Складний рівень":
-        bot.send_message(chat_id, "🔴 Складний рівень - оберіть активність:", reply_markup=hard_level_keyboard())
-    else:
-        # Пересоздаем объект сообщения для передачи
-        from telebot.types import Message
-        new_message = Message(
-            message_id=message.message_id,
-            from_user=message.from_user,
-            date=message.date,
-            chat=message.chat,
-            content_type='text',
-            options={},
-            json_string=None
-        )
-        new_message.text = message.text
-        
-        # Запускаем обработку команды
-        bot.process_new_messages([new_message])
+    return False
 
 def sanitize_user_input(text, max_length=100):
-    """
-    Очищает пользовательский ввод от потенциально опасных символов.
+    """Sanitize user input to prevent SQL injection and limit input length
     
     Args:
-        text: Текст для очистки
-        max_length: Максимальная длина текста
-    
+        text (str): Input text to sanitize
+        max_length (int): Maximum allowed length
+        
     Returns:
-        Очищенный текст
+        str: Sanitized text
     """
     if not text:
         return ""
+        
+    # Обмеження довжини
+    sanitized = text[:max_length]
     
-    # Удаляем специальные символы, оставляем только буквы, цифры и простую пунктуацию
-    text = re.sub(r'[^\w\s\.\,\-\(\)\/]', '', text)
+    # Видалення потенційно небезпечних символів SQL
+    sanitized = sanitized.replace("'", "''")
+    sanitized = sanitized.replace(";", "")
     
-    # Ограничиваем длину
-    return text[:max_length]
+    return sanitized
+
+def handle_exit_from_activity(message):
+    """Handle exit from activity using menu buttons
+    
+    Args:
+        message: Telegram message with exit command
+    """
+    from utils import clear_state, main_menu_keyboard
+    from utils import easy_level_keyboard, medium_level_keyboard, hard_level_keyboard
+    
+    chat_id = message.chat.id
+    preserve_dict_type = True
+    
+    # Визначаємо, яке меню показати в залежності від команди, використовуючи локалізацію
+    if message.text in ["↩️ Повернутися до головного меню", get_text("back_to_main_menu", chat_id)]:
+        keyboard = main_menu_keyboard(chat_id)  # Передаємо chat_id для локалізації кнопок
+        message_text = get_text("main_menu", chat_id)
+        preserve_level = False
+    elif message.text in ["🟢 Легкий рівень", get_text("easy_level", chat_id)]:
+        keyboard = easy_level_keyboard(chat_id)  # Передаємо chat_id для локалізації
+        message_text = get_text("easy_level_select_activity", chat_id)
+        preserve_level = True
+        if chat_id in user_state:
+            user_state[chat_id]["level"] = "easy"
+    elif message.text in ["🟠 Середній рівень", get_text("medium_level", chat_id)]:
+        keyboard = medium_level_keyboard(chat_id)  # Передаємо chat_id для локалізації
+        message_text = get_text("medium_level_select_activity", chat_id)
+        preserve_level = True
+        if chat_id in user_state:
+            user_state[chat_id]["level"] = "medium"
+    elif message.text in ["🔴 Складний рівень", get_text("hard_level", chat_id)]:
+        keyboard = hard_level_keyboard(chat_id)  # Передаємо chat_id для локалізації
+        message_text = get_text("hard_level_select_activity", chat_id)
+        preserve_level = True
+        if chat_id in user_state:
+            user_state[chat_id]["level"] = "hard"
+    else:  # "✖️ Відміна" або "Відміна" або локалізовані версії
+        keyboard = main_menu_keyboard(chat_id)  # Передаємо chat_id для локалізації
+        message_text = get_text("cancelled", chat_id)
+        preserve_level = False
+    
+    # Очищаємо стан, зберігаючи потрібні дані
+    clear_state(chat_id, preserve_dict_type=preserve_dict_type, preserve_level=preserve_level)
+    
+    # Відправляємо повідомлення з відповідною клавіатурою
+    bot.send_message(chat_id, message_text, reply_markup=keyboard)
+
+def safe_next_step_handler(message, callback, *args, **kwargs):
+    """Safe version of register_next_step_handler that handles exit commands
+    
+    Args:
+        message: Message to register handler for
+        callback: Callback function
+        *args, **kwargs: Arguments to pass to the callback
+    """
+    def wrapper(message):
+        chat_id = message.chat.id
+        
+        # Отримуємо локалізовані команди виходу
+        localized_back_to_main = get_text("back_to_main_menu", chat_id)
+        localized_cancel = get_text("cancel", chat_id)
+        
+        # Перевіряємо на локалізовані та стандартні команди виходу
+        if message.text in EXIT_COMMANDS or message.text == localized_back_to_main or message.text == localized_cancel:
+            # Обробка команди виходу
+            handle_exit_from_activity(message)
+            return
+            
+        # Якщо не команда виходу, викликаємо оригінальний колбек
+        try:
+            callback(message, *args, **kwargs)
+        except Exception as e:
+            print(f"Error in safe_next_step_handler callback: {e}")
+            import traceback
+            traceback.print_exc()
+            
+            # Відправляємо повідомлення про помилку
+            chat_id = message.chat.id
+            bot.send_message(chat_id, get_text("error_occurred", chat_id))
+    
+    # Реєструємо обробник з нашим wrapper
+    bot.register_next_step_handler(message, wrapper)

@@ -8,6 +8,8 @@ import telebot
 from config import bot, user_state
 import db_manager
 from utils import main_menu_keyboard
+from utils.language_utils import get_text
+from utils.state_helpers import save_message_id
 
 # Define language flags and codes for easier identification
 LANGUAGE_FLAGS = {
@@ -61,11 +63,12 @@ def show_language_selection(chat_id):
     if row:
         keyboard.row(*row)
     
-    bot.send_message(
+    sent_message = bot.send_message(
         chat_id,
-        "Please select your language / Виберіть мову:",
+        get_text("choose_language", chat_id),  # Use the localized key instead of hardcoded text
         reply_markup=keyboard
     )
+    save_message_id(chat_id, sent_message.message_id)
 
 @bot.message_handler(commands=['language', 'change_language'])
 def change_language_command(message):
@@ -95,8 +98,6 @@ def handle_language_button(message):
     chat_id = message.chat.id
     text = message.text
     
-    print(f"DIRECT LANGUAGE BUTTON DETECTED: {text}")
-    
     # Map button text to language codes
     language_map = {
         "🇬🇧 English": "en",
@@ -109,63 +110,45 @@ def handle_language_button(message):
     language_code = language_map.get(text)
     
     if language_code:
-        print(f"Setting language for user {chat_id} to {language_code}")
-        
         # Backup user state
         dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
         shared_dict_id = user_state.get(chat_id, {}).get("shared_dict_id")
         level = user_state.get(chat_id, {}).get("level", "easy")
         
-        # Update language in database
-        success = db_manager.set_user_language(chat_id, language_code)
-        print(f"Database update result: {success}")
-        
-        # Verify update
-        new_language = db_manager.get_user_language(chat_id)
-        print(f"Verified language in DB: {new_language}")
-        
-        # Update user state
-        user_state[chat_id] = {
-            "state": "main_menu",
-            "dict_type": dict_type,
-            "shared_dict_id": shared_dict_id,
-            "level": level
-        }
-        
-        # Send confirmation in the selected language
-        confirmations = {
-            "en": "✅ English language selected",
-            "uk": "✅ Обрано українську мову",
-            "ru": "✅ Выбран русский язык",
-            "tr": "✅ Türkçe dil seçildi",
-            "ar": "✅ تم اختيار اللغة العربية"
-        }
-        
-        menu_texts = {
-            "en": "Main menu:",
-            "uk": "Головне меню:",
-            "ru": "Главное меню:",
-            "tr": "Ana menü:",
-            "ar": "القائمة الرئيسية:"
-        }
-        
-        confirmation = confirmations.get(language_code, "Language selected")
-        menu_text = menu_texts.get(language_code, "Main menu:")
-        
-        # Send messages
-        bot.send_message(chat_id, confirmation)
-        bot.send_message(chat_id, menu_text, reply_markup=main_menu_keyboard(chat_id))
+        try:
+            # Update language in database
+            db_manager.set_user_language(chat_id, language_code)
+            
+            # Update user state
+            user_state[chat_id] = {
+                "state": "main_menu",
+                "dict_type": dict_type,
+                "level": level,
+                "language": language_code  # Add language to state
+            }
+            
+            if shared_dict_id:
+                user_state[chat_id]["shared_dict_id"] = shared_dict_id
+            
+            # Send confirmation using localization
+            bot.send_message(chat_id, get_text("language_selected", chat_id))
+            
+            # Send main menu using localization
+            sent_message = bot.send_message(
+                chat_id, 
+                get_text("main_menu", chat_id), 
+                reply_markup=main_menu_keyboard(chat_id)
+            )
+            save_message_id(chat_id, sent_message.message_id)
+        except Exception as e:
+            print(f"Error setting language: {e}")
+            bot.send_message(chat_id, get_text("error_occurred", chat_id))
 
 @bot.message_handler(func=lambda message: user_state.get(message.chat.id, {}).get("state") == "language_selection")
 def handle_language_selection(message):
     """Handle language selection from keyboard during language selection state"""
     chat_id = message.chat.id
     text = message.text
-    
-    print(f"LANGUAGE SELECTION MESSAGE RECEIVED: '{text}' (User state: {user_state.get(chat_id, {})})")
-    
-    # Log the button press
-    log_language_event(chat_id, "BUTTON_PRESSED", f"Button text: '{text}'")
     
     # Define language mappings
     language_buttons = [
@@ -178,123 +161,50 @@ def handle_language_selection(message):
     
     # Extract language code from button text
     language_code = None
-    language_name = None
     
     for flag, code, name in language_buttons:
         if flag in text or name in text:
             language_code = code
-            language_name = name
-            log_language_event(chat_id, "LANGUAGE_IDENTIFIED", f"Identified language: {code} ({name}) from button text: '{text}'")
             break
     
     if not language_code:
-        log_language_event(chat_id, "LANGUAGE_UNKNOWN", f"Could not identify language from button text: '{text}'")
         bot.send_message(chat_id, "Sorry, I couldn't recognize your language choice. Please try again.")
         return
     
-    # Log the current language in DB
     try:
-        import db_manager
-        current_lang = db_manager.get_user_language(chat_id)
-        log_language_event(chat_id, "CURRENT_LANGUAGE", f"Current language in DB: {current_lang}")
-    except Exception as e:
-        log_language_event(chat_id, "DB_ERROR", f"Error getting current language: {e}")
-    
-    # Log that we're about to update the database
-    log_language_event(chat_id, "DB_UPDATE_START", f"Updating language in database to: {language_code}")
-    
-    try:
-        # Update language in database
-        result = db_manager.set_user_language(chat_id, language_code)
-        log_language_event(chat_id, "DB_UPDATE_RESULT", f"Database update result: {result}")
-        
-        # Verify the update
-        new_lang = db_manager.get_user_language(chat_id)
-        log_language_event(chat_id, "DB_VERIFY", f"Language in DB after update: {new_lang}")
-        
         # Save previous state settings we want to keep
         dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
         shared_dict_id = user_state.get(chat_id, {}).get("shared_dict_id")
         level = user_state.get(chat_id, {}).get("level", "easy")
         
-        # Log the current state
-        log_language_event(chat_id, "STATE_BEFORE", f"User state before update: {user_state.get(chat_id, {})}")
+        # Update language in database
+        db_manager.set_user_language(chat_id, language_code)
         
         # Update user state
         user_state[chat_id] = {
             "state": "main_menu",
             "dict_type": dict_type,
-            "shared_dict_id": shared_dict_id,
             "level": level,
             "language": language_code  # Store the selected language in state
         }
         
-        # Log the new state
-        log_language_event(chat_id, "STATE_AFTER", f"User state after update: {user_state[chat_id]}")
+        if shared_dict_id:
+            user_state[chat_id]["shared_dict_id"] = shared_dict_id
         
-        # Send confirmation message in the selected language
-        if language_code == "en":
-            confirmation = "✅ English language selected"
-        elif language_code == "uk":
-            confirmation = "✅ Обрано українську мову"
-        elif language_code == "ru":
-            confirmation = "✅ Выбран русский язык"
-        elif language_code == "tr":
-            confirmation = "✅ Türkçe dil seçildi"
-        elif language_code == "ar":
-            confirmation = "✅ تم اختيار اللغة العربية"
-        else:
-            confirmation = f"✅ Language selected: {language_name}"
+        # Send confirmation message using localization
+        bot.send_message(chat_id, get_text("language_selected", chat_id))
         
-        log_language_event(chat_id, "SENDING_CONFIRMATION", f"Sending confirmation message: '{confirmation}'")
-        bot.send_message(chat_id, confirmation)
-        
-        # Send main menu message
-        from utils import main_menu_keyboard
-        
-        if language_code == "en":
-            menu_text = "Main menu:"
-        elif language_code == "uk":
-            menu_text = "Головне меню:"
-        elif language_code == "ru":
-            menu_text = "Главное меню:"
-        elif language_code == "tr":
-            menu_text = "Ana menü:"
-        elif language_code == "ar":
-            menu_text = "القائمة الرئيسية:"
-        else:
-            menu_text = "Menu:"
-        
-        log_language_event(chat_id, "SENDING_MENU", f"Sending main menu: '{menu_text}'")
+        # Send main menu message using localization
         menu_markup = main_menu_keyboard(chat_id)
-        bot.send_message(chat_id, menu_text, reply_markup=menu_markup)
-        
-        log_language_event(chat_id, "PROCESS_COMPLETE", f"Language selection process completed successfully")
+        sent_message = bot.send_message(
+            chat_id, 
+            get_text("main_menu", chat_id), 
+            reply_markup=menu_markup
+        )
+        save_message_id(chat_id, sent_message.message_id)
         
     except Exception as e:
-        log_language_event(chat_id, "ERROR", f"Error in language selection process: {str(e)}")
+        print(f"Error in language selection: {e}")
         import traceback
-        log_language_event(chat_id, "TRACEBACK", traceback.format_exc())
-        bot.send_message(chat_id, "Sorry, an error occurred while setting your language. Please try again later.")
-
-def get_language_confirmation(language_code):
-    """Get language selection confirmation message in the selected language"""
-    messages = {
-        "en": "✅ English language selected",
-        "uk": "✅ Обрано українську мову",
-        "ru": "✅ Выбран русский язык",
-        "tr": "✅ Türkçe dil seçildi",
-        "ar": "✅ تم اختيار اللغة العربية"
-    }
-    return messages.get(language_code, f"✅ Language selected: {language_code}")
-
-def get_main_menu_text(language_code):
-    """Get main menu text in the selected language"""
-    messages = {
-        "en": "Main menu:",
-        "uk": "Головне меню:",
-        "ru": "Главное меню:",
-        "tr": "Ana menü:",
-        "ar": "القائمة الرئيسية:"
-    }
-    return messages.get(language_code, "Menu:")
+        traceback.print_exc()
+        bot.send_message(chat_id, get_text("error_occurred", chat_id))

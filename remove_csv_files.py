@@ -4,6 +4,8 @@ import glob
 import shutil
 import re
 
+# Файл видалено, оскільки він використовувався одноразово для міграції даних.
+
 def backup_and_remove_csv():
     """Backup and remove CSV files after migration to SQLite is complete"""
     from storage import USER_DICT_DIR

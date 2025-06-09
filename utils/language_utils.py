@@ -1,21 +1,32 @@
 # -*- coding: utf-8 -*-
 
 """
-Utilities for language handling.
+Утиліти для роботи з локалізацією та мовами.
 """
 
-from locales import get_text, SUPPORTED_LANGUAGES
-import db_manager
-from utils.logging_utils import log_language
-import os
 import json
-import logging
+import os
+import db_manager
+from config import user_state
+import telebot
 
-# Directory containing the localization files
-LOCALES_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'locales')
+# Шлях до каталогу локалізацій
+LOCALES_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "locales")
 
-# Supported languages with their native names
-SUPPORTED_LANGUAGES = {
+# Кеш локалізацій для оптимізації
+_localization_cache = {}
+
+# Define language flags and codes for easier identification
+LANGUAGE_FLAGS = {
+    "🇬🇧": "en",
+    "🇺🇦": "uk",
+    "🇷🇺": "ru",
+    "🇹🇷": "tr",
+    "🇸🇾": "ar"
+}
+
+# Language names in their native form
+LANGUAGE_NAMES = {
     "en": "English",
     "uk": "Українська",
     "ru": "Русский",
@@ -23,206 +34,157 @@ SUPPORTED_LANGUAGES = {
     "ar": "العربية"
 }
 
-# Default language to use as fallback
-DEFAULT_LANGUAGE = "en"
-
-# Cache for loaded translations
-_translations = {}
-
-def load_language(language_code):
-    """
-    Load translations for the specified language.
-    Falls back to English if the language is not supported.
-    """
-    # Return from cache if already loaded
-    if language_code in _translations:
-        return _translations[language_code]
-    
-    # Load the language file
-    language_file = os.path.join(LOCALES_DIR, f"{language_code}.json")
-    
-    try:
-        if os.path.exists(language_file):
-            with open(language_file, 'r', encoding='utf-8') as f:
-                translations = json.load(f)
-            _translations[language_code] = translations
-            return translations
-        else:
-            # If language file doesn't exist, fall back to English
-            if language_code != DEFAULT_LANGUAGE:
-                logging.warning(f"Language file {language_file} not found, falling back to {DEFAULT_LANGUAGE}")
-                return load_language(DEFAULT_LANGUAGE)
-            else:
-                logging.error(f"Default language file {language_file} not found!")
-                return {}
-    except Exception as e:
-        logging.error(f"Error loading language file {language_file}: {e}")
-        if language_code != DEFAULT_LANGUAGE:
-            return load_language(DEFAULT_LANGUAGE)
-        return {}
-
-def get_user_language(chat_id):
-    """Get language code for user from database"""
-    import db_manager
-    lang = db_manager.get_user_language(chat_id)
-    
-    # If no language is set, default to English
-    if not lang or lang not in SUPPORTED_LANGUAGES:
-        return DEFAULT_LANGUAGE
-        
-    return lang
-
-def get_text(key, chat_id):
-    """
-    Get translated text for the given key for a specific user.
-    
-    Args:
-        key: Translation key
-        chat_id: User's chat ID to determine language
-        
-    Returns:
-        str: Translated text or key itself if not found
-    """
-    # Get user's language code
-    language_code = get_user_language(chat_id)
-    
-    # Load translations for this language
-    translations = load_language(language_code)
-    
-    # Return the translation if it exists
-    if key in translations:
-        return translations[key]
-    
-    # Try English as fallback
-    if language_code != DEFAULT_LANGUAGE:
-        en_translations = load_language(DEFAULT_LANGUAGE)
-        if key in en_translations:
-            return en_translations[key]
-    
-    # If all else fails, return the key itself
-    logging.warning(f"Translation for key '{key}' not found in language {language_code}")
-    return key
-
-def get_localized_text(key, chat_id):
-    """
-    Get localized text for the given key and user.
-    
-    Args:
-        key: The translation key
-        chat_id: The user's chat ID
-    
-    Returns:
-        str: Translated text for the user's language
-    """
-    # Get user's language from database
-    language = db_manager.get_user_language(chat_id) or "en"
-    
-    # Get translated text
-    return get_text(key, language)
-
 def create_language_keyboard():
-    """Create a keyboard with language selection buttons"""
-    import telebot
+    """Create a keyboard with language selection buttons
     
-    log_language("KEYBOARD", "SYSTEM", "Creating language selection keyboard")
-    
+    Returns:
+        ReplyKeyboardMarkup: Keyboard with language selection buttons
+    """
     keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
     
-    # Language flags and their names
-    language_buttons = [
-        ("🇬🇧", "English"),
-        ("🇺🇦", "Українська"),
-        ("🇷🇺", "Русский"),
-        ("🇹🇷", "Türkçe"),
-        ("🇸🇾", "العربية")
-    ]
-    
-    # Log the buttons we're adding
-    log_language("KEYBOARD_BUTTONS", "SYSTEM", f"Adding buttons: {language_buttons}")
-    
-    # Add buttons in rows of 2
+    # Add language buttons in rows of 2
     row = []
-    for flag, name in language_buttons:
+    for flag, code in LANGUAGE_FLAGS.items():
+        name = LANGUAGE_NAMES.get(code, code.upper())
         button_text = f"{flag} {name}"
         row.append(button_text)
         
         if len(row) == 2:
             keyboard.row(*row)
-            log_language("KEYBOARD_ROW", "SYSTEM", f"Added row: {row}")
             row = []
     
     # Add any remaining buttons
     if row:
         keyboard.row(*row)
-        log_language("KEYBOARD_ROW", "SYSTEM", f"Added final row: {row}")
     
     return keyboard
 
-def get_language_flag(code):
-    """Get flag emoji for language"""
-    flags = {
-        "en": "🇬🇧",
-        "uk": "🇺🇦",
-        "ru": "🇷🇺",
-        "tr": "🇹🇷",
-        "ar": "🇸🇾"
-    }
-    return flags.get(code, "🌐")
-
-def get_language_code_from_button(button_text):
-    """
-    Extract language code from button text.
-    Example: "🇺🇦 Українська" -> "uk"
+def load_localization(lang_code="uk"):
+    """Load localization file for a given language
     
     Args:
-        button_text: The text of the pressed button
+        lang_code (str): Language code
         
     Returns:
-        str: Language code or None if not found
+        dict: Localization strings
     """
-    # Debug print
-    print(f"Extracting language code from: '{button_text}'")
+    # Перевіряємо кеш
+    if lang_code in _localization_cache:
+        return _localization_cache[lang_code]
     
-    # Map of flag emojis to language codes
-    flag_to_code = {
-        "🇬🇧": "en",
-        "🇺🇦": "uk",
-        "🇷🇺": "ru",
-        "🇹🇷": "tr",
-        "🇸🇾": "ar"
-    }
-    
-    # First try to extract directly from emoji
-    for flag, code in flag_to_code.items():
-        if button_text.startswith(flag):
-            print(f"Found language code {code} from flag {flag}")
-            return code
-    
-    # If that fails, try matching the language name
-    from locales import SUPPORTED_LANGUAGES
-    for code, name in SUPPORTED_LANGUAGES.items():
-        if name in button_text:
-            print(f"Found language code {code} from name {name}")
-            return code
-    
-    print(f"No language code found for '{button_text}'")
-    return None
+    # Завантажуємо локалізацію з файлу
+    try:
+        file_path = os.path.join(LOCALES_DIR, f"{lang_code}.json")
+        
+        if not os.path.exists(file_path):
+            # Якщо файл не існує, використовуємо англійську як запасну
+            if lang_code != "en":
+                print(f"Warning: Localization file for {lang_code} not found, using English")
+                return load_localization("en")
+            # Якщо і англійська не існує, використовуємо українську
+            return load_localization("uk")
+        
+        with open(file_path, "r", encoding="utf-8") as file:
+            localization = json.load(file)
+            # Зберігаємо в кеші
+            _localization_cache[lang_code] = localization
+            return localization
+    except Exception as e:
+        print(f"Error loading localization for {lang_code}: {e}")
+        # Повертаємо порожній словник у разі помилки
+        return {}
 
-def is_command(message, command_key):
-    """
-    Check if message text matches the localized command text.
+def clear_localization_cache():
+    """Clear the localization cache"""
+    global _localization_cache
+    _localization_cache = {}
+
+def get_user_language(chat_id):
+    """Get user's language code from database or state
     
     Args:
-        message: Telegram message object
-        command_key: The key for the command in the localization files
+        chat_id: User's chat ID
         
     Returns:
-        bool: True if the message text matches the localized command
+        str: Language code (e.g. 'uk', 'en', 'ru')
     """
+    # Спочатку перевіряємо кеш стану користувача
+    language = user_state.get(chat_id, {}).get("language")
+        
+    # Якщо немає в кеші, беремо з бази даних
+    if not language:
+        try:
+            language = db_manager.get_user_language(chat_id)
+        except Exception as e:
+            print(f"Error getting user language: {e}")
+            language = "uk"  # Запасний варіант
+    
+    return language
+
+def get_text(key, chat_id=None, default=None, **kwargs):
+    """Get localized text by key and format it with provided arguments
+    
+    Args:
+        key (str): Localization key
+        chat_id: User's chat ID to determine language
+        default (str, optional): Default value if key not found
+        **kwargs: Format arguments
+        
+    Returns:
+        str: Localized and formatted text
+    """
+    if chat_id is None:
+        language = "uk"  # Default language
+    else:
+        language = get_user_language(chat_id)
+    
+    localization = load_localization(language)
+    
+    # Пошук ключа в локалізації
+    if key in localization:
+        text = localization[key]
+    else:
+        # Якщо ключ не знайдено, спробуємо знайти в англійській локалізації
+        if language != "en":
+            en_localization = load_localization("en")
+            if key in en_localization:
+                text = en_localization[key]
+            else:
+                # Якщо і в англійській немає, повертаємо значення за замовчуванням або ключ
+                text = default if default is not None else key
+        else:
+            text = default if default is not None else key
+    
+    # Форматування тексту з переданими аргументами
+    if kwargs:
+        try:
+            text = text.format(**kwargs)
+        except KeyError as e:
+            print(f"Error formatting text for key '{key}': Missing key {e}")
+        except Exception as e:
+            print(f"Error formatting text for key '{key}': {e}")
+    
+    return text
+
+def is_command(message, specific_command=None):
+    """Check if message is a command or matches a specific command
+    
+    Args:
+        message: Telegram message
+        specific_command (str, optional): Check for a specific command
+        
+    Returns:
+        bool: True if message is a command or matches specific command
+    """
+    from utils.input_handlers import is_system_command
+    
     if not hasattr(message, 'text') or not message.text:
         return False
-        
-    chat_id = message.chat.id
-    localized_text = get_text(command_key, chat_id)
     
-    return message.text == localized_text
+    # Якщо вказано конкретну команду, перевіряємо тільки її
+    if specific_command:
+        chat_id = message.chat.id
+        return message.text in [specific_command, get_text(specific_command, chat_id)]
+    
+    # Інакше перевіряємо чи це системна команда
+    return is_system_command(message)

@@ -29,7 +29,7 @@ def hard_game(message):
     # Повідомляємо, що функціонал у розробці
     bot.send_message(
         chat_id, 
-        "🚧 Складна гра знаходиться у розробці.\nСпробуйте інші активності складного рівня.",
+        get_text("hard_game_developing", chat_id),
         reply_markup=hard_level_keyboard()
     )
 
@@ -98,7 +98,7 @@ def word_typing_game(message):
         # Відправляємо запит на переклад с использованием безопасного обработчика
         sent_message = bot.send_message(
             chat_id,
-            f"📝 Введіть німецький переклад слова:\n\n<b>{word_row['translation']}</b>",
+            get_text("enter_german_translation", chat_id).format(word=word_row['translation']),
             parse_mode="HTML"
         )
         
@@ -120,7 +120,7 @@ def handle_word_typing_answer(message):
         bot.send_message(chat_id, get_text("game_not_stop",chat_id), reply_markup=hard_level_keyboard())
         return
     
-    # Очищаем и безопасно обрабатываем ввод пользователя
+    # Очищаем і безпечнo обробляємо ввід користувача
     user_answer = sanitize_user_input(message.text.strip().lower())
     
     # Получаем данные из состояния
@@ -139,7 +139,7 @@ def handle_word_typing_answer(message):
         if is_correct:
             bot.send_message(
                 chat_id,
-                f"✅ Правильно!\n\n<b>{translation}</b> = <b>{correct_word}</b>",
+                get_text("correct_translation", chat_id).format(translation=translation, word=correct_word),
                 parse_mode="HTML"
             )
             
@@ -157,7 +157,7 @@ def handle_word_typing_answer(message):
             if attempts >= 2:
                 bot.send_message(
                     chat_id,
-                    f"❌ Неправильно!\n\nПравильна відповідь: <b>{correct_word}</b>\n\n<b>{translation}</b> = <b>{correct_word}</b>",
+                    get_text("incorrect_translation_final", chat_id).format(translation=translation, word=correct_word),
                     parse_mode="HTML"
                 )
                 # Продовжуємо з новим словом
@@ -168,7 +168,7 @@ def handle_word_typing_answer(message):
                 # Даємо ще одну спробу
                 sent_message = bot.send_message(
                     chat_id, 
-                    f"❌ Неправильно! Спробуйте ще раз.\n\n<b>{translation}</b>",
+                    get_text("incorrect_try_again", chat_id).format(translation=translation),
                     parse_mode="HTML"
                 )
                 bot.register_next_step_handler(sent_message, handle_word_typing_answer)
@@ -266,7 +266,7 @@ def article_typing_game(message):
             result = random.choice(top_results)
         else:
             # Якщо результатів немає, повідомляємо про це
-            bot.send_message(chat_id, get_text("in", chat_id) + get_text("dictionary", chat_id) + get_text("no_words", chat_id),
+            bot.send_message(chat_id, get_text("in"+"dictionary"+"", chat_id),
                            reply_markup=hard_level_keyboard())
             conn.close()
             return
@@ -294,11 +294,10 @@ def article_typing_game(message):
         case_explanation = db_manager.get_case_explanation("Dativ" if random.random() < 0.5 else "Akkusativ", language)
         
         # Відправляємо запит на введення артикля з поясненням падежу
-        message_text = (
-            f"🏷️ Введіть артикль (der, die, das) для слова:\n\n"
-            f"<b>{word}</b>\n\n"
-            f"<i>Переклад: {translation}</i>\n\n"
-            f"<i>{case_explanation}</i>"
+        message_text = get_text("enter_article", chat_id).format(
+            word=word, 
+            translation=translation, 
+            case_explanation=case_explanation
         )
         
         sent_message = bot.send_message(
@@ -316,7 +315,7 @@ def article_typing_game(message):
         print(f"Error in article_typing_game: {e}")
         import traceback
         traceback.print_exc()
-        bot.send_message(chat_id,get_text("error_occurred", chat_id), reply_markup=hard_level_keyboard())
+        bot.send_message(chat_id, get_text("error_occurred",chat_id), reply_markup=hard_level_keyboard())
 
 def handle_article_typing_answer(message):
     """Handle user's answer in article typing game"""
@@ -343,15 +342,15 @@ def handle_article_typing_answer(message):
         # Визначаємо, яке повідомлення показати
         if preserve_level:
             reply_markup = hard_level_keyboard()
-           # msg_text = "🚫 Гра перервана. Переходимо до іншої активності..."
+            msg_text = get_text("game_cancelled", chat_id) 
         else:
             reply_markup = main_menu_keyboard(chat_id)
-           # msg_text = "🚫 Гра перервана. Виконую команду..."
+            msg_text = get_text("game_cancelled", chat_id)
             
         # Повідомлення про завершення гри
         bot.send_message(
             chat_id,
-            #msg_text,
+            msg_text,
             reply_markup=reply_markup
         )
         
@@ -391,13 +390,13 @@ def handle_article_typing_answer(message):
         # Правильна відповідь
         bot.send_message(
             chat_id,
-            f"✅ Правильно! Слово <b>{word}</b> має артикль <b>{correct_article}</b>.",
+            get_text("correct_article_answer", chat_id).format(word=word, article=correct_article),
             parse_mode="HTML"
         )
         
         # Оновлюємо рейтинг слова - для складного рівня більше зниження рейтингу
         if dict_type == "shared" and shared_dict_id:
-            db_manager.update_word_rating_shared_dict(chat_id, word_id, -0.1, shared_dict_id)
+            db_manager.update_word_rating_shared_dict(chat_id, word_id, +0.2, shared_dict_id)
         else:
             db_manager.update_word_rating(chat_id, word_id, -0.1)
         
@@ -419,7 +418,7 @@ def handle_article_typing_answer(message):
         if attempts >= 2:  # Змінено з 3 на 2 спроби
             bot.send_message(
                 chat_id,
-                f"❌ Неправильно!\n\nПравильна відповідь: <b>{correct_article}</b>\n\nСлово <b>{word}</b> має артикль <b>{correct_article}</b>.",
+                get_text("incorrect_article_final", chat_id).format(word=word, article=correct_article),
                 parse_mode="HTML"
             )
             # Продовжуємо з новим словом
@@ -429,7 +428,7 @@ def handle_article_typing_answer(message):
             # Даємо ще одну спробу
             sent_message = bot.send_message(
                 chat_id, 
-                f"❌ Неправильно! Спробуйте ще раз.\n\nВведіть артикль для слова <b>{word}</b>",
+                get_text("incorrect_article_retry", chat_id).format(word=word),
                 parse_mode="HTML"
             )
             bot.register_next_step_handler(sent_message, handle_article_typing_answer)

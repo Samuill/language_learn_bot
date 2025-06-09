@@ -8,7 +8,10 @@ import telebot
 from config import bot, user_state
 from utils import main_menu_keyboard, main_menu_cancel, shared_dictionary_keyboard
 from utils import clear_state
+from utils.state_helpers import save_message_id
 import db_manager
+from utils.language_utils import get_text
+from utils.input_handlers import safe_next_step_handler, sanitize_user_input
 
 @bot.message_handler(func=lambda message: message.text.startswith("👥 Спільний словник"))
 def shared_dictionary_menu(message):
@@ -38,21 +41,26 @@ def shared_dictionary_menu(message):
         # Отримуємо інформацію про словник
         cursor.execute("SELECT name FROM shared_dictionaries WHERE id = ?", (shared_dict_id,))
         dict_info = cursor.fetchone()
-        dict_name = dict_info[0] if dict_info else "Невідомий словник"
+        dict_name = dict_info[0] if dict_info else get_text("unknown_dict", chat_id)
         
         # Повідомляємо про поточний активний словник
-        bot.send_message(
+        sent_message = bot.send_message(
             chat_id,
-            f"📚 Поточний активний словник: <b>{dict_name}</b>\n\n"
-            f"Оберіть дію з меню нижче:",
+            get_text("selected_dict", chat_id) +
+            f"<b>{dict_name}</b>\n\n"+
+            get_text("select_activity", chat_id),
             parse_mode="HTML",
             reply_markup=shared_dictionary_keyboard()
         )
     else:
         # Просто показуємо меню спільних словників
-        bot.send_message(chat_id, "👥 Спільні словники - оберіть опцію:",
-                        reply_markup=shared_dictionary_keyboard())
+        sent_message = bot.send_message(
+            chat_id, 
+            get_text("select_option", chat_id),
+            reply_markup=shared_dictionary_keyboard()
+        )
     
+    save_message_id(chat_id, sent_message.message_id)
     conn.close()
 
 @bot.message_handler(func=lambda message: message.text == "🆕 Створити спільний словник")
@@ -66,39 +74,62 @@ def create_shared_dictionary(message):
         "step": "creating_shared_dict",
     }
     
-    bot.send_message(chat_id, "Введіть назву для спільного словника:",
-                    reply_markup=main_menu_cancel())
+    sent_message = bot.send_message(
+        chat_id, 
+        get_text("enter_dict_name", chat_id),
+        reply_markup=main_menu_cancel()
+    )
+    save_message_id(chat_id, sent_message.message_id)
+    
+    # Використовуємо безпечний обробник для наступного кроку
+    safe_next_step_handler(sent_message, handle_shared_dict_name)
 
-@bot.message_handler(func=lambda message: user_state.get(message.chat.id, {}).get("step") == "creating_shared_dict")
 def handle_shared_dict_name(message):
     """Handle shared dictionary name input"""
     chat_id = message.chat.id
     
-    if message.text == "Відміна" or message.text == "✖️ Відміна":
+    # Перевіряємо на команди
+    if message.text in ["Відміна", "✖️ Відміна"]:
         clear_state(chat_id)
-        bot.send_message(chat_id, "🚫 Дію скасовано.", reply_markup=main_menu_keyboard(chat_id))
+        bot.send_message(
+            chat_id, 
+            get_text("cancelled", chat_id), 
+            reply_markup=main_menu_keyboard(chat_id)
+        )
         return
     
-    dict_name = message.text.strip()
+    # Очищення і валідація вводу
+    dict_name = sanitize_user_input(message.text.strip(), max_length=30)
     
     if len(dict_name) < 3 or len(dict_name) > 30:
-        bot.send_message(chat_id, "❌ Назва словника повинна містити від 3 до 30 символів.")
+        bot.send_message(chat_id, get_text("dict_name_length_error", chat_id))
+        safe_next_step_handler(message, handle_shared_dict_name)
         return
     
-    # Створюємо спільний словник
-    code, shared_dict_id = db_manager.create_shared_dictionary(chat_id, dict_name)
-    
-    # Повідомляємо про успішне створення та показуємо код доступу
-    bot.send_message(
-        chat_id,
-        f"✅ Спільний словник '{dict_name}' успішно створено!\n\n"
-        f"Код доступу: <code>{code}</code>\n\n"
-        f"Поділіться цим кодом з друзями, щоб вони могли приєднатися до вашого словника.",
-        parse_mode="HTML",
-        reply_markup=main_menu_keyboard(chat_id)
-    )
-    
-    clear_state(chat_id)
+    try:
+        # Створюємо спільний словник
+        code, shared_dict_id = db_manager.create_shared_dictionary(chat_id, dict_name)
+        
+        # Повідомляємо про успішне створення та показуємо код доступу
+        bot.send_message(
+            chat_id,
+            get_text("dict_created_success", chat_id) + f"'{dict_name}'" + 
+            get_text("created_success", chat_id) +  "\n\n" +
+            get_text("access_code", chat_id).format(code=code) + f"<code>{code}</code>\n\n" +
+            get_text("share_code", chat_id),
+            parse_mode="HTML",
+            reply_markup=main_menu_keyboard(chat_id)
+        )
+        
+        clear_state(chat_id)
+    except Exception as e:
+        print(f"Error creating shared dictionary: {e}")
+        bot.send_message(
+            chat_id, 
+            get_text("error_occurred", chat_id), 
+            reply_markup=main_menu_keyboard(chat_id)
+        )
+        clear_state(chat_id)
 
 @bot.message_handler(func=lambda message: message.text == "🔑 Вступити до спільного словника")
 def join_shared_dictionary(message):
@@ -111,40 +142,58 @@ def join_shared_dictionary(message):
         "step": "joining_shared_dict",
     }
     
-    bot.send_message(chat_id, "Введіть код доступу до спільного словника:",
-                    reply_markup=main_menu_cancel())
+    sent_message = bot.send_message(
+        chat_id, 
+        get_text("enter_access_code", chat_id),
+        reply_markup=main_menu_cancel()
+    )
+    save_message_id(chat_id, sent_message.message_id)
+    
+    # Використовуємо безпечний обробник для наступного кроку
+    safe_next_step_handler(sent_message, handle_shared_dict_code)
 
-@bot.message_handler(func=lambda message: user_state.get(message.chat.id, {}).get("step") == "joining_shared_dict")
 def handle_shared_dict_code(message):
     """Handle shared dictionary code input"""
     chat_id = message.chat.id
     
-    if message.text == "Відміна" or message.text == "✖️ Відміна":
+    # Перевіряємо на команди
+    if message.text in ["Відміна", "✖️ Відміна"]:
         clear_state(chat_id)
-        bot.send_message(chat_id, "🚫 Дію скасовано.", reply_markup=main_menu_keyboard(chat_id))
+        bot.send_message(chat_id, get_text("cancelled", chat_id), reply_markup=main_menu_keyboard(chat_id))
         return
     
-    code = message.text.strip().upper()
+    # Очищення і валідація вводу
+    code = sanitize_user_input(message.text.strip(), max_length=6).upper()
     
     if len(code) != 6:
-        bot.send_message(chat_id, "❌ Код доступу повинен містити 6 символів.")
+        bot.send_message(chat_id, get_text("access_code_length_error", chat_id))
+        safe_next_step_handler(message, handle_shared_dict_code)
         return
     
-    # Приєднуємось до спільного словника
-    success, result = db_manager.join_shared_dictionary(chat_id, code)
-    
-    if success:
-        # Повідомляємо про успішне приєднання
+    try:
+        # Приєднуємось до спільного словника
+        success, result = db_manager.join_shared_dictionary(chat_id, code)
+        
+        if success:
+            # Повідомляємо про успішне приєднання
+            bot.send_message(
+                chat_id,
+                get_text("joined_shared_dict_success", chat_id).format(dict_name=result),
+                reply_markup=main_menu_keyboard(chat_id)
+            )
+        else:
+            # Повідомляємо про помилку
+            bot.send_message(chat_id, f"❌ {result}")
+        
+        clear_state(chat_id)
+    except Exception as e:
+        print(f"Error joining shared dictionary: {e}")
         bot.send_message(
-            chat_id,
-            f"✅ Ви успішно приєднались до спільного словника '{result}'!",
+            chat_id, 
+            get_text("error_occurred", chat_id), 
             reply_markup=main_menu_keyboard(chat_id)
         )
-    else:
-        # Повідомляємо про помилку
-        bot.send_message(chat_id, f"❌ {result}")
-    
-    clear_state(chat_id)
+        clear_state(chat_id)
 
 @bot.message_handler(func=lambda message: message.text == "📋 Мої спільні словники")
 def my_shared_dictionaries(message):
@@ -155,22 +204,23 @@ def my_shared_dictionaries(message):
     shared_dicts = db_manager.get_user_shared_dictionaries(chat_id)
     
     if not shared_dicts:
-        bot.send_message(
+        sent_message = bot.send_message(
             chat_id,
-            "📭 Ви не є учасником жодного спільного словника.",
+            get_text("no_shared_dicts", chat_id),
             reply_markup=shared_dictionary_keyboard()
         )
+        save_message_id(chat_id, sent_message.message_id)
         return
     
     # Показуємо список словників
-    response = "📋 Ваші спільні словники:\n\n"
+    response = get_text("your_dict",chat_id) + "\n\n"
     
     for dict_info in shared_dicts:
-        admin_status = "👑 Адміністратор" if dict_info['is_admin'] else "👤 Учасник"
+        admin_status = get_text("admin",chat_id) if dict_info['is_admin'] else get_text("user",chat_id)
         response += f"• <b>{dict_info['name']}</b> ({admin_status})\n"
-        response += f"  Код доступу: <code>{dict_info['code']}</code>\n\n"
+        response += get_text("accsess_code",chat_id) +  f"<code>{dict_info['code']}</code>\n\n"
     
-    response += "Оберіть словник, який бажаєте використовувати:"
+    response += get_text("select_dict_to_use", chat_id)
     
     # Створюємо інлайн клавіатуру для вибору словника
     markup = telebot.types.InlineKeyboardMarkup()
@@ -183,12 +233,13 @@ def my_shared_dictionaries(message):
             callback_data=f"use_shared_dict_{dict_info['id']}"
         ))
     
-    bot.send_message(
+    sent_message = bot.send_message(
         chat_id,
         response,
         parse_mode="HTML",
         reply_markup=markup
     )
+    save_message_id(chat_id, sent_message.message_id)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("use_shared_dict_"))
 def use_shared_dictionary(call):
@@ -238,31 +289,47 @@ def use_shared_dictionary(call):
     
     conn.commit()
     
-    # Отримуємо назву словника для повідомлення
-    cursor.execute('SELECT name FROM shared_dictionaries WHERE id = ?', (shared_dict_id,))
-    dict_name = cursor.fetchone()[0]
-    conn.close()
-    
-    # Оновлюємо стан в пам'яті
-    level = user_state.get(chat_id, {}).get("level", "easy")
-    
-    user_state[chat_id] = {
-        "dict_type": "shared", 
-        "shared_dict_id": shared_dict_id,
-        "level": level,
-        "is_admin": is_admin
-    }
-    
-    # Показуємо повідомлення
-    bot.answer_callback_query(call.id, f"Обрано спільний словник: {dict_name}")
-    bot.delete_message(chat_id, call.message.message_id)
-    
-    admin_text = " (ви адміністратор)" if is_admin else ""
-    
-    bot.send_message(
-        chat_id,
-        f"📚 Обрано спільний словник: <b>{dict_name}</b>{admin_text}\n"
-        f"Тепер всі дії будуть виконуватись у цьому словнику.",
-        parse_mode="HTML",
-        reply_markup=main_menu_keyboard(chat_id)
-    )
+    try:
+        # Отримуємо назву словника для повідомлення
+        cursor.execute('SELECT name FROM shared_dictionaries WHERE id = ?', (shared_dict_id,))
+        dict_name = cursor.fetchone()[0]
+        conn.close()
+        
+        # Оновлюємо стан в пам'яті
+        level = user_state.get(chat_id, {}).get("level", "easy")
+        
+        user_state[chat_id] = {
+            "dict_type": "shared", 
+            "shared_dict_id": shared_dict_id,
+            "level": level,
+            "is_admin": is_admin
+        }
+        
+        # Показуємо повідомлення
+        bot.answer_callback_query(call.id, get_text("selected_dict", chat_id) + f"{dict_name}")
+        
+        # Видаляємо попереднє повідомлення
+        try:
+            bot.delete_message(chat_id, call.message.message_id)
+        except:
+            pass
+        
+        admin_text = get_text("you_admin",chat_id) if is_admin else ""
+        
+        sent_message = bot.send_message(
+            chat_id,
+            get_text("selected_dict", chat_id) +
+            f"<b>{dict_name}</b>{admin_text}\n"+
+            get_text("moves_in_dict", chat_id),
+            parse_mode="HTML",
+            reply_markup=main_menu_keyboard(chat_id)
+        )
+        save_message_id(chat_id, sent_message.message_id)
+        
+    except Exception as e:
+        print(f"Error switching to shared dictionary: {e}")
+        bot.send_message(
+            chat_id, 
+            get_text("error_occurred", chat_id), 
+            reply_markup=main_menu_keyboard(chat_id)
+        )
