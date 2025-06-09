@@ -159,15 +159,15 @@ def handle_pairs(call):
         correct = any(tr == state['selected_tr'] and de == selected_de for tr, de in state["pairs"])
         
         try:
-            # Получаем DataFrame для обновления рейтинга
+            # Update word rating based on correctness
             dict_type = state.get("dict_type", "personal")
             shared_dict_id = state.get("shared_dict_id")
             
             if dict_type == "shared" and shared_dict_id:
-                # Для общего словаря используем API для обновления рейтинга
+                # For shared dictionary, use DB API
                 for tr, de in state["pairs"]:
                     if tr == state['selected_tr']:
-                        # Получаем ID слова и обновляем рейтинг
+                        # Get word ID and update rating
                         word_id = db_manager.get_word_id_by_german(de)
                         if word_id:
                             rating_change = -0.1 if correct else 0.1
@@ -175,18 +175,14 @@ def handle_pairs(call):
                                 chat_id, word_id, rating_change, shared_dict_id)
                             break
             else:
-                # Для личного словаря используем DataFrame
-                from storage import get_dataframe, save_dataframe, get_user_file_path
-                df = get_dataframe(chat_id)
-                
-                if 'translation' in df.columns and 'priority' in df.columns:
-                    mask = df['translation'] == state['selected_tr']
-                    if mask.any():
-                        df.loc[mask, 'priority'] += -0.1 if correct else 0.1
-                        
-                # Сохраняем DataFrame
-                file_path, lang = get_user_file_path(chat_id) if dict_type == "personal" else (None, None)
-                save_dataframe(chat_id, df, lang if lang else "common")
+                # For personal dictionary, use DB API
+                for tr, de in state["pairs"]:
+                    if tr == state['selected_tr']:
+                        word_id = db_manager.get_word_id_by_german(de)
+                        if word_id:
+                            rating_change = -0.1 if correct else 0.1
+                            db_manager.update_word_rating(chat_id, word_id, rating_change)
+                            break
             
             if correct:
                 bot.answer_callback_query(call.id, get_text("correct",chat_id))

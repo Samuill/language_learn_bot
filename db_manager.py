@@ -262,10 +262,12 @@ def get_user_words(chat_id, dict_type="personal"):
     return df
 
 def add_word(chat_id, word, translation, dict_type="personal", article=None):
-    """Add a word to user's dictionary with duplicate handling and article update"""
+    """Add a word to user's dictionary with duplicate handling and article update.
+    Returns word_id on success, None on failure.
+    """
     # Check if user can add to common dictionary
     if dict_type == "common" and chat_id != ADMIN_ID:
-        return False
+        return None # Changed from False
     
     conn = get_connection()
     cursor = conn.cursor()
@@ -274,7 +276,7 @@ def add_word(chat_id, word, translation, dict_type="personal", article=None):
     language = get_user_language(chat_id)
     if not language:
         conn.close()
-        return False
+        return None # Changed from False
     
     # Перевіряємо, чи є в слові артикль
     article_match = re.match(r'^(der|die|das)\s+(.+)$', word, re.IGNORECASE)
@@ -301,6 +303,8 @@ def add_word(chat_id, word, translation, dict_type="personal", article=None):
     cursor.execute('SELECT id, article_id FROM words WHERE LOWER(word) = LOWER(?)', (word,))
     existing_words = cursor.fetchall()
     
+    final_word_id = None # Initialize word_id to be returned
+
     if existing_words:
         # Слово(а) існує, перевіряємо чи є дублікати і які артиклі вже задані
         duplicate_ids = []
@@ -318,17 +322,18 @@ def add_word(chat_id, word, translation, dict_type="personal", article=None):
                 # Додаємо інші слова в список дублікатів
                 duplicate_ids.append(word_id)
         
-        word_id = best_word_id
+        # word_id = best_word_id # This was the original line
+        final_word_id = best_word_id # Use the new variable
         
         # Перевіряємо, чи є переклад для поточної мови користувача
-        cursor.execute(f'SELECT {language}_tran FROM words WHERE id = ?', (word_id,))
+        cursor.execute(f'SELECT {language}_tran FROM words WHERE id = ?', (final_word_id,))
         current_translation = cursor.fetchone()[0]
         
         if not current_translation:
             # Якщо немає перекладу для поточної мови користувача,
             # але слово існує, спробуємо отримати переклад з іншої мови
             other_language = "ru" if language == "uk" else "uk"
-            cursor.execute(f'SELECT {other_language}_tran FROM words WHERE id = ?', (word_id,))
+            cursor.execute(f'SELECT {other_language}_tran FROM words WHERE id = ?', (final_word_id,))
             other_translation = cursor.fetchone()[0]
             
             if other_translation:
@@ -349,15 +354,15 @@ def add_word(chat_id, word, translation, dict_type="personal", article=None):
         if article_id != 4 and not best_has_article:
             # Оновлюємо артикль і переклад
             cursor.execute(f'UPDATE words SET {language}_tran = ?, article_id = ? WHERE id = ?', 
-                         (translation, article_id, word_id))
+                         (translation, article_id, final_word_id))
         else:
             # Просто оновлюємо переклад
             cursor.execute(f'UPDATE words SET {language}_tran = ? WHERE id = ?', 
-                         (translation, word_id))
+                         (translation, final_word_id))
         
         # Обробка дублікатів
         if duplicate_ids:
-            print(f"Found {len(duplicate_ids)} duplicates for word '{word}', merging to word_id={word_id}")
+            print(f"Found {len(duplicate_ids)} duplicates for word '{word}', merging to word_id={final_word_id}")
             for dup_id in duplicate_ids:
                 # Знаходимо користувачів, у яких є це слово
                 cursor.execute(f"SELECT 'user_' || chat_id FROM users")
@@ -369,7 +374,7 @@ def add_word(chat_id, word, translation, dict_type="personal", article=None):
                         cursor.execute(f"SELECT 1 FROM {user_table} WHERE word_id = ?", (dup_id,))
                         if cursor.fetchone():
                             # Перевіряємо чи користувач вже має основне слово
-                            cursor.execute(f"SELECT 1 FROM {user_table} WHERE word_id = ?", (word_id,))
+                            cursor.execute(f"SELECT 1 FROM {user_table} WHERE word_id = ?", (final_word_id,))
                             has_main_word = cursor.fetchone() is not None
                             
                             if has_main_word:
@@ -379,8 +384,8 @@ def add_word(chat_id, word, translation, dict_type="personal", article=None):
                             else:
                                 # Оновлюємо word_id з дубліката на основне слово
                                 cursor.execute(f"UPDATE {user_table} SET word_id = ? WHERE word_id = ?", 
-                                             (word_id, dup_id))
-                                print(f"Updated in {user_table}: word_id {dup_id} -> {word_id}")
+                                             (final_word_id, dup_id))
+                                print(f"Updated in {user_table}: word_id {dup_id} -> {final_word_id}")
                     except Exception as e:
                         print(f"Error processing duplicate for {user_table}: {e}")
                         continue
@@ -401,10 +406,11 @@ def add_word(chat_id, word, translation, dict_type="personal", article=None):
             translation if language == 'ru' else None,
             translation if language == 'uk' else None
         ))
-        word_id = cursor.lastrowid
+        # word_id = cursor.lastrowid # This was the original line
+        final_word_id = cursor.lastrowid # Use the new variable
     
     # If it's a personal dictionary, add reference to user's table
-    if dict_type == "personal":
+    if dict_type == "personal" and final_word_id is not None:
         # Ensure user table exists
         
         create_user_table(chat_id)
@@ -413,12 +419,12 @@ def add_word(chat_id, word, translation, dict_type="personal", article=None):
         cursor.execute(f'''
         INSERT OR IGNORE INTO user_{chat_id} (word_id, rating)
         VALUES (?, ?)
-        ''', (word_id, 0.0))
+        ''', (final_word_id, 0.0))
     
     conn.commit()
     conn.close()
     
-    return True
+    return final_word_id # Changed from True
 
 def update_word_rating(chat_id, word_id, change, dict_type="personal"):
     """Update word rating for a user with appropriate changes based on level"""
@@ -1197,5 +1203,61 @@ def reset_user_dictionary(chat_id):
     except Exception as e:
         print(f"Error resetting dictionary for user {chat_id}: {e}")
         return False
+    finally:
+        conn.close()
+
+def is_user_admin_of_shared_dict(chat_id, shared_dict_id):
+    """Check if a user is an admin of a specific shared dictionary."""
+    if not shared_dict_id:
+        return False
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        # First, check the shared_dict_users table
+        cursor.execute("""
+            SELECT is_admin FROM shared_dict_users
+            WHERE user_id = ? AND dict_id = ?
+        """, (chat_id, shared_dict_id))
+        result = cursor.fetchone()
+        if result and result[0] == 1:
+            return True
+        
+        # Fallback: Check if the user is the creator of the dictionary
+        # This is important if the shared_dict_users entry wasn't made or if is_admin is 0
+        # but they are the original creator.
+        cursor.execute("""
+            SELECT 1 FROM shared_dictionaries
+            WHERE id = ? AND created_by = ?
+        """, (shared_dict_id, chat_id))
+        if cursor.fetchone():
+            # If they created it, ensure they are marked as admin in shared_dict_users
+            # This is a self-correction step.
+            cursor.execute("""
+                INSERT OR REPLACE INTO shared_dict_users (user_id, dict_id, is_admin, joined_at)
+                VALUES (?, ?, 1, COALESCE((SELECT joined_at FROM shared_dict_users WHERE user_id = ? AND dict_id = ?), datetime('now')))
+            """, (chat_id, shared_dict_id, chat_id, shared_dict_id))
+            conn.commit()
+            return True
+            
+        return False
+    except Exception as e:
+        print(f"Error checking admin status for user {chat_id} in shared_dict {shared_dict_id}: {e}")
+        return False
+    finally:
+        conn.close()
+
+def get_word_id_by_german(german_word):
+    """Get the ID of a word by its German text"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('SELECT id FROM words WHERE word = ?', (german_word,))
+        result = cursor.fetchone()
+        word_id = result[0] if result else None
+        return word_id
+    except Exception as e:
+        print(f"Error getting word ID for '{german_word}': {e}")
+        return None
     finally:
         conn.close()
