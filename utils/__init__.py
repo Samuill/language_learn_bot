@@ -16,6 +16,7 @@ from .keyboards import (
     shared_dictionary_keyboard,
     yes_no_cancel_keyboard
 )
+from utils.grammar_helpers import get_case_explanation, get_pronoun_translation, get_case_name_in_ukrainian
 
 def clear_state(chat_id, preserve_dict_type=False, preserve_messages=False, preserve_level=False):
     """Clear user state to prevent conflicts between activities"""

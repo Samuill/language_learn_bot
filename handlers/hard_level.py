@@ -5,13 +5,15 @@
 """
 
 import traceback
+import db_manager
 from config import bot, user_state
 from utils import clear_state, main_menu_keyboard, hard_level_keyboard
 from utils.input_handlers import safe_next_step_handler, sanitize_user_input, is_menu_navigation_command, handle_exit_from_activity
 from dictionary import return_to_appropriate_menu
 from utils.language_utils import get_text
-import db_manager
 from utils.console_logger import log_menu_transition, log_displayed_buttons, MENU_MAIN, MENU_EASY, MENU_MEDIUM, MENU_HARD, MENU_SHARED
+# Add import for grammar helpers
+from utils.grammar_helpers import get_case_explanation, get_pronoun_translation, get_case_name_in_ukrainian
 
 # Додаємо константи для зміни рейтингу на високому рівні
 HARD_RATING_DECREASE = -0.1    # Зменшення рейтингу при правильній відповіді

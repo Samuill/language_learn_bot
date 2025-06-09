@@ -13,9 +13,49 @@ from dictionary import return_to_appropriate_menu
 from utils.language_utils import get_text, is_command
 from utils import clear_state, easy_level_keyboard
 from utils.input_handlers import safe_next_step_handler, sanitize_user_input, is_menu_navigation_command
-from utils.state_management import update_user_state, get_user_state_value, ensure_dict_state
-from utils.dictionary_helpers import load_user_dictionary, handle_empty_dictionary, update_word_rating
-from utils.game_helpers import handle_game_result, handle_game_error, create_article_options_keyboard
+from utils.state_management import get_user_state_value, set_user_state_value, update_user_state, ensure_dict_state
+from utils.dictionary_helpers import update_word_rating
+from utils.game_helpers import handle_game_error
+from utils.grammar_helpers import get_case_explanation, get_pronoun_translation, get_case_name_in_ukrainian
+def ensure_dict_state(chat_id):
+    """
+    Ensure dictionary-related state is properly initialized
+    
+    Args:
+        chat_id: User's chat ID
+        
+    Returns:
+        tuple: (dict_type, shared_dict_id)
+    """
+    # Get the current dictionary type from database or state
+    dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
+    shared_dict_id = user_state.get(chat_id, {}).get("shared_dict_id")
+    
+    # Double-check with database
+    try:
+        db_info = db_manager.get_user_dictionary_info(chat_id)
+        if db_info:
+            db_dict_type, db_shared_id, _ = db_info
+            dict_type = db_dict_type
+            shared_dict_id = db_shared_id
+    except Exception as e:
+        print(f"Error getting dictionary info from database: {e}")
+    
+    # Update state
+    if chat_id in user_state:
+        user_state[chat_id]["dict_type"] = dict_type
+        if shared_dict_id:
+            user_state[chat_id]["shared_dict_id"] = shared_dict_id
+        elif "shared_dict_id" in user_state[chat_id]:
+            del user_state[chat_id]["shared_dict_id"]
+    else:
+        user_state[chat_id] = {
+            "dict_type": dict_type
+        }
+        if shared_dict_id:
+            user_state[chat_id]["shared_dict_id"] = shared_dict_id
+    
+    return dict_type, shared_dict_id
 
 @bot.message_handler(func=lambda message: is_command(message, "learning_new_words"))
 def learn_words(message):
@@ -317,7 +357,7 @@ def handle_answer(call):
             try:
                 word_id = db_manager.get_word_id_by_german(word)
                 if word_id:
-                    # Единый підхід до рейтингів для легкого рівня
+                    # Единий підхід до рейтингів для легкого рівня
                     rating_change = -0.1 if is_correct else 0.1
                     db_manager.update_word_rating_shared_dict(chat_id, word_id, rating_change, shared_dict_id)
                     print(f"Updated rating for shared dict word {word_id}: {rating_change}")
@@ -365,21 +405,24 @@ def learn_articles(message):
 def start_article_activity(chat_id):
     """Start learning articles activity"""
     try:
-        # Get dictionary info using our utility function
+        # Use the locally-defined function instead of importing it
         dict_type, shared_dict_id = ensure_dict_state(chat_id)
         
         # Get user language consistently
         language = db_manager.get_user_language(chat_id) or "uk"
         
-        # Update state using our unified state manager
-        update_user_state(chat_id, {
-            "dict_type": dict_type,
-            "language": language, 
-            "level": "easy"
-        })
+        # Update state directly instead of using undefined function
+        if chat_id in user_state:
+            user_state[chat_id].update({
+                "dict_type": dict_type,
+                "language": language, 
+                "level": "easy"
+            })
         
         if shared_dict_id:
-            set_user_state_value(chat_id, "shared_dict_id", shared_dict_id)
+            # Set this directly instead of using an undefined function
+            if chat_id in user_state:
+                user_state[chat_id]["shared_dict_id"] = shared_dict_id
         
         # Отримуємо останнє слово, яке було показано, щоб не повторювати його
         last_word_id = user_state.get(chat_id, {}).get("last_article_word_id", None)

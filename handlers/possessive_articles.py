@@ -13,6 +13,7 @@ from utils.input_handlers import handle_exit_from_activity
 import db_manager
 from utils.language_utils import get_text
 from utils.console_logger import log_menu_transition, MENU_MAIN, MENU_EASY, MENU_MEDIUM, MENU_HARD, MENU_SHARED, set_current_menu
+from utils.grammar_helpers import get_case_name_in_ukrainian, get_pronoun_translation, get_case_explanation
 
 @bot.message_handler(func=lambda message: 
                     message.text in ["🧩 Вивчати присвійні займенники", 
@@ -57,50 +58,6 @@ def start_possessive_exercise(chat_id, difficulty="easy"):
     
     # Start the first exercise
     generate_possessive_exercise(chat_id)
-
-def get_case_name_in_ukrainian(case_name):
-    """Convert German case names to Ukrainian"""
-    case_translations = {
-        "Nominativ": "Називний",
-        "Akkusativ": "Знахідний",
-        "Dativ": "Давальний",
-        "Genitiv": "Родовий"
-    }
-    return case_translations.get(case_name, case_name)
-
-def get_pronoun_translation(pronoun):
-    """Get Ukrainian translation of German pronouns"""
-    pronoun_translations = {
-        "ich": "я",
-        "du": "ти",
-        "er": "він",
-        "es": "воно",
-        "sie (singular)": "вона",
-        "wir": "ми",
-        "ihr": "ви",
-        "sie (plural)": "вони",
-        "Sie": "Ви (ввічливе)"
-    }
-    return pronoun_translations.get(pronoun, pronoun)
-
-def get_case_explanation(case, language="uk"):
-    """Get explanation for grammatical cases"""
-    explanations = {
-        "Nominativ": {
-            "uk": "Називний відмінок (Nominativ) використовується для підмета речення і відповідає на питання 'хто/що?'",
-            "ru": "Именительный падеж (Nominativ) используется для подлежащего и отвечает на вопрос 'кто/что?'"
-        },
-        "Akkusativ": {
-            "uk": "Знахідний відмінок (Akkusativ) використовується для прямого додатка і відповідає на питання 'кого/що?'",
-            "ru": "Винительный падеж (Akkusativ) используется для прямого дополнения и отвечает на вопрос 'кого/что?'"
-        },
-        "Dativ": {
-            "uk": "Давальний відмінок (Dativ) використовується для непрямого додатка і відповідає на питання 'кому/чому?'",
-            "ru": "Дательный падеж (Dativ) используется для непрямого дополнения и отвечает на вопрос 'кому/чему?'"
-        }
-    }
-    
-    return explanations.get(case, {}).get(language, explanations[case]["uk"])
 
 def generate_possessive_exercise(chat_id):
     """Generate a new possessive article exercise"""
@@ -302,7 +259,7 @@ def generate_possessive_exercise(chat_id):
         # Fallback if form not found
         bot.send_message(
             chat_id,
-            "❌ Помилка: не вдалося знайти правильну форму присвійного займенника.",
+            get_text("no_possessive_form", chat_id),
             reply_markup=easy_level_keyboard()
         )
         clear_state(chat_id)
@@ -360,12 +317,12 @@ def generate_possessive_exercise(chat_id):
     markup.add(*button_data)
     
     # Step 9: Send the question to the user
-    pronoun_display = get_pronoun_translation(pronoun)
-    case_display = get_case_name_in_ukrainian(case)
-    case_explanation = get_case_explanation(case, language)
+    pronoun_display   = get_pronoun_translation(pronoun, chat_id)
+    case_display       = get_case_name_in_ukrainian(case, chat_id)
+    case_explanation   = get_case_explanation(case, chat_id)
     
     message_text = (
-        f"🧩 Виберіть правильний присвійний займенник:\n\n"
+        get_text("set_padeg",chat_id) + f"\n\n"
         f"[{pronoun_display} - <b>{pronoun}</b>] ____ <b>{word}</b> (<b>{case}</b> - {case_display})\n\n"
         f"<i>Переклад: {translation}</i>"
     )
@@ -442,11 +399,11 @@ def handle_possessive_answer(call):
     
     if is_correct:
         # Show success message
-        bot.answer_callback_query(call.id, "✅ Правильно!")
+        bot.answer_callback_query(call.id, get_text("correct",chat_id))
         
         # Edit message with correct answer
         bot.edit_message_text(
-            f"✅ Правильно!\n\n"
+            get_text("correct",chat_id) + f"\n\n"
             f"[{pronoun_display} - <b>{pronoun}</b>] <b>{correct_form}</b> <b>{word}</b> ({case_display})",
             chat_id=chat_id,
             message_id=call.message.message_id,
@@ -458,12 +415,12 @@ def handle_possessive_answer(call):
         threading.Timer(1.5, lambda: generate_possessive_exercise(chat_id)).start()
     else:
         # Show failure message
-        bot.answer_callback_query(call.id, "❌ Неправильно!")
+        bot.answer_callback_query(call.id, get_text("incorrect",chat_id))
         
         if attempts >= 2:  # Змінено з 3 на 2 спроби
             # After two wrong attempts, show correct answer
             bot.edit_message_text(
-                f"❌ Неправильно!\n\n"
+                get_text("incorrect",chat_id) + f"\n\n"
                 f"Правильна відповідь: <b>{correct_form}</b>\n\n"
                 f"[{pronoun_display} - <b>{pronoun}</b>] <b>{correct_form}</b> <b>{word}</b> ({case_display})",
                 chat_id=chat_id,
