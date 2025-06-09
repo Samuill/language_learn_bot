@@ -6690,3 +6690,37 @@ Name: 1, dtype: object, 'message_id': 4360, 'dict_type': 'shared'}
 [2025-06-09 15:36:40.491] Response to User 476376623: '🧩 Виберіть правильний присвійний займенник:
 
 [він - <b>er</b>] ____ <b>Mutter</b> (<b>Akkusativ</b> ...'
+[2025-06-09 15:49:13.456] ERROR: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response')) | Context: Critical error in main loop
+[2025-06-09 15:51:16.958] Response to User 476376623: 'Головне меню:
+
+📚 Поточний словник: A1 німецька (👥 Спільний словник)'
+[2025-06-09 15:51:16.959] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 5215
+[2025-06-09 15:51:19.329] Response to User 476376623: '🔴 Складний рівень - оберіть активність:'
+[2025-06-09 15:51:19.330] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 5217
+[2025-06-09 15:51:22.687] Response to User 476376623: '🧩 Виберіть правильний присвійний займенник:
+
+[воно - <b>es</b>] ____ <b>Elternabend</b> (<b>Dativ</b...'
+[2025-06-09 15:51:30.860] Response to User 476376623: '🧩 Виберіть правильний присвійний займенник:
+
+[вона - <b>sie (singular)</b>] ____ <b>Großvater</b> (<...'
+[2025-06-09 15:51:39.752] Response to User 476376623: '🧩 Виберіть правильний присвійний займенник:
+
+[ви - <b>ihr</b>] ____ <b>Lieblingsfarben</b> (<b>Dativ...'
+[2025-06-09 15:51:51.192] Response to User 476376623: 'Please select your language / Оберіть мову / Выберите язык:'
+[2025-06-09 15:51:54.122] Response to User 476376623: 'تم اختيار اللغة العربية'
+[2025-06-09 15:51:54.354] Response to User 476376623: 'القائمة الرئيسية:'
+[2025-06-09 15:51:54.354] SECTION: User 476376623 entered section 'State update: main_menu' | Added message ID: 5226
+[2025-06-09 15:51:56.553] Response to User 476376623: '🔴 المستوى الصعب - اختر النشاط:'
+[2025-06-09 15:51:56.554] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 5228
+[2025-06-09 15:51:57.911] Response to User 476376623: '🧩 اختر الضمير المتملك الصحيح:
+
+[أنتم - <b>ihr</b>] ____ <b>Waschmaschine</b> (<b>Akkusativ</b> - Зна...'
+[2025-06-09 15:52:16.192] Response to User 476376623: 'القائمة الرئيسية:
+
+📚 القاموس الحالي: A1 німецька (👥 القاموس المشترك)'
+[2025-06-09 15:52:16.193] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 5232
+[2025-06-09 15:52:17.492] Response to User 476376623: '🟢 المستوى السهل - اختر النشاط:'
+[2025-06-09 15:52:17.493] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 5234
+[2025-06-09 15:52:21.042] Response to User 476376623: '🧩 اختر الضمير المتملك الصحيح:
+
+[вона - <b>sie (singular)</b>] ____ <b>Sohn</b> (<b>Nominativ</b> - Н...'

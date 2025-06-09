@@ -20,10 +20,10 @@ def get_case_name_in_ukrainian(case_name, chat_id):
     """
     # Map case names to translation keys
     case_keys = {
-        "Nominativ": "nominative",
-        "Akkusativ": "accusative",
-        "Dativ": "dative",
-        "Genitiv": "genitive"
+        "Nominativ": "case_Nominativ",
+        "Akkusativ": "case_Akkusativ", 
+        "Dativ": "case_Dativ",
+        "Genitiv": "case_Genitiv"
     }
     
     # Get the translation key for this case
@@ -94,13 +94,35 @@ def get_case_explanation(case, chat_id, language=None):
     # Use the pattern from uk.json: nominativ_explanation_uk
     translation_key = f"{case.lower()}_explanation_{language}"
     
-    # Default explanations if translations not found
-    defaults = {
-        "Nominativ": "The nominative case is used for the subject of a sentence",
-        "Akkusativ": "The accusative case is used for the direct object",
-        "Dativ": "The dative case is used for the indirect object",
-        "Genitiv": "The genitive case is used for possession"
+    # Ключі пояснень відмінків
+    explanation_keys = {
+        "Nominativ": "nominativ_explanation_uk",
+        "Akkusativ": "akkusativ_explanation_uk",
+        "Dativ": "dativ_explanation_uk",
+        "Genitiv": "genitiv_explanation_uk"
     }
     
-    # Return localized text or default
-    return get_text(translation_key, chat_id, defaults.get(case, ""))
+    # Спробуємо отримати локалізований текст
+    key = explanation_keys.get(case)
+    if key:
+        return get_text(key, chat_id)
+    
+    # Словник запасних варіантів для різних мов
+    defaults = {
+        "uk": {
+            "Nominativ": "Називний відмінок використовується для підмета речення і відповідає на питання 'хто/що?'",
+            "Akkusativ": "Знахідний відмінок використовується для прямого додатка і відповідає на питання 'кого/що?'",
+            "Dativ": "Давальний відмінок використовується для непрямого додатка і відповідає на питання 'кому/чому?'",
+            "Genitiv": "Родовий відмінок використовується для вираження приналежності і відповідає на питання 'кого/чого?'"
+        },
+        "en": {
+            "Nominativ": "The nominative case is used for the subject of a sentence",
+            "Akkusativ": "The accusative case is used for the direct object",
+            "Dativ": "The dative case is used for the indirect object",
+            "Genitiv": "The genitive case is used for possession"
+        }
+    }
+    
+    # Використовуємо відповідні запасні варіанти або англійські, якщо переклад відсутній
+    language_defaults = defaults.get(language, defaults.get("uk", defaults["en"]))
+    return language_defaults.get(case, "")
