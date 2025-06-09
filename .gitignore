@@ -1,6 +1,6 @@
 # Environment variables
-#.env
-#.env.*
+# .env
+# .env.*
 
 # Logs
 logs/
@@ -16,8 +16,7 @@ ENV/
 __pycache__/
 *.py[cod]
 *$py.class
-utils/__pycache__/
-.pyc
+
 # Distribution / packaging
 dist/
 build/

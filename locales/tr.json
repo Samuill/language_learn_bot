@@ -101,5 +101,17 @@
   "reminder_new": "👋 Merhaba! Şimdi Almanca öğrenme zamanı! Hemen başlayın ve becerilerinizi geliştirin.",
   "reminder_short_streak": "⚡ Hızınızı kaybetmeyin! {active_days} gündür aktifsiniz. Almanca becerilerinizi geliştirmek için çalışmaya devam edin.",
   "reminder_medium_streak": "🔥 Harika bir ilerleme! {active_days} gündür aktifsiniz. Şimdi durmayın!",
-  "reminder_long_streak": "🏆 Etkileyici! {active_days} gündür aktifsiniz. Harika serinizi koruyun!"
+  "reminder_long_streak": "🏆 Etkileyici! {active_days} gündür aktifsiniz. Harika serinizi koruyun!",
+  "add_word_multiple_instruction": "Bir veya birden fazla kelime ekleyebilirsiniz.\n\nGiriş formatları:\n- Tek kelime: Haus\n- Virgülle ayrılmış birden fazla kelime: Haus, Tisch, Stuhl\n- Artikelli kelimeler: der Mann, die Frau, das Kind\n\nArtikeller otomatik olarak belirlenecektir.",
+  "processing_word": "{current}/{total} kelime işleniyor",
+  "words_added_result": "✅ {added} kelime eklendi.\n❌ {failed} kelime işlenemedi.",
+  "word_skipped": "❌ '{word}' kelimesi için çeviri alınamadı. Atlanıyor.",
+  "word_processing_error": "❌ '{word}' kelimesi işlenirken bir hata oluştu. Atlanıyor.",
+  "use_suggested_translation": "✅ Önerilen çeviriyi kullan",
+  "keep_my_translation": "❌ Kendi çevirimi koru",
+  "translation_may_be_incorrect": "⚠️ Çeviriniz doğru olmayabilir. Önerilen seçenek: ",
+  "skip_word": "⏭️ Atla",
+  "next_word": "Sonraki kelime...",
+  "edit_word": "✏️ Kelimeyi düzenle",
+  "change_language_help": "Arayüz dilini değiştirmek için /language veya /lang komutunu kullanın"
 }

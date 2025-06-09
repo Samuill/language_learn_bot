@@ -93,5 +93,18 @@
   "reminder_new": "👋 Hello! It's time to study German! Start now and improve your skills.",
   "reminder_short_streak": "⚡ Don't lose pace! You have been active for {active_days} days. Continue learning to develop your German skills.",
   "reminder_medium_streak": "🔥 Great progress! You have been active for {active_days} days. Keep going!",
-  "reminder_long_streak": "🏆 Impressive! You have been active for {active_days} days. Maintain your excellent streak!"
+  "reminder_long_streak": "🏆 Impressive! You have been active for {active_days} days. Maintain your excellent streak!",
+  "accsess_code": "🔑 Access code: ",
+  "add_word_multiple_instruction": "You can add a single word or multiple words at once.\n\nFormats:\n- Single word: Haus\n- Multiple words separated by a comma: Haus, Tisch, Stuhl\n- Words with articles: der Mann, die Frau, das Kind\n\nArticles will be determined automatically.",
+  "processing_word": "Processing word {current}/{total}",
+  "words_added_result": "✅ Added {added} words.\n❌ Failed to process {failed} words.",
+  "word_skipped": "❌ Failed to get translation for '{word}'. Skipping.",
+  "word_processing_error": "❌ Error processing '{word}'. Skipping.",
+  "use_suggested_translation": "✅ Use recommended translation",
+  "keep_my_translation": "❌ Keep my translation",
+  "translation_may_be_incorrect": "⚠️ Your translation may be inaccurate. Recommended option: ",
+  "skip_word": "⏭️ Skip",
+  "next_word": "Next word...",
+  "edit_word": "✏️ Edit word",
+  "change_language_help": "To change the interface language, use the /language or /lang command"
 }

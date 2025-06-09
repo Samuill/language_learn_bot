@@ -56,26 +56,34 @@ def cleanup():
         pass
 
 def signal_handler(sig, frame):
-    """Handle termination signals to shutdown bot and scheduler gracefully"""
-    print("Termination signal received. Shutting down...")
-    log_action("Bot stopping", {"reason": "signal received"})
+    """Handle shutdown signals gracefully"""
+    print("\nReceived shutdown signal. Stopping bot...")
     
     try:
+        # Stop bot polling first
         bot.stop_polling()
-        print("Bot polling stopped")
+        print("Bot polling stopped.")
     except Exception as e:
-        print(f"Error stopping bot: {e}")
+        print(f"Error stopping bot polling: {e}")
     
     try:
-        scheduler.shutdown(wait=False)
-        print("Scheduler shutdown")
-    except SchedulerNotRunningError:
-        print("Scheduler was not running")
+        # Check if scheduler is running before attempting to shut it down
+        if scheduler.running:
+            scheduler.shutdown(wait=False)
+            print("Scheduler stopped.")
+        else:
+            print("Scheduler was not running.")
     except Exception as e:
-        print(f"Error shutting down scheduler: {e}")
+        print(f"Error stopping scheduler: {e}")
     
-    log_action("Bot stopped")
-    print("Bot has been stopped gracefully")
+    try:
+        # Log the shutdown
+        from debug_logger import log_action
+        log_action("Bot stopped", {"reason": "shutdown_signal"})
+    except Exception as e:
+        print(f"Error logging shutdown: {e}")
+    
+    print("Bot shutdown complete.")
     sys.exit(0)
 
 def reset_dictionaries():
@@ -110,6 +118,47 @@ def change_language_command(message):
         "Please select your language / Оберіть мову / Выберите язык:", 
         reply_markup=keyboard
     )
+
+def setup_scheduler():
+    """Setup APScheduler for daily reminders"""
+    try:
+        from scheduler import send_reminder
+        import random
+        
+        # Check if scheduler is already running
+        if scheduler.running:
+            print("Scheduler is already running, skipping setup...")
+            return
+        
+        # Check if there's already a job with this ID before adding it
+        existing_jobs = [job.id for job in scheduler.get_jobs()]
+        
+        # Use unique job ID by adding random suffix to avoid conflicts
+        reminder_job_id = f"daily_reminder_{random.randint(1000, 9999)}"
+        
+        # Create a job to send reminders daily at 18:00
+        if "daily_reminder" not in existing_jobs:
+            scheduler.add_job(
+                send_reminder, 
+                'cron', 
+                hour=18, 
+                minute=0,
+                id=reminder_job_id,
+                replace_existing=True
+            )
+            print(f"Daily reminder scheduled for 18:00 (job id: {reminder_job_id})")
+        else:
+            print("Daily reminder already scheduled, skipping...")
+        
+        # Start the scheduler in a separate thread
+        if not scheduler.running:
+            scheduler.start()
+            log_action("Reminder scheduler initialized")
+        
+    except Exception as e:
+        print(f"Error setting up scheduler: {e}")
+        import traceback
+        traceback.print_exc()
 
 def main():
     """Main function to run the bot"""
@@ -155,6 +204,7 @@ def main():
         dict_type = state.get("dict_type", "personal")
         print(f"User {chat_id} using dictionary type: {dict_type}")
     
+    # Setup the scheduler
     setup_scheduler()
     
     # Setup debug logging
@@ -244,12 +294,23 @@ if __name__ == "__main__":
     print("Bot started!")
     log_action("Bot polling started")
     
+    # Start bot polling with error handling
     try:
-        # Start the bot in polling mode
-        bot.polling(none_stop=True)
+        bot.polling(none_stop=True, interval=1, timeout=60)
+    except KeyboardInterrupt:
+        print("\nKeyboard interrupt received. Shutting down...")
     except Exception as e:
-        log_error(e, "Bot polling error")
+        print(f"Error in bot polling: {e}")
         import traceback
         traceback.print_exc()
     finally:
+        # Graceful shutdown
+        try:
+            if scheduler.running:
+                scheduler.shutdown(wait=False)
+                print("Scheduler shutdown complete.")
+        except Exception as e:
+            print(f"Error during scheduler shutdown: {e}")
+        
         log_action("Bot stopped")
+        print("Bot stopped gracefully.")

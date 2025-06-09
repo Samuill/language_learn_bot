@@ -31,17 +31,24 @@ LANGUAGE_NAMES = {
 
 @bot.message_handler(commands=['start'])
 def start_handler(message):
-    """Handle the /start command"""
+    """Handle the /start command - only show language selection for new users"""
     chat_id = message.chat.id
     
-    # Clear any existing state
+    # Check if user already has a language set
+    import db_manager
+    existing_language = db_manager.get_user_language(chat_id)
+    
+    if existing_language:
+        # User already has language - redirect to main menu
+        from handlers.main_menu import main_menu
+        main_menu(message)
+        return
+    
+    # New user - show language selection
     if chat_id in user_state:
         user_state.pop(chat_id)
     
-    # Set initial state
     user_state[chat_id] = {"state": "language_selection"}
-    
-    # Show language selection keyboard
     show_language_selection(chat_id)
 
 def show_language_selection(chat_id):
@@ -70,9 +77,9 @@ def show_language_selection(chat_id):
     )
     save_message_id(chat_id, sent_message.message_id)
 
-@bot.message_handler(commands=['language', 'change_language'])
+@bot.message_handler(commands=['language', 'change_language', 'lang'])
 def change_language_command(message):
-    """Handle /language or /change_language command"""
+    """Handle language change commands - force language selection"""
     chat_id = message.chat.id
     
     # Save important state data
@@ -117,29 +124,32 @@ def handle_language_button(message):
         
         try:
             # Update language in database
-            db_manager.set_user_language(chat_id, language_code)
+            success = db_manager.set_user_language(chat_id, language_code)
             
-            # Update user state
-            user_state[chat_id] = {
-                "state": "main_menu",
-                "dict_type": dict_type,
-                "level": level,
-                "language": language_code  # Add language to state
-            }
-            
-            if shared_dict_id:
-                user_state[chat_id]["shared_dict_id"] = shared_dict_id
-            
-            # Send confirmation using localization
-            bot.send_message(chat_id, get_text("language_selected", chat_id))
-            
-            # Send main menu using localization
-            sent_message = bot.send_message(
-                chat_id, 
-                get_text("main_menu", chat_id), 
-                reply_markup=main_menu_keyboard(chat_id)
-            )
-            save_message_id(chat_id, sent_message.message_id)
+            if success:
+                # Update user state
+                user_state[chat_id] = {
+                    "state": "main_menu",
+                    "dict_type": dict_type,
+                    "level": level,
+                    "language": language_code
+                }
+                
+                if shared_dict_id:
+                    user_state[chat_id]["shared_dict_id"] = shared_dict_id
+                
+                # Send confirmation using localization
+                bot.send_message(chat_id, get_text("language_selected", chat_id))
+                
+                # Send main menu using localization
+                sent_message = bot.send_message(
+                    chat_id, 
+                    get_text("main_menu", chat_id), 
+                    reply_markup=main_menu_keyboard(chat_id)
+                )
+                save_message_id(chat_id, sent_message.message_id)
+            else:
+                bot.send_message(chat_id, get_text("error_occurred", chat_id))
         except Exception as e:
             print(f"Error setting language: {e}")
             bot.send_message(chat_id, get_text("error_occurred", chat_id))

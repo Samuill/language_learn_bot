@@ -2890,3 +2890,16 @@ accsess_code<code>XANOEF</code>
 [2025-06-09 09:03:19.192] ERROR: Scheduler is not running | Context: Critical error in main loop
 [2025-06-09 09:03:43.247] ERROR: Scheduler is not running | Context: Critical error in main loop
 [2025-06-09 09:09:01.150] ERROR: Scheduler is not running | Context: Critical error in main loop
+[2025-06-09 09:23:32.519] Response to User 476376623: 'Главное меню:'
+[2025-06-09 09:23:35.594] Response to User 476376623: '🌍 Пожалуйста, выберите ваш язык:'
+[2025-06-09 09:23:37.428] Response to User 476376623: 'تم اختيار اللغة العربية'
+[2025-06-09 09:23:37.522] Response to User 476376623: 'القائمة الرئيسية:'
+[2025-06-09 09:23:39.421] Response to User 476376623: '📚 تم اختيار القاموس المشترك: <b>A1 німецька</b>
+
+اختر إجراءً من القائمة أدناه:'
+[2025-06-09 09:23:41.161] Response to User 476376623: '📋 قواميسك المشتركة: 
+
+• <b>A1 німецька</b> (👑 المسؤول)
+accsess_code<code>XANOEF</code>
+
+• <b>Test</b...'

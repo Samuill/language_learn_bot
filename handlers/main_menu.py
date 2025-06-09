@@ -14,7 +14,6 @@ from handlers.start import show_language_selection
 def main_menu(message):
     """Show main menu or language selection"""
     chat_id = message.chat.id
-    clear_state(chat_id)
     
     # Перевіряємо, чи є мова в БД
     import db_manager
@@ -22,15 +21,22 @@ def main_menu(message):
     track_activity(chat_id)
     
     if not language:
-        # Якщо мови немає, пропонуємо обрати
+        # Якщо мови немає, пропонуємо обрати (тільки для нових користувачів)
         show_language_selection(chat_id)
         user_state[chat_id] = {"state": "language_selection"}
     else:
-        # Інакше показуємо головне меню з локалізованими кнопками
+        # Мова вже встановлена - показуємо головне меню
+        clear_state(chat_id)
+        user_state[chat_id] = {
+            "language": language,
+            "dict_type": "personal",  # Default dictionary type
+            "level": "easy"  # Default level
+        }
+        
         sent_message = bot.send_message(
             chat_id, 
             get_text("main_menu", chat_id),
-            reply_markup=main_menu_keyboard(chat_id)  # Передаємо chat_id для локалізації кнопок
+            reply_markup=main_menu_keyboard(chat_id)
         )
         save_message_id(chat_id, sent_message.message_id)
 
