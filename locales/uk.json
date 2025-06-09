@@ -14,6 +14,7 @@
   "confirmation_processing_error": "❌ Помилка при обробці підтвердження.",
   "continue_game": "Продовжуємо...",
   "correct": "✅ Правильно!",
+  "correct_answer": "Правильна відповідь",
   "correct_article_answer": "✅ Правильно! Слово <b>{word}</b> має артикль <b>{article}</b>.",
   "correct_translation": "✅ Правильно!\n\n<b>{translation}</b> = <b>{word}</b>",
   "created_success": " успішно створено!",

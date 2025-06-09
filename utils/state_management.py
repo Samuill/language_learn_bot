@@ -65,3 +65,44 @@ def update_user_state(chat_id, new_values, preserve_keys=None):
         user_state[chat_id][key] = value
         
     return user_state[chat_id]
+
+def ensure_dict_state(chat_id):
+    """
+    Ensure dictionary-related state is properly initialized
+    
+    Args:
+        chat_id: User's chat ID
+        
+    Returns:
+        tuple: (dict_type, shared_dict_id)
+    """
+    # Get the current dictionary type from database or state
+    dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
+    shared_dict_id = user_state.get(chat_id, {}).get("shared_dict_id")
+    
+    # Double-check with database
+    try:
+        import db_manager
+        db_info = db_manager.get_user_dictionary_info(chat_id)
+        if db_info:
+            db_dict_type, db_shared_id, _ = db_info
+            dict_type = db_dict_type
+            shared_dict_id = db_shared_id
+    except Exception as e:
+        print(f"Error getting dictionary info from database: {e}")
+    
+    # Update state
+    if chat_id in user_state:
+        user_state[chat_id]["dict_type"] = dict_type
+        if shared_dict_id:
+            user_state[chat_id]["shared_dict_id"] = shared_dict_id
+        elif "shared_dict_id" in user_state[chat_id]:
+            del user_state[chat_id]["shared_dict_id"]
+    else:
+        user_state[chat_id] = {
+            "dict_type": dict_type
+        }
+        if shared_dict_id:
+            user_state[chat_id]["shared_dict_id"] = shared_dict_id
+    
+    return dict_type, shared_dict_id

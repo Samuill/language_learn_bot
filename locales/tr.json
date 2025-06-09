@@ -15,6 +15,7 @@
   "confirmation_processing_error": "❌ Onay işlenirken hata oluştu.",
   "continue_game": "Devam ediliyor...",
   "correct": "✅ Doğru!",
+  "correct_answer": "Doğru cevap",
   "correct_article_answer": "✅ Doğru! <b>{word}</b> kelimesinin artikeli <b>{article}</b>.",
   "correct_translation": "✅ Doğru!\n\n<b>{translation}</b> = <b>{word}</b>",
   "created_success": " başarıyla oluşturuldu!",
@@ -113,5 +114,12 @@
   "skip_word": "⏭️ Atla",
   "next_word": "Sonraki kelime...",
   "edit_word": "✏️ Kelimeyi düzenle",
-  "change_language_help": "Arayüz dilini değiştirmek için /language veya /lang komutunu kullanın"
+  "change_language_help": "Arayüz dilini değiştirmek için /language veya /lang komutunu kullanın",
+  "nominative": "Adıl durumu (Nominativ)",
+  "accusative": "Belirtme durumu (Akkusativ)",
+  "dative": "Dolaylı nesne durumu (Dativ)",
+  "genitive": "İyelik durumu (Genitiv)",
+  "exercise_not_found": "❌ Hata: alıştırma etkin değil",
+  "set_padeg": "🧩 Doğru iyelik zamirini seçin:",
+  "no_possessive_form": "❌ Hata: doğru iyelik zamiri bulunamadı."
 }

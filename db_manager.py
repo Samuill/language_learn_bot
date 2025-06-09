@@ -1130,3 +1130,25 @@ def update_user_state_from_db():
         print(f"Error updating user states from database: {e}")
     finally:
         conn.close()
+
+def init_db():
+    """Initialize the database - creates tables and migrates data if needed"""
+    try:
+        # Make sure DB directory exists
+        if not os.path.exists(DB_DIR):
+            os.makedirs(DB_DIR)
+            
+        # Create database schema if doesn't exist
+        create_database()
+        
+        # Try to migrate data from CSV files if available
+        if not os.path.exists(DB_PATH) or os.path.getsize(DB_PATH) == 0:
+            migrate_from_csv()
+            
+        print("Database initialized successfully.")
+        return True
+    except Exception as e:
+        print(f"Error initializing database: {e}")
+        import traceback
+        traceback.print_exc()
+        return False

@@ -317,14 +317,14 @@ def generate_possessive_exercise(chat_id):
     markup.add(*button_data)
     
     # Step 9: Send the question to the user
-    pronoun_display   = get_pronoun_translation(pronoun, chat_id)
-    case_display       = get_case_name_in_ukrainian(case, chat_id)
-    case_explanation   = get_case_explanation(case, chat_id)
+    pronoun_display = get_pronoun_translation(pronoun, chat_id)
+    case_display = get_case_name_in_ukrainian(case, chat_id)
+    case_explanation = get_case_explanation(case, chat_id, language)
     
     message_text = (
-        get_text("set_padeg",chat_id) + f"\n\n"
+        get_text("set_padeg", chat_id) + f"\n\n"
         f"[{pronoun_display} - <b>{pronoun}</b>] ____ <b>{word}</b> (<b>{case}</b> - {case_display})\n\n"
-        f"<i>Переклад: {translation}</i>"
+        f"<i>{get_text('translation', chat_id)}: {translation}</i>"
     )
     
     # Add case explanation for all levels
@@ -350,7 +350,7 @@ def handle_possessive_answer(call):
     chat_id = call.message.chat.id
     
     if chat_id not in user_state or user_state[chat_id].get("exercise") != "possessive":
-        bot.answer_callback_query(call.id, "❌ Помилка: вправа не активна")
+        bot.answer_callback_query(call.id, get_text("exercise_not_found", chat_id))
         return
     
     # Get the selected option
@@ -368,8 +368,8 @@ def handle_possessive_answer(call):
     word_id = user_state[chat_id].get("word_id")
     pronoun = user_state[chat_id]["pronoun"]
     case = user_state[chat_id]["case"]
-    pronoun_display = get_pronoun_translation(pronoun)
-    case_display = get_case_name_in_ukrainian(case)
+    pronoun_display = get_pronoun_translation(pronoun, chat_id)
+    case_display = get_case_name_in_ukrainian(case, chat_id)
     
     # Update attempts
     user_state[chat_id]["attempts"] += 1
@@ -399,11 +399,11 @@ def handle_possessive_answer(call):
     
     if is_correct:
         # Show success message
-        bot.answer_callback_query(call.id, get_text("correct",chat_id))
+        bot.answer_callback_query(call.id, get_text("correct", chat_id))
         
         # Edit message with correct answer
         bot.edit_message_text(
-            get_text("correct",chat_id) + f"\n\n"
+            get_text("correct", chat_id) + f"\n\n"
             f"[{pronoun_display} - <b>{pronoun}</b>] <b>{correct_form}</b> <b>{word}</b> ({case_display})",
             chat_id=chat_id,
             message_id=call.message.message_id,
@@ -415,13 +415,13 @@ def handle_possessive_answer(call):
         threading.Timer(1.5, lambda: generate_possessive_exercise(chat_id)).start()
     else:
         # Show failure message
-        bot.answer_callback_query(call.id, get_text("incorrect",chat_id))
+        bot.answer_callback_query(call.id, get_text("incorrect", chat_id))
         
         if attempts >= 2:  # Змінено з 3 на 2 спроби
             # After two wrong attempts, show correct answer
             bot.edit_message_text(
-                get_text("incorrect",chat_id) + f"\n\n"
-                f"Правильна відповідь: <b>{correct_form}</b>\n\n"
+                get_text("incorrect", chat_id) + f"\n\n"
+                f"{get_text('correct_answer', chat_id, 'Правильна відповідь')}: <b>{correct_form}</b>\n\n"
                 f"[{pronoun_display} - <b>{pronoun}</b>] <b>{correct_form}</b> <b>{word}</b> ({case_display})",
                 chat_id=chat_id,
                 message_id=call.message.message_id,

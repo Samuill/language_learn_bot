@@ -6633,3 +6633,60 @@ Name: 1, dtype: object, 'message_id': 4360, 'dict_type': 'shared'}
 [2025-06-09 15:07:11.887] Response to User 476376623: '🧩 Виберіть правильний присвійний займенник:
 
 [ти - <b>du</b>] ____ <b>Elternabende</b> (<b>Dativ</b>...'
+2025-06-09 15:07:32,840 - urllib3.connectionpool - DEBUG - https://api.telegram.org:443 "GET /bot7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw/getUpdates?offset=989871478&timeout=20 HTTP/11" 200 23
+2025-06-09 15:07:53,935 - urllib3.connectionpool - DEBUG - https://api.telegram.org:443 "GET /bot7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw/getUpdates?offset=989871478&timeout=20 HTTP/11" 200 23
+2025-06-09 15:08:15,010 - urllib3.connectionpool - DEBUG - https://api.telegram.org:443 "GET /bot7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw/getUpdates?offset=989871478&timeout=20 HTTP/11" 200 23
+2025-06-09 15:08:36,086 - urllib3.connectionpool - DEBUG - https://api.telegram.org:443 "GET /bot7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw/getUpdates?offset=989871478&timeout=20 HTTP/11" 200 23
+2025-06-09 15:08:57,159 - urllib3.connectionpool - DEBUG - https://api.telegram.org:443 "GET /bot7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw/getUpdates?offset=989871478&timeout=20 HTTP/11" 200 23
+2025-06-09 15:09:18,278 - urllib3.connectionpool - DEBUG - https://api.telegram.org:443 "GET /bot7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw/getUpdates?offset=989871478&timeout=20 HTTP/11" 200 23
+2025-06-09 15:09:39,336 - urllib3.connectionpool - DEBUG - https://api.telegram.org:443 "GET /bot7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw/getUpdates?offset=989871478&timeout=20 HTTP/11" 200 23
+2025-06-09 15:10:00,398 - urllib3.connectionpool - DEBUG - https://api.telegram.org:443 "GET /bot7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw/getUpdates?offset=989871478&timeout=20 HTTP/11" 200 23
+2025-06-09 15:10:21,479 - urllib3.connectionpool - DEBUG - https://api.telegram.org:443 "GET /bot7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw/getUpdates?offset=989871478&timeout=20 HTTP/11" 200 23
+2025-06-09 15:10:42,575 - urllib3.connectionpool - DEBUG - https://api.telegram.org:443 "GET /bot7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw/getUpdates?offset=989871478&timeout=20 HTTP/11" 200 23
+2025-06-09 15:11:03,642 - urllib3.connectionpool - DEBUG - https://api.telegram.org:443 "GET /bot7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw/getUpdates?offset=989871478&timeout=20 HTTP/11" 200 23
+2025-06-09 15:11:24,718 - urllib3.connectionpool - DEBUG - https://api.telegram.org:443 "GET /bot7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw/getUpdates?offset=989871478&timeout=20 HTTP/11" 200 23
+2025-06-09 15:11:45,814 - urllib3.connectionpool - DEBUG - https://api.telegram.org:443 "GET /bot7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw/getUpdates?offset=989871478&timeout=20 HTTP/11" 200 23
+2025-06-09 15:12:06,916 - urllib3.connectionpool - DEBUG - https://api.telegram.org:443 "GET /bot7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw/getUpdates?offset=989871478&timeout=20 HTTP/11" 200 23
+2025-06-09 15:12:07,928 - urllib3.connectionpool - DEBUG - Starting new HTTPS connection (1): api.telegram.org:443
+2025-06-09 15:12:28,201 - urllib3.connectionpool - DEBUG - https://api.telegram.org:443 "GET /bot7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw/getUpdates?offset=989871478&timeout=20 HTTP/11" 200 23
+2025-06-09 15:12:49,286 - urllib3.connectionpool - DEBUG - https://api.telegram.org:443 "GET /bot7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw/getUpdates?offset=989871478&timeout=20 HTTP/11" 200 23
+2025-06-09 15:13:10,363 - urllib3.connectionpool - DEBUG - https://api.telegram.org:443 "GET /bot7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw/getUpdates?offset=989871478&timeout=20 HTTP/11" 200 23
+2025-06-09 15:13:31,434 - urllib3.connectionpool - DEBUG - https://api.telegram.org:443 "GET /bot7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw/getUpdates?offset=989871478&timeout=20 HTTP/11" 200 23
+2025-06-09 15:13:52,516 - urllib3.connectionpool - DEBUG - https://api.telegram.org:443 "GET /bot7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw/getUpdates?offset=989871478&timeout=20 HTTP/11" 200 23
+2025-06-09 15:14:13,603 - urllib3.connectionpool - DEBUG - https://api.telegram.org:443 "GET /bot7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw/getUpdates?offset=989871478&timeout=20 HTTP/11" 200 23
+2025-06-09 15:14:34,712 - urllib3.connectionpool - DEBUG - https://api.telegram.org:443 "GET /bot7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw/getUpdates?offset=989871478&timeout=20 HTTP/11" 200 23
+2025-06-09 15:14:55,828 - urllib3.connectionpool - DEBUG - https://api.telegram.org:443 "GET /bot7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw/getUpdates?offset=989871478&timeout=20 HTTP/11" 200 23
+2025-06-09 15:15:16,964 - urllib3.connectionpool - DEBUG - https://api.telegram.org:443 "GET /bot7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw/getUpdates?offset=989871478&timeout=20 HTTP/11" 200 23
+2025-06-09 15:15:38,043 - urllib3.connectionpool - DEBUG - https://api.telegram.org:443 "GET /bot7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw/getUpdates?offset=989871478&timeout=20 HTTP/11" 200 23
+2025-06-09 15:15:59,213 - urllib3.connectionpool - DEBUG - https://api.telegram.org:443 "GET /bot7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw/getUpdates?offset=989871478&timeout=20 HTTP/11" 200 23
+2025-06-09 15:16:20,276 - urllib3.connectionpool - DEBUG - https://api.telegram.org:443 "GET /bot7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw/getUpdates?offset=989871478&timeout=20 HTTP/11" 200 23
+2025-06-09 15:16:41,347 - urllib3.connectionpool - DEBUG - https://api.telegram.org:443 "GET /bot7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw/getUpdates?offset=989871478&timeout=20 HTTP/11" 200 23
+2025-06-09 15:17:02,418 - urllib3.connectionpool - DEBUG - https://api.telegram.org:443 "GET /bot7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw/getUpdates?offset=989871478&timeout=20 HTTP/11" 200 23
+2025-06-09 15:17:23,498 - urllib3.connectionpool - DEBUG - https://api.telegram.org:443 "GET /bot7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw/getUpdates?offset=989871478&timeout=20 HTTP/11" 200 23
+2025-06-09 15:17:44,561 - urllib3.connectionpool - DEBUG - https://api.telegram.org:443 "GET /bot7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw/getUpdates?offset=989871478&timeout=20 HTTP/11" 200 23
+2025-06-09 15:18:05,638 - urllib3.connectionpool - DEBUG - https://api.telegram.org:443 "GET /bot7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw/getUpdates?offset=989871478&timeout=20 HTTP/11" 200 23
+2025-06-09 15:18:26,714 - urllib3.connectionpool - DEBUG - https://api.telegram.org:443 "GET /bot7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw/getUpdates?offset=989871478&timeout=20 HTTP/11" 200 23
+2025-06-09 15:18:47,802 - urllib3.connectionpool - DEBUG - https://api.telegram.org:443 "GET /bot7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw/getUpdates?offset=989871478&timeout=20 HTTP/11" 200 23
+2025-06-09 15:19:08,871 - urllib3.connectionpool - DEBUG - https://api.telegram.org:443 "GET /bot7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw/getUpdates?offset=989871478&timeout=20 HTTP/11" 200 23
+2025-06-09 15:19:29,950 - urllib3.connectionpool - DEBUG - https://api.telegram.org:443 "GET /bot7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw/getUpdates?offset=989871478&timeout=20 HTTP/11" 200 23
+2025-06-09 15:19:51,037 - urllib3.connectionpool - DEBUG - https://api.telegram.org:443 "GET /bot7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw/getUpdates?offset=989871478&timeout=20 HTTP/11" 200 23
+2025-06-09 15:20:12,137 - urllib3.connectionpool - DEBUG - https://api.telegram.org:443 "GET /bot7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw/getUpdates?offset=989871478&timeout=20 HTTP/11" 200 23
+2025-06-09 15:20:33,205 - urllib3.connectionpool - DEBUG - https://api.telegram.org:443 "GET /bot7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw/getUpdates?offset=989871478&timeout=20 HTTP/11" 200 23
+[2025-06-09 15:36:15.184] Response to User 476376623: 'set_padeg
+
+[ти - <b>du</b>] ____ <b>Kuli</b> (<b>Dativ</b> - Давальний)
+
+<i>Перевод: шариковая ручка...'
+[2025-06-09 15:36:30.931] Response to User 476376623: 'Главное меню:
+
+📚 Текущий словарь: 👤 Персональный словарь'
+[2025-06-09 15:36:30.933] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 5204
+[2025-06-09 15:36:33.438] Response to User 476376623: 'Please select your language / Оберіть мову / Выберите язык:'
+[2025-06-09 15:36:36.210] Response to User 476376623: 'Обрана українська мова'
+[2025-06-09 15:36:36.472] Response to User 476376623: 'Головне меню:'
+[2025-06-09 15:36:36.473] SECTION: User 476376623 entered section 'State update: main_menu' | Added message ID: 5209
+[2025-06-09 15:36:38.411] Response to User 476376623: '🔴 Складний рівень - оберіть активність:'
+[2025-06-09 15:36:38.412] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 5211
+[2025-06-09 15:36:40.491] Response to User 476376623: '🧩 Виберіть правильний присвійний займенник:
+
+[він - <b>er</b>] ____ <b>Mutter</b> (<b>Akkusativ</b> ...'

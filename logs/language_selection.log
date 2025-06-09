@@ -6525,3 +6525,7 @@
 [2025-06-09 13:12:38] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ru
 [2025-06-09 15:07:11] [LANG] [User 476376623] GET_LANG: Retrieving language from database
 [2025-06-09 15:07:11] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ru
+[2025-06-09 15:36:14] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-09 15:36:14] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ru
+[2025-06-09 15:36:40] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-09 15:36:40] [LANG] [User 476376623] GET_LANG_RESULT: Found language: uk

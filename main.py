@@ -158,46 +158,33 @@ def setup_database():
     conn.close()
 
 def setup_logging():
-    """Set up logging configuration"""
+    """Set up logging for the application"""
+    import logging
+    import os
+    
     # Create logs directory if it doesn't exist
-    logs_dir = "logs"
-    if not os.path.exists(logs_dir):
-        os.makedirs(logs_dir)
-        
-    # Set up file handler for logging
-    log_file = os.path.join(logs_dir, "debug.log")
-    file_handler = logging.FileHandler(log_file, encoding='utf-8')
-    file_handler.setLevel(logging.DEBUG)
+    log_dir = os.path.join(os.path.dirname(__file__), 'logs')
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
     
-    # Set up formatter
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    file_handler.setFormatter(formatter)
+    # Configure logging
+    log_file = os.path.join(log_dir, 'bot.log')
     
-    # Get logger and add handler
-    logger = logging.getLogger()
-    logger.addHandler(file_handler)
-    logger.setLevel(logging.DEBUG)
+    # Set up basic configuration
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler(log_file),
+            logging.StreamHandler()
+        ]
+    )
     
-    print(f"Debug logging enabled. Logs will be saved to {log_file}")
+    # Create logger
+    logger = logging.getLogger(__name__)
+    logger.info("Logging initialized")
     
-    # Setup console logger for important messages
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-    console_handler.setFormatter(formatter)
-    logger.addHandler(console_handler)
-    
-    # Skip middleware setup as it's not compatible with this telebot version
-    print("Skipping middleware setup - using basic logging instead")
-    
-    # Set up simple console logging for user actions instead of middleware
-    from debug_logger import log_message_decorator
-    
-    # Apply the decorator to important message handlers
-    try:
-        # Decorate main message handlers for logging (optional)
-        pass
-    except Exception as e:
-        print(f"Error setting up message logging: {e}")
+    return logger
 
 def main():
     """Main entry point for the bot"""

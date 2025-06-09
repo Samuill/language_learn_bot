@@ -17,45 +17,6 @@ from utils.state_management import get_user_state_value, set_user_state_value, u
 from utils.dictionary_helpers import update_word_rating
 from utils.game_helpers import handle_game_error
 from utils.grammar_helpers import get_case_explanation, get_pronoun_translation, get_case_name_in_ukrainian
-def ensure_dict_state(chat_id):
-    """
-    Ensure dictionary-related state is properly initialized
-    
-    Args:
-        chat_id: User's chat ID
-        
-    Returns:
-        tuple: (dict_type, shared_dict_id)
-    """
-    # Get the current dictionary type from database or state
-    dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
-    shared_dict_id = user_state.get(chat_id, {}).get("shared_dict_id")
-    
-    # Double-check with database
-    try:
-        db_info = db_manager.get_user_dictionary_info(chat_id)
-        if db_info:
-            db_dict_type, db_shared_id, _ = db_info
-            dict_type = db_dict_type
-            shared_dict_id = db_shared_id
-    except Exception as e:
-        print(f"Error getting dictionary info from database: {e}")
-    
-    # Update state
-    if chat_id in user_state:
-        user_state[chat_id]["dict_type"] = dict_type
-        if shared_dict_id:
-            user_state[chat_id]["shared_dict_id"] = shared_dict_id
-        elif "shared_dict_id" in user_state[chat_id]:
-            del user_state[chat_id]["shared_dict_id"]
-    else:
-        user_state[chat_id] = {
-            "dict_type": dict_type
-        }
-        if shared_dict_id:
-            user_state[chat_id]["shared_dict_id"] = shared_dict_id
-    
-    return dict_type, shared_dict_id
 
 @bot.message_handler(func=lambda message: is_command(message, "learning_new_words"))
 def learn_words(message):
