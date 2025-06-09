@@ -80,3 +80,39 @@ def clear_state(chat_id, preserve_dict_type=False, preserve_messages=False, pres
 def get_user_params_path(chat_id):
     from .path_helpers import get_user_params_path as gup
     return gup(chat_id)
+
+def medium_level_keyboard(chat_id=None):
+    """Create medium level keyboard with localized buttons if chat_id provided"""
+    from telebot.types import ReplyKeyboardMarkup
+    keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
+
+    if chat_id:
+        from utils.language_utils import get_text
+        keyboard.row(get_text("choose_correct_spelling", chat_id), get_text("fill_in_gaps", chat_id))
+        keyboard.row(get_text("learn_possessive_pronouns", chat_id) + " (" + get_text("medium_level", chat_id) + ")")
+        keyboard.row(get_text("back_to_main_menu", chat_id))
+    else:
+        keyboard.row("🔤 Вибір правильного написання", "📝 Заповніть пропуски")
+        keyboard.row("🧩 Вивчати присвійні займенники (середній)")
+        keyboard.row("↩️ Повернутися до головного меню")
+    
+    return keyboard
+
+def hard_level_keyboard(chat_id=None):
+    """Create hard level keyboard with localized buttons if chat_id provided"""
+    from telebot.types import ReplyKeyboardMarkup
+    keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
+
+    if chat_id:
+        from utils.language_utils import get_text
+        keyboard.row(get_text("advanced_game", chat_id), get_text("word_typing", chat_id))
+        keyboard.row(get_text("article_typing", chat_id))
+        keyboard.row(get_text("learn_possessive_pronouns", chat_id) + " (" + get_text("hard_level", chat_id) + ")")
+        keyboard.row(get_text("back_to_main_menu", chat_id))
+    else:
+        keyboard.row("🧩 Складна гра", "📝 Введення слів")
+        keyboard.row("🏷️ Введення артиклів")
+        keyboard.row("🧩 Вивчати присвійні займенники (складний)")
+        keyboard.row("↩️ Повернутися до головного меню")
+    
+    return keyboard

@@ -1130,3 +1130,45 @@ def update_user_state_from_db():
         print(f"Error updating user states from database: {e}")
     finally:
         conn.close()
+
+def init_db():
+    """
+    Initializes the database schema or performs any necessary setup.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # Створюємо таблиці, якщо вони ще не існують
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS users (
+        chat_id INTEGER PRIMARY KEY,
+        language TEXT,
+        streak INTEGER DEFAULT 0,
+        last_active TEXT,
+        shared_dict_admin INTEGER DEFAULT 0,
+        shared_dict_id INTEGER DEFAULT NULL,
+        FOREIGN KEY (shared_dict_id) REFERENCES shared_dictionaries(id)
+    )
+    ''')
+    
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS words (
+        id INTEGER PRIMARY KEY,
+        article_id INTEGER,
+        word TEXT NOT NULL,
+        ru_tran TEXT,
+        uk_tran TEXT,
+        en_tran TEXT,
+        FOREIGN KEY (article_id) REFERENCES article(id)
+    )
+    ''')
+    
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS article (
+        id INTEGER PRIMARY KEY,
+        article TEXT NOT NULL UNIQUE
+    )
+    ''')
+    
+    conn.commit()
+    conn.close()

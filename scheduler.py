@@ -5,12 +5,11 @@
 """
 
 import datetime
+from config import scheduler, bot
 import db_manager
-import os
-import random
-from config import bot, scheduler
-from utils import get_user_params_path, language_utils
-
+import logging
+from utils import language_utils
+from utils.path_helpers import get_user_params_path
 def send_streak_info(chat_id):
     """Send streak info to user"""
     import json
@@ -113,7 +112,26 @@ def send_reminder():
         import traceback
         traceback.print_exc()
 
-# Schedule the reminder task to run daily at 18:00
-def setup_scheduler():
-    scheduler.add_job(send_reminder, 'cron', hour=18, minute=0, id='daily_reminder')
-    print("Daily reminder scheduled for 18:00")
+def schedule_reminders():
+    """Schedule the daily reminder job"""
+    # Set reminder time to 18:00
+    reminder_time = datetime.time(hour=18, minute=0)
+    
+    # Schedule the job
+    job = scheduler.add_job(
+        send_reminder, 
+        'cron', 
+        hour=reminder_time.hour, 
+        minute=reminder_time.minute,
+        id='daily_reminder'
+    )
+    
+    print(f"Daily reminder scheduled for {reminder_time.strftime('%H:%M')} (job id: {job.id})")
+    logging.info(f"Scheduled daily reminder for {reminder_time.strftime('%H:%M')}")
+    
+    # Return time and job ID
+    return (reminder_time.strftime("%H:%M"), job.id)
+
+# When imported directly
+if __name__ == "__main__":
+    send_reminder()

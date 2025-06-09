@@ -296,10 +296,15 @@ def generate_missing_letters_exercise(chat_id):
         
         # Перевіряємо наявність слів
         if df is None or df.empty:
-            dict_name = "спільному словнику" if dict_type == "shared" else "загальному словнику" if dict_type == "common" else "персональному словнику"
-            bot.send_message(chat_id, f"📭 У {dict_name} ще немає доданих слів.", reply_markup=medium_level_keyboard())
+            # Use localization instead of hard-coded Ukrainian
+            # get_text('in') = "📭 В " or localized prefix
+            # get_text('no_words') = " ще немає доданих слів." or localized suffix
+            # get_text('{dict_type}_dictionary') gives the dictionary name
+            dict_name = get_text(f"{dict_type}_dictionary", chat_id)
+            message = f"{get_text('in', chat_id)} {dict_name} {get_text('no_words', chat_id)}"
+            bot.send_message(chat_id, message, reply_markup=medium_level_keyboard(chat_id))
             return
-            
+        
         # Вибираємо слово, яке має більше 3 букв
         filtered_df = df[df['word'].str.len() > 3]
         if filtered_df.empty:

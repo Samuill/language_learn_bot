@@ -6,20 +6,13 @@ import signal
 import sys
 import time
 import threading
-
-# Enable middleware support before initializing the bot
-import telebot.apihelper
-telebot.apihelper.ENABLE_MIDDLEWARE = True
-
-# Now import the bot and other modules
+from config import user_state
 from config import bot, scheduler
 import db_manager
-import handlers
-# Import everything else...
 
 # Шлях до PID файлу для запобігання запуску кількох екземплярів бота
 PID_FILE = "bot.pid"
-
+DEBUG_MODE = True
 # Record start time for uptime calculation
 START_TIME = time.time()
 
@@ -123,45 +116,46 @@ def change_language_command(message):
     )
 
 def setup_scheduler():
-    """Setup APScheduler for daily reminders"""
+    """Set up the scheduler for reminders - replacement for the missing setup_scheduler function"""
     try:
-        from scheduler import send_reminder
-        import random
+        # Schedule the daily reminder job
+        from scheduler import schedule_reminders
+        job = schedule_reminders()
         
-        # Check if scheduler is already running
-        if scheduler.running:
-            print("Scheduler is already running, skipping setup...")
-            return
-        
-        # Check if there's already a job with this ID before adding it
-        existing_jobs = [job.id for job in scheduler.get_jobs()]
-        
-        # Use unique job ID by adding random suffix to avoid conflicts
-        reminder_job_id = f"daily_reminder_{random.randint(1000, 9999)}"
-        
-        # Create a job to send reminders daily at 18:00
-        if "daily_reminder" not in existing_jobs:
-            scheduler.add_job(
-                send_reminder, 
-                'cron', 
-                hour=18, 
-                minute=0,
-                id=reminder_job_id,
-                replace_existing=True
-            )
-            print(f"Daily reminder scheduled for 18:00 (job id: {reminder_job_id})")
-        else:
-            print("Daily reminder already scheduled, skipping...")
-        
-        # Start the scheduler in a separate thread
-        if not scheduler.running:
-            scheduler.start()
-            log_action("Reminder scheduler initialized")
-        
+        # Log success with standard logging instead of log_action
+        print(f"Daily reminder scheduled for {job[0]} (job id: {job[1]})")
+        logging.info(f"Scheduler initialized with job ID: {job[1]}")
+        return True
     except Exception as e:
         print(f"Error setting up scheduler: {e}")
         import traceback
         traceback.print_exc()
+        return False
+
+# Initialize the database schema on startup if needed
+def setup_database():
+    """Initialize the database with necessary tables"""
+    # Initialize database
+    db_manager.init_db()
+    
+    # Ensure the active_days column exists in users table
+    conn = db_manager.get_connection()
+    cursor = conn.cursor()
+    
+    # Check if active_days column exists
+    cursor.execute("PRAGMA table_info(users)")
+    columns = [col[1] for col in cursor.fetchall()]
+    
+    if 'active_days' not in columns:
+        print("Adding active_days column to users table")
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN active_days INTEGER DEFAULT 0")
+            conn.commit()
+            print("Successfully added active_days column")
+        except Exception as e:
+            print(f"Error adding active_days column: {e}")
+    
+    conn.close()
 
 def setup_logging():
     """Set up logging configuration"""
@@ -192,182 +186,63 @@ def setup_logging():
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
     
-    # Set up comprehensive interaction logging middleware
+    # Skip middleware setup as it's not compatible with this telebot version
+    print("Skipping middleware setup - using basic logging instead")
+    
+    # Set up simple console logging for user actions instead of middleware
+    from debug_logger import log_message_decorator
+    
+    # Apply the decorator to important message handlers
     try:
-        from logging_middleware import setup_logging_middleware
-        setup_logging_middleware()
-        print("Comprehensive logging middleware enabled")
+        # Decorate main message handlers for logging (optional)
+        pass
     except Exception as e:
-        print(f"Error setting up logging middleware: {e}")
-        import traceback
-        traceback.print_exc()
+        print(f"Error setting up message logging: {e}")
 
 def main():
-    """Main function to run the bot"""
-    try:
-        # Import required modules at the top
-        import traceback  # Add explicit import of traceback
-        import db_manager  # Ensure db_manager is imported
-        import datetime
-        
-        # Initialize logging
-        import logging
-        logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-        
-        # Load user states from database to ensure consistency
-        print("Loading user states from database...")
-        db_manager.update_user_state_from_db()
-        
-        # Initialize database
-        print("Initializing database...")
-        # Use create_database instead of setup_database
-        db_manager.create_database()
-        
-        # Перевірка, чи вже запущено екземпляр бота
-        if not check_instance():
-            return
-        
-        # Реєстрація обробників сигналів для правильного завершення
-        signal.signal(signal.SIGINT, signal_handler)
-        signal.signal(signal.SIGTERM, signal_handler)
-        
-        # При виході з програми видаляємо PID файл
-        import atexit
-        atexit.register(cleanup)
-        
-        # Скидаємо всі активні словники до персонального
-        reset_dictionaries()
-        
-        # Завантаження станів користувачів з бази даних для забезпечення узгодженості
-        print("Loading user states from database...")
-        db_manager.update_user_state_from_db()
-        
-        # Додамо логування для відстеження типів словників при старті
-        print("Initializing user dictionaries state:")
-        for chat_id, state in user_state.items():
-            dict_type = state.get("dict_type", "personal")
-            print(f"User {chat_id} using dictionary type: {dict_type}")
-        
-        # Setup the scheduler
-        setup_scheduler()
-        
-        # Setup debug logging
-        if DEBUG_MODE:
-            from debug_logger import log_error, log_dict_operation
-            print(f"Debug logging enabled. Logs will be saved to logs/debug.log")
-        
-        # Register command handlers
-        bot.set_my_commands([
-            telebot.types.BotCommand("/start", "Start the bot"),
-            telebot.types.BotCommand("/language", "Change language")
-        ])
-        
-        # Setup enhanced logging
-        setup_logging()
-        
-        print(f"Bot started at {time.strftime('%Y-%m-%d %H:%M:%S')}...")
-        print("Press Ctrl+C to stop the bot")
-        
-        # Start polling in a try-except block
-        while True:
-            try:
-                bot.polling(none_stop=True, interval=1, timeout=60)
-                break  # If polling exits normally, break the loop
-            except requests.exceptions.ConnectionError:
-                print("Connection error. Retrying in 5 seconds...")
-                time.sleep(5)
-            except requests.exceptions.ReadTimeout:
-                print("Read timeout. Retrying in 5 seconds...")
-                time.sleep(5)
-            except Exception as e:
-                print(f"Critical error: {e}")
-                traceback.print_exc()
-                if DEBUG_MODE:
-                    from debug_logger import log_error
-                    log_error(e, "Critical error in main loop")
-                time.sleep(5)
-    except Exception as e:
-        log_error(f"Critical error: {e}", "Critical error in main loop")
-        print(f"Critical error: {e}")
-        import traceback  # Import traceback here as well for redundancy
-        traceback.print_exc()
-
-if __name__ == "__main__":
-    try:
-        # Initialize database before starting the bot
-        import db_manager
-        # Use create_database instead of setup_database
-        db_manager.create_database()
-        print("Database initialized successfully")
-        main()
-    except Exception as e:
-        print(f"Error setting up database: {e}")
-        import traceback  # Import traceback here for redundancy
-        traceback.print_exc()
-
-# -*- coding: utf-8 -*-
-
-import os
-from dotenv import load_dotenv
-from config import bot, scheduler
-import db_manager
-from utils.language_utils import create_language_keyboard
-from utils.logger import log_action, log_error
-from scheduler import setup_scheduler  # Import the scheduler setup function
-
-# Load environment variables from .env file
-load_dotenv()
-print("Using environment variables from .env file")
-
-# Логуємо запуск бота
-log_action("Bot starting", {"version": "1.0", "environment": os.environ.get("ENVIRONMENT", "production")})
-
-# Set up scheduler
-setup_scheduler()
-log_action("Reminder scheduler initialized")
-
-# Set up database
-try:
-    db_manager.setup_database()
-    log_action("Database setup complete")
-except Exception as e:
-    log_error(e, "Error setting up database")
-    raise
-
-# Import handlers to register them
-try:
-    import handlers
-    log_action("Handlers registered successfully")
-except Exception as e:
-    log_error(e, "Error registering handlers")
-    raise
-
-# Start the bot
-if __name__ == "__main__":
-    # Start the scheduler in a background thread
-    scheduler.start()
-    log_action("Scheduler started")
+    """Main entry point for the bot"""
+    print("Bot started at {}...".format(
+        datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+    print("Press Ctrl+C to stop the bot")
     
-    print("Bot started!")
-    log_action("Bot polling started")
+    # Setup database
+    setup_database()
     
-    # Start bot polling with error handling
+    # Setup logging
+    setup_logging()
+    
+    # Set up message handlers
+    import handlers.main_menu
+    import handlers.dictionaries
+    import handlers.start
+    import handlers.add_word
+    import handlers.easy_level
+    import handlers.medium_level
+    import handlers.hard_level
+    import handlers.shared_dicts
+    import handlers.possessive_articles
+    
+    # Admin handlers
+    import handlers.admin
+    
+    # Try to add optional/experimental handlers
     try:
+        import handlers.status
+    except ImportError:
+        pass
+    
+    # Initialize reminder scheduler
+    setup_scheduler()
+    
+    try:
+        # Start bot polling - increase interval to reduce API requests
         bot.polling(none_stop=True, interval=1, timeout=60)
-    except KeyboardInterrupt:
-        print("\nKeyboard interrupt received. Shutting down...")
     except Exception as e:
-        print(f"Error in bot polling: {e}")
+        print(f"Critical error: {e}")
         import traceback
         traceback.print_exc()
-    finally:
-        # Graceful shutdown
-        try:
-            if scheduler.running:
-                scheduler.shutdown(wait=False)
-                print("Scheduler shutdown complete.")
-        except Exception as e:
-            print(f"Error during scheduler shutdown: {e}")
-        
-        log_action("Bot stopped")
-        print("Bot stopped gracefully.")
+        from debug_logger import log_error
+        log_error(e, "Critical error in main loop")
+
+if __name__ == "__main__":
+    main()

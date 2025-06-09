@@ -8,10 +8,11 @@ import random
 import telebot
 import sqlite3
 from config import bot, user_state
-from utils import clear_state, easy_level_keyboard, main_menu_keyboard
-from utils.input_handlers import handle_exit_from_activity  # Импорт новой утилиты
+from utils import clear_state, easy_level_keyboard, main_menu_keyboard, medium_level_keyboard, hard_level_keyboard
+from utils.input_handlers import handle_exit_from_activity
 import db_manager
 from utils.language_utils import get_text
+from utils.console_logger import log_menu_transition, MENU_MAIN, MENU_EASY, MENU_MEDIUM, MENU_HARD, MENU_SHARED, set_current_menu
 
 @bot.message_handler(func=lambda message: 
                     message.text in ["🧩 Вивчати присвійні займенники", 
@@ -170,7 +171,6 @@ def generate_possessive_exercise(chat_id):
             WHERE a.article IN ('der', 'die', 'das') AND w.{language}_tran IS NOT NULL
             ORDER BY RANDOM() LIMIT 1
             ''')
-            
         elif dict_type == "common":
             cursor.execute(f'''
             SELECT w.id, w.word, a.article, w.{language}_tran 
@@ -179,7 +179,6 @@ def generate_possessive_exercise(chat_id):
             WHERE a.article IN ('der', 'die', 'das') AND w.{language}_tran IS NOT NULL
             ORDER BY RANDOM() LIMIT 1
             ''')
-            
         else:  # personal
             cursor.execute(f'''
             SELECT w.id, w.word, a.article, w.{language}_tran 
@@ -194,30 +193,48 @@ def generate_possessive_exercise(chat_id):
         
         # If no words found with articles, show message but preserve state
         if not results:
-            # Important: Don't clear the entire state here
-            # Only change the exercise state but keep dict_type and shared_dict_id
+            # Preserve state values without forcing difficulty to easy
             preserved_dict_type = user_state[chat_id].get("dict_type", "personal")
             preserved_shared_dict_id = user_state[chat_id].get("shared_dict_id")
             preserved_level = user_state[chat_id].get("level", "easy")
-            preserved_language = language  # Save user language to preserve it
+            preserved_language = language  # Preserve user language
+            # Also preserve current menu
+            preserved_menu = user_state[chat_id].get("current_menu", "UNKNOWN")
+
+            # Choose keyboard based on preserved level
+            if preserved_level == "hard":
+                kb = hard_level_keyboard(chat_id)
+                menu_const = MENU_HARD
+            elif preserved_level == "medium":
+                kb = medium_level_keyboard(chat_id)
+                menu_const = MENU_MEDIUM
+            else:
+                kb = easy_level_keyboard(chat_id)
+                menu_const = MENU_EASY
+
+            # Log menu transition for clarity - use preserved menu as source
+            log_menu_transition(chat_id, preserved_menu, menu_const, "No words with articles")
             
             bot.send_message(
                 chat_id, 
-                get_text("no_words_with_articles", chat_id, "📭 Недостатньо слів з артиклями у вашому словнику для цієї вправи."),
-                reply_markup=easy_level_keyboard(chat_id)  # Pass chat_id for localization
+                get_text("no_words_with_articles", chat_id, "📭 В словаре нет слов с артиклями для этого упражнения."), 
+                reply_markup=kb
             )
-            
-            # Preserve important state elements instead of clearing everything
+
+            # Restore preserved state without changing difficulty
             user_state[chat_id] = {
                 "dict_type": preserved_dict_type,
                 "level": preserved_level,
-                "language": preserved_language  # Restore the language in state
+                "language": preserved_language,
+                "current_menu": menu_const  # Set the correct menu constant
             }
             
             if preserved_shared_dict_id:
                 user_state[chat_id]["shared_dict_id"] = preserved_shared_dict_id
-                print(f"Debug: Preserved shared_dict_id={preserved_shared_dict_id} for user {chat_id}")
-                
+            
+            # Also update the current menu in console logger
+            set_current_menu(chat_id, menu_const)
+            
             conn.close()
             return
         

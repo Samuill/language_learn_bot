@@ -225,3 +225,58 @@ def log_handler(func):
         # is sent directly by the bot inside the handler function
         
     return wrapper
+
+# Add this function for scheduler logging
+def log_action(action_name, data=None, user_info=None):
+    """Log an action with optional data and user info"""
+    timestamp = get_timestamp()
+    
+    # Create log entry
+    log_entry = {
+        "timestamp": timestamp,
+        "action": action_name
+    }
+    
+    if data:
+        log_entry.update(data)
+    
+    if user_info:
+        log_entry["user"] = user_info
+    
+    # Convert to string for logging
+    log_str = f"[{timestamp}] [INFO] Action '{action_name}' | {json.dumps(log_entry)}"
+    
+    # Write to debug log
+    with open(DEBUG_LOG, 'a', encoding='utf-8') as f:
+        f.write(f"{log_str}\n")
+    
+    # Print to console for immediate feedback
+    print(log_str)
+    
+    return log_entry
+
+def extract_user_info(message):
+    """Extract user info from a message for logging"""
+    if not message or not message.from_user:
+        return None
+        
+    return {
+        "id": message.from_user.id,
+        "username": message.from_user.username,
+        "first_name": message.from_user.first_name,
+        "last_name": message.from_user.last_name
+    }
+
+# Decorator for logging message handlers - simpler alternative to middleware
+def log_message_decorator(func):
+    """Decorator to log message handling"""
+    def wrapper(message, *args, **kwargs):
+        # Log the message
+        log_message(message)
+        
+        # Call the original function
+        result = func(message, *args, **kwargs)
+        
+        # Return the result
+        return result
+    return wrapper

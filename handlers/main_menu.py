@@ -19,7 +19,10 @@ def main_menu(message):
     
     # Перевіряємо, чи є мова в БД
     language = db_manager.get_user_language(chat_id)
-    track_activity(chat_id)
+    try:
+        track_activity(chat_id)
+    except Exception as e:
+        print(f"Error tracking activity: {e}")
     
     if not language:
         # Якщо мови немає, пропонуємо обрати (тільки для нових користувачів)
@@ -42,7 +45,11 @@ def main_menu(message):
         if shared_dict_id:
             user_state[chat_id]["shared_dict_id"] = shared_dict_id
             
-        log_menu_transition(chat_id, "UNKNOWN", MENU_MAIN, "Command: /start")
+        # Log menu transition (safely catch errors)
+        try:
+            log_menu_transition(chat_id, "UNKNOWN", MENU_MAIN, "Command: /start")
+        except Exception as e:
+            print(f"Error logging menu transition: {e}")
         
         # Show current dictionary info in menu message
         menu_message = get_text("main_menu", chat_id)
@@ -62,9 +69,23 @@ def main_menu(message):
         
         keyboard = main_menu_keyboard(chat_id)
         
-        # Логируем отображаемые кнопки без emoji
-        button_texts = [button.text for row in keyboard.keyboard for button in row]
-        log_displayed_buttons(chat_id, button_texts, MENU_MAIN)
+        # Fix for the button_text extraction - make it safe
+        try:
+            button_texts = []
+            if hasattr(keyboard, 'keyboard'):
+                for row in keyboard.keyboard:
+                    for button in row:
+                        # Handle both ReplyButton objects and dictionaries
+                        if hasattr(button, 'text'):
+                            button_texts.append(button.text)
+                        elif isinstance(button, dict) and 'text' in button:
+                            button_texts.append(button['text'])
+        
+            # Log displayed buttons (only if we have the button texts)
+            if button_texts:
+                log_displayed_buttons(chat_id, button_texts, MENU_MAIN)
+        except Exception as e:
+            print(f"Error extracting button texts: {e}")
         
         sent_message = bot.send_message(
             chat_id, 
@@ -89,9 +110,23 @@ def cancel_action(message):
     
     keyboard = main_menu_keyboard(chat_id)
     
-    # Логируем отображаемые кнопки
-    button_texts = [button.text for row in keyboard.keyboard for button in row]
-    log_displayed_buttons(chat_id, button_texts, MENU_MAIN)
+    # Safely extract button texts for logging
+    try:
+        button_texts = []
+        if hasattr(keyboard, 'keyboard'):
+            for row in keyboard.keyboard:
+                for button in row:
+                    # Handle both ReplyButton objects and dictionaries
+                    if hasattr(button, 'text'):
+                        button_texts.append(button.text)
+                    elif isinstance(button, dict) and 'text' in button:
+                        button_texts.append(button['text'])
+        
+        # Log displayed buttons only if we successfully extracted texts
+        if button_texts:
+            log_displayed_buttons(chat_id, button_texts, MENU_MAIN)
+    except Exception as e:
+        print(f"Error logging buttons: {e}")
     
     sent_message = bot.send_message(
         chat_id, 
@@ -113,7 +148,7 @@ def return_to_main_menu(message):
     # Очищаем состояние, сохраняя тип словаря
     clear_state(chat_id, preserve_dict_type=True, preserve_messages=False)
     
-    # Явно устанавливаем текущее меню
+    # Явно устанавливаем текуще меню
     if chat_id in user_state:
         user_state[chat_id]["current_menu"] = "main"
     else:
@@ -141,9 +176,23 @@ def return_to_main_menu(message):
     
     keyboard = main_menu_keyboard(chat_id)
     
-    # Логируем отображаемые кнопки
-    button_texts = [button.text for row in keyboard.keyboard for button in row]
-    log_displayed_buttons(chat_id, button_texts, MENU_MAIN)
+    # Safely extract button texts for logging
+    try:
+        button_texts = []
+        if hasattr(keyboard, 'keyboard'):
+            for row in keyboard.keyboard:
+                for button in row:
+                    # Handle both ReplyButton objects and dictionaries
+                    if hasattr(button, 'text'):
+                        button_texts.append(button.text)
+                    elif isinstance(button, dict) and 'text' in button:
+                        button_texts.append(button['text'])
+        
+        # Log displayed buttons only if we successfully extracted texts
+        if button_texts:
+            log_displayed_buttons(chat_id, button_texts, MENU_MAIN)
+    except Exception as e:
+        print(f"Error logging buttons: {e}")
     
     sent_message = bot.send_message(
         chat_id, 

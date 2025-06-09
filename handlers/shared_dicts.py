@@ -61,9 +61,24 @@ def shared_dictionary_menu(message):
         
         keyboard = shared_dictionary_keyboard(chat_id)
         
-        # Логируем отображаемые кнопки
-        button_texts = [button.text for row in keyboard.keyboard for button in row]
-        log_displayed_buttons(chat_id, button_texts, MENU_SHARED)
+        # Safely extract button texts for logging
+        try:
+            button_texts = []
+            if hasattr(keyboard, 'keyboard'):
+                for row in keyboard.keyboard:
+                    for button in row:
+                        if hasattr(button, 'text'):
+                            button_texts.append(button.text)
+                        elif isinstance(button, dict) and 'text' in button:
+                            button_texts.append(button['text'])
+            
+            # Log displayed buttons only if we successfully extracted texts
+            if button_texts:
+                log_displayed_buttons(chat_id, button_texts, MENU_SHARED)
+            else:
+                print(f"Warning: Could not extract button texts for user {chat_id} in {MENU_SHARED} menu")
+        except Exception as e:
+            print(f"Error extracting button texts: {e}")
         
         sent_message = bot.send_message(
             chat_id,
@@ -77,9 +92,24 @@ def shared_dictionary_menu(message):
         
         keyboard = shared_dictionary_keyboard(chat_id)
         
-        # Логируем отображаемые кнопки
-        button_texts = [button.text for row in keyboard.keyboard for button in row]
-        log_displayed_buttons(chat_id, button_texts, MENU_SHARED)
+        # Safely extract button texts for logging
+        try:
+            button_texts = []
+            if hasattr(keyboard, 'keyboard'):
+                for row in keyboard.keyboard:
+                    for button in row:
+                        if hasattr(button, 'text'):
+                            button_texts.append(button.text)
+                        elif isinstance(button, dict) and 'text' in button:
+                            button_texts.append(button['text'])
+            
+            # Log displayed buttons only if we successfully extracted texts
+            if button_texts:
+                log_displayed_buttons(chat_id, button_texts, MENU_SHARED)
+            else:
+                print(f"Warning: Could not extract button texts for user {chat_id} in {MENU_SHARED} menu")
+        except Exception as e:
+            print(f"Error extracting button texts: {e}")
         
         sent_message = bot.send_message(
             chat_id, 

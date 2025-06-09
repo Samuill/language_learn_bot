@@ -80,9 +80,24 @@ def set_difficulty_level(message):
     if shared_dict_id:
         user_state[chat_id]["shared_dict_id"] = shared_dict_id
         
-    # Логируем отображаемые кнопки
-    button_texts = [button.text for row in keyboard.keyboard for button in row]
-    log_displayed_buttons(chat_id, button_texts, menu_type)
+    # Safely extract button texts for logging
+    try:
+        button_texts = []
+        if hasattr(keyboard, 'keyboard'):
+            for row in keyboard.keyboard:
+                for button in row:
+                    if hasattr(button, 'text'):
+                        button_texts.append(button.text)
+                    elif isinstance(button, dict) and 'text' in button:
+                        button_texts.append(button['text'])
+    except Exception as e:
+        print(f"Error extracting button texts: {e}")
+    
+    # Log displayed buttons only if we successfully extracted texts
+    if button_texts:
+        log_displayed_buttons(chat_id, button_texts, menu_type)
+    else:
+        print(f"Warning: Could not extract button texts for user {chat_id} in {menu_type} menu")
     
     # Відправляємо меню відповідного рівня
     sent_message = bot.send_message(
@@ -123,8 +138,23 @@ def personal_dictionary_button(message):
     keyboard = main_menu_keyboard(chat_id)
     
     # Логируем отображаемые кнопки
-    button_texts = [button.text for row in keyboard.keyboard for button in row]
-    log_displayed_buttons(chat_id, button_texts, MENU_MAIN)
+    try:
+        button_texts = []
+        if hasattr(keyboard, 'keyboard'):
+            for row in keyboard.keyboard:
+                for button in row:
+                    if hasattr(button, 'text'):
+                        button_texts.append(button.text)
+                    elif isinstance(button, dict) and 'text' in button:
+                        button_texts.append(button['text'])
+    except Exception as e:
+        print(f"Error extracting button texts: {e}")
+    
+    # Log displayed buttons only if we successfully extracted texts
+    if button_texts:
+        log_displayed_buttons(chat_id, button_texts, MENU_MAIN)
+    else:
+        print(f"Warning: Could not extract button texts for user {chat_id} in MENU_MAIN menu")
     
     sent_message = bot.send_message(
         chat_id, 
