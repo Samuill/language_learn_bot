@@ -13,68 +13,52 @@ from config import bot, user_state
 from dictionary import return_to_appropriate_menu
 from utils.language_utils import get_text, is_command
 from utils import clear_state
+from utils import clear_state, main_menu_keyboard, easy_level_keyboard
+from utils.input_handlers import safe_next_step_handler, sanitize_user_input, is_menu_navigation_command, handle_exit_from_activity
 
 @bot.message_handler(func=lambda message: is_command(message, "learning_new_words"))
 def learn_words(message):
     """Handler for learning new words activity"""
     chat_id = message.chat.id
     
-    # Always get dictionary info from database rather than state
-    dict_type, shared_dict_id, _ = db_manager.get_user_dictionary_info(chat_id)
+    # Load dictionary with our unified helper
+    from utils.dictionary_helpers import load_user_dictionary, handle_empty_dictionary
+    df, dict_type, dict_name, shared_dict_id, success = load_user_dictionary(chat_id)
     
-    # Update in-memory state to match database
+    if not success:
+        bot.send_message(chat_id, get_text("error_occurred", chat_id), reply_markup=easy_level_keyboard(chat_id))
+        return
+    
+    # Update state with dictionary info to ensure consistency
     if chat_id in user_state:
-        user_state[chat_id]["dict_type"] = dict_type
-        if dict_type == "shared" and shared_dict_id:
+        user_state[chat_id].update({
+            "dict_type": dict_type,
+            "level": "easy"
+        })
+        if shared_dict_id:
             user_state[chat_id]["shared_dict_id"] = shared_dict_id
-        elif "shared_dict_id" in user_state[chat_id]:
-            del user_state[chat_id]["shared_dict_id"]
+    else:
+        user_state[chat_id] = {
+            "dict_type": dict_type,
+            "level": "easy"
+        }
+        if shared_dict_id:
+            user_state[chat_id]["shared_dict_id"] = shared_dict_id
     
+    # Check if we have words
+    if df is None or df.empty:
+        return handle_empty_dictionary(chat_id, easy_level_keyboard(chat_id), dict_name)
+    
+    # Start learning activity
     try:
-        # Get dataframe from the appropriate dictionary
-        if dict_type == "shared" and shared_dict_id:
-            # For shared dictionary
-            df = db_manager.get_shared_dictionary_words(chat_id, shared_dict_id)
-        elif dict_type == "common":
-            # For common dictionary
-            df = db_manager.get_user_words(chat_id, "common")
-            print(f"Got common dictionary for user {chat_id}: {len(df)} words")
-        else:
-            # For personal dictionary
-            df = db_manager.get_user_words(chat_id, "personal") 
-            print(f"Got personal dictionary for user {chat_id}: {len(df)} words")
-        
-        if df is None or df.empty:
-            dict_type_text = ""
-            if dict_type == "shared":
-                # Get the shared dictionary name
-                conn = db_manager.get_connection()
-                cursor = conn.cursor()
-                cursor.execute("SELECT name FROM shared_dictionaries WHERE id = ?", (shared_dict_id,))
-                result = cursor.fetchone()  # Store the result first
-                dict_name = result[0] if result else get_text("shared_dictionary", chat_id)  # Use stored result
-                conn.close()
-                dict_type_text = f"«{dict_name}»"
-            else:
-                dict_type_text = get_text(f"{dict_type}_dictionary", chat_id)
-                
-            bot.send_message(chat_id, f"{get_text('no_words_in_dictionary', chat_id)} ({dict_type_text})")
-            return
-            
-        # Start learning activity
         success = start_learning(chat_id, df)
-        
         if not success:
-            return_to_appropriate_menu(chat_id, False)
-            
+            bot.send_message(chat_id, get_text("error_activity", chat_id), reply_markup=easy_level_keyboard(chat_id))
     except Exception as e:
         print(f"Error in learn_words: {e}")
         import traceback
         traceback.print_exc()
-        
-        # Replace get_localized_text with standard get_text
-        error_message = get_text("error_learning_activity", chat_id, "Сталася помилка при вивченні слів")
-        bot.send_message(chat_id, error_message)
+        bot.send_message(chat_id, get_text("error_learning_activity", chat_id), reply_markup=easy_level_keyboard(chat_id))
 
 def start_learning(chat_id, df):
     """Start learning new words activity"""
@@ -246,21 +230,36 @@ def repeat_words(message):
             print(f"Got personal dictionary for repetition: {len(df)} words")
         
         if df is None or df.empty:
-            dict_name = get_text("shared_dictionary", chat_id) if dict_type == "shared" else get_text("common_dictionary", chat_id, "загальному словнику") if dict_type == "common" else get_text("personal_dictionary", chat_id)
-            bot.send_message(chat_id, f"{get_text('in', chat_id)} {dict_name} {get_text('no_words', chat_id)}")
+            # Use localized message with dictionary name
+            if dict_type == "shared" and shared_dict_id:
+                # Get shared dictionary name
+                conn = db_manager.get_connection()
+                cursor = conn.cursor()
+                cursor.execute("SELECT name FROM shared_dictionaries WHERE id = ?", (shared_dict_id,))
+                result = cursor.fetchone()
+                dict_name = f"«{result[0] if result else ''}»" if result else get_text("shared_dictionary", chat_id)
+                conn.close()
+            else:
+                dict_name = get_text(f"{dict_type}_dictionary", chat_id)
+                
+            bot.send_message(chat_id, f"{get_text('in', chat_id)} {dict_name} {get_text('no_words', chat_id)}", 
+                             reply_markup=easy_level_keyboard(chat_id))
             return
             
         # Use the centralized start_repetition function
         success = start_repetition(chat_id, df)
         
         if not success:
-            return_to_appropriate_menu(chat_id, False)
+            # Ensure we stay in the easy level menu
+            bot.send_message(chat_id, get_text("error_activity", chat_id),
+                             reply_markup=easy_level_keyboard(chat_id))
             
     except Exception as e:
         print(f"Error in repeat_words: {e}")
         import traceback
         traceback.print_exc()
-        bot.send_message(chat_id, get_text("error_activity", chat_id))
+        bot.send_message(chat_id, get_text("error_activity", chat_id), 
+                         reply_markup=easy_level_keyboard(chat_id))
 
 def start_repetition(chat_id, df):
     """Start repetition activity"""

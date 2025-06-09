@@ -94,3 +94,4 @@
 [2025-06-09 11:48:53.380] ERROR: 'dict' object has no attribute 'text' | Context: Critical error in main loop
 [2025-06-09 11:50:06.085] ERROR: 'dict' object has no attribute 'text' | Context: Critical error in main loop
 [2025-06-09 12:19:54.460] ERROR: 'dict' object has no attribute 'text' | Context: Critical error in main loop
+[2025-06-09 12:52:54.298] ERROR: HTTPSConnectionPool(host='api.telegram.org', port=443): Read timed out. (read timeout=60) | Context: Critical error in main loop

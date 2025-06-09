@@ -7,6 +7,8 @@
 import telebot
 from config import bot, user_state
 from utils.language_utils import get_text
+from utils import clear_state, main_menu_keyboard, easy_level_keyboard, medium_level_keyboard, hard_level_keyboard
+from utils.console_logger import log_menu_transition, MENU_MAIN
 
 # Список стандартних команд, які можуть бути використані для виходу з активності
 EXIT_COMMANDS = [
@@ -87,60 +89,59 @@ def sanitize_user_input(text, max_length=100):
     
     return sanitized
 
-def handle_exit_from_activity(message):
-    """Handle exit from activity using menu buttons
-    
-    Args:
-        message: Telegram message with exit command
-    """
-    from utils import clear_state, main_menu_keyboard
-    from utils import easy_level_keyboard, medium_level_keyboard, hard_level_keyboard
+def handle_exit_from_activity(message, preserve_level=None):
+    """Unified handler for exiting from any activity back to a menu"""
+    from config import bot, user_state
     
     chat_id = message.chat.id
-    preserve_dict_type = True
     
-    # Get localized button texts for comparison
-    back_to_main = get_text("back_to_main_menu", chat_id)
-    easy_level = get_text("easy_level", chat_id)
-    medium_level = get_text("medium_level", chat_id)
-    hard_level = get_text("hard_level", chat_id)
-    cancel_text = get_text("cancel", chat_id)
-    
-    # Визначаємо, яке меню показати в залежності від команди
-    if message.text in ["↩️ Повернутися до головного меню", back_to_main]:
-        keyboard = main_menu_keyboard(chat_id)
-        message_text = get_text("main_menu", chat_id)
-        preserve_level = False
-    elif message.text in ["🟢 Легкий рівень", easy_level]:
-        keyboard = easy_level_keyboard(chat_id)
-        message_text = get_text("easy_level_select_activity", chat_id)
-        preserve_level = True
+    # Determine which menu to go back to based on message text
+    if message.text == "↩️ Повернутися до головного меню" or message.text == get_text("back_to_main_menu", chat_id):
+        # Log transition to main menu
+        log_menu_transition(chat_id, user_state.get(chat_id, {}).get("current_menu", "UNKNOWN"), MENU_MAIN, "Action: Return to main menu")
+        
+        # Clear state but preserve dictionary type and shared_dict_id
+        preserve_level = False  # Always reset level when returning to main menu
+        clear_state(chat_id, preserve_dict_type=True, preserve_messages=False, preserve_level=preserve_level)
+        
+        # Set current menu state to main
         if chat_id in user_state:
-            user_state[chat_id]["level"] = "easy"
-    elif message.text in ["🟠 Середній рівень", medium_level]:
-        keyboard = medium_level_keyboard(chat_id)
-        message_text = get_text("medium_level_select_activity", chat_id)
-        preserve_level = True
-        if chat_id in user_state:
-            user_state[chat_id]["level"] = "medium"
-    elif message.text in ["🔴 Складний рівень", hard_level]:
-        keyboard = hard_level_keyboard(chat_id)
-        message_text = get_text("hard_level_select_activity", chat_id)
-        preserve_level = True
-        if chat_id in user_state:
-            user_state[chat_id]["level"] = "hard"
-    else:  # "✖️ Відміна" або "Відміна" або локалізовані версії
-        keyboard = main_menu_keyboard(chat_id)
-        message_text = get_text("cancelled", chat_id)
-        preserve_level = False
-    
-    # Очищаємо стан, зберігаючи потрібні дані
-    clear_state(chat_id, preserve_dict_type=preserve_dict_type, preserve_level=preserve_level)
-    
-    # Відправляємо повідомлення з відповідною клавіатурою та зберігаємо ID
-    sent_message = bot.send_message(chat_id, message_text, reply_markup=keyboard)
-    from utils.state_helpers import save_message_id
-    save_message_id(chat_id, sent_message.message_id)
+            user_state[chat_id]["current_menu"] = MENU_MAIN
+        else:
+            user_state[chat_id] = {"current_menu": MENU_MAIN}
+        
+        # Show main menu
+        from handlers.main_menu import main_menu
+        main_menu(message)
+        
+    elif message.text == "🟢 Легкий рівень" or message.text == get_text("easy_level", chat_id):
+        # Go to easy level menu
+        from handlers.dictionaries import set_difficulty_level
+        set_difficulty_level(message)
+        
+    elif message.text == "🟠 Середній рівень" or message.text == get_text("medium_level", chat_id):
+        # Go to medium level menu
+        from handlers.dictionaries import set_difficulty_level
+        set_difficulty_level(message)
+        
+    elif message.text == "🔴 Складний рівень" or message.text == get_text("hard_level", chat_id):
+        # Go to hard level menu
+        from handlers.dictionaries import set_difficulty_level
+        set_difficulty_level(message)
+        
+    else:
+        # Default: return to the appropriate menu based on level
+        level = user_state.get(chat_id, {}).get("level", "easy")
+        
+        if level == "hard":
+            bot.send_message(chat_id, get_text("hard_level_select_activity", chat_id), reply_markup=hard_level_keyboard(chat_id))
+        elif level == "medium":
+            bot.send_message(chat_id, get_text("medium_level_select_activity", chat_id), reply_markup=medium_level_keyboard(chat_id))
+        else:  # Default to easy
+            bot.send_message(chat_id, get_text("easy_level_select_activity", chat_id), reply_markup=easy_level_keyboard(chat_id))
+        
+        # Очищаємо стан, зберігаючи потрібні дані
+        clear_state(chat_id, preserve_dict_type=True, preserve_messages=False, preserve_level=True)
 
 def safe_next_step_handler(message, callback, *args, **kwargs):
     """Safe version of register_next_step_handler that handles exit commands
@@ -177,3 +178,35 @@ def safe_next_step_handler(message, callback, *args, **kwargs):
     
     # Реєструємо обробник з нашим wrapper
     bot.register_next_step_handler(message, wrapper)
+
+def is_menu_navigation_command(message):
+    """Check if message is a menu navigation command"""
+    common_menu_commands = [
+        "↩️ Повернутися до головного меню", 
+        "🟢 Легкий рівень", 
+        "🟠 Середній рівень", 
+        "🔴 Складний рівень",
+        "✖️ Відміна",
+        "👤 Персональний словник",
+        "👥 Спільний словник"
+    ]
+    
+    # Check direct matches or localized versions
+    if hasattr(message, 'text') and message.text:
+        if message.text in common_menu_commands:
+            return True
+        
+        # Try to match with localized text if available
+        if message.chat and hasattr(message, 'chat'):
+            chat_id = message.chat.id
+            back_text = get_text("back_to_main_menu", chat_id, "")
+            easy_text = get_text("easy_level", chat_id, "")
+            medium_text = get_text("medium_level", chat_id, "")
+            hard_text = get_text("hard_level", chat_id, "")
+            cancel_text = get_text("cancel", chat_id, "")
+            
+            localized_commands = [back_text, easy_text, medium_text, hard_text, cancel_text]
+            if message.text in localized_commands:
+                return True
+    
+    return False

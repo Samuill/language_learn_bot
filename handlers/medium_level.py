@@ -11,7 +11,7 @@ import pandas as pd
 from config import bot, user_state
 from utils import clear_state, medium_level_keyboard, main_menu_keyboard
 import db_manager
-from utils.input_handlers import safe_next_step_handler, sanitize_user_input
+from utils.input_handlers import safe_next_step_handler, sanitize_user_input, is_menu_navigation_command, handle_exit_from_activity
 from utils.language_utils import get_text
 # Константи для зміни рейтингу
 MEDIUM_RATING_DECREASE = -0.1  # Зменшення рейтингу при правильній відповіді
@@ -365,30 +365,18 @@ def handle_missing_letters_answer(message):
     """Handle user's answer in the missing letters game"""
     chat_id = message.chat.id
     
-    # Перевіряємо, чи не є це командою виходу з гри
-    if message.text in ["↩️ Повернутися до головного меню", "🟢 Легкий рівень", 
-                        "🟠 Середній рівень", "🔴 Складний рівень"]:
-        clear_state(chat_id, preserve_dict_type=True)
-        
-        if message.text == "↩️ Повернутися до головного меню":
-            bot.send_message(chat_id, "Головне меню:", reply_markup=main_menu_keyboard(chat_id))
-        elif message.text == "🟢 Легкий рівень":
-            from utils import easy_level_keyboard
-            bot.send_message(chat_id, "🟢 Легкий рівень - оберіть активність:", reply_markup=easy_level_keyboard())
-        elif message.text == "🟠 Середній рівень":
-            bot.send_message(chat_id, "🟠 Середній рівень - оберіть активність:", reply_markup=medium_level_keyboard())
-        elif message.text == "🔴 Складний рівень":
-            from utils import hard_level_keyboard
-            bot.send_message(chat_id, "🔴 Складний рівень - оберіть активність:", reply_markup=hard_level_keyboard())
+    # Check for menu navigation commands first
+    if is_menu_navigation_command(message):
+        handle_exit_from_activity(message)
         return
     
-    # Перевіряємо, чи активна гра
+    # Check if the game is still active
     if chat_id not in user_state or user_state[chat_id].get("game") != "missing_letters":
-        bot.send_message(chat_id, "❌ Помилка: гра не активна", reply_markup=medium_level_keyboard())
+        bot.send_message(chat_id, get_text("game_not_active", chat_id), reply_markup=medium_level_keyboard(chat_id))
         return
     
-    # Отримуємо відповідь користувача
-    user_answer = message.text.strip()
+    # Get user's answer - sanitize it first
+    user_answer = sanitize_user_input(message.text.strip())
     correct_letters = user_state[chat_id]["missing_letters"]
     
     # Перевіряємо відповідь
