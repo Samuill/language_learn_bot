@@ -160,5 +160,6 @@
   "word_added_to_common_successfully": "✅ Kelime genel sözlüğe başarıyla eklendi!",
   "add_word_shared_not_admin": "❌ Bu paylaşılan sözlüğün yöneticisi değilsiniz ve kelime ekleyemezsiniz.",
   "add_word_common_not_admin": "❌ Genel sözlüğe sadece botun ana yöneticisi kelime ekleyebilir.",
-  "cannot_add_word_in_shared": "Bu paylaşılan sözlüğe yeni kelime ekleme izniniz yok."
+  "cannot_add_word_in_shared": "Bu paylaşılan sözlüğe yeni kelime ekleme izniniz yok.",
+  "correct_variant": "🔤 Kelimenin doğru biçimini seçin: "
 }

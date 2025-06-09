@@ -261,6 +261,81 @@ def get_user_words(chat_id, dict_type="personal"):
     
     return df
 
+def get_user_words_with_articles(chat_id, dict_type="personal"):
+    """Get words with defined articles (not NULL/empty) for a user as a DataFrame"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # Визначаємо, який словник використовувати
+    if dict_type == "common":
+        # Загальний словник - вибираємо всі слова з артиклями
+        language = get_user_language(chat_id) or "en"
+        print(f"Getting common dictionary words with articles for user {chat_id} in language {language}")
+        
+        # Handle different languages
+        if language in ["en", "uk", "ru", "tr", "ar"]:
+            query = f'''
+            SELECT w.id, w.word, w.{language}_tran as translation, a.article, 0.0 as priority
+            FROM words w
+            JOIN article a ON w.article_id = a.id
+            WHERE w.{language}_tran IS NOT NULL
+            AND w.article_id != 4 AND w.article_id IS NOT NULL
+            '''
+        else:
+            # Fallback to English if language not supported
+            query = '''
+            SELECT w.id, w.word, w.en_tran as translation, a.article, 0.0 as priority
+            FROM words w
+            JOIN article a ON w.article_id = a.id
+            WHERE w.en_tran IS NOT NULL
+            AND w.article_id != 4 AND w.article_id IS NOT NULL
+            '''
+        
+        cursor.execute(query)
+    else:
+        # Персональний словник - вибираємо слова користувача з артиклями
+        language = get_user_language(chat_id)
+        if not language:
+            print(f"Cannot determine language for user {chat_id}")
+            conn.close()
+            return pd.DataFrame()
+        
+        print(f"Getting personal dictionary words with articles for user {chat_id} in language {language}")
+        
+        # Перевіряємо, чи існує таблиця для користувача
+        cursor.execute(f"""
+        SELECT name FROM sqlite_master 
+        WHERE type='table' AND name='user_{chat_id}'
+        """)
+        if not cursor.fetchone():
+            print(f"No table found for user {chat_id}")
+            conn.close()
+            return pd.DataFrame()
+        
+        query = f'''
+        SELECT w.id, w.word, w.{language}_tran as translation, a.article, u.rating
+        FROM user_{chat_id} u
+        JOIN words w ON u.word_id = w.id
+        JOIN article a ON w.article_id = a.id
+        WHERE w.{language}_tran IS NOT NULL
+        AND w.article_id != 4 AND w.article_id IS NOT NULL
+        ORDER BY u.rating ASC
+        '''
+        cursor.execute(query)
+    
+    # Отримуємо результати
+    results = cursor.fetchall()
+    
+    # Convert results to DataFrame
+    columns = ['id', 'word', 'translation', 'article', 'priority']
+    df = pd.DataFrame(results, columns=columns)
+    
+    print(f"Found {len(df)} words with articles for user {chat_id} with dict_type={dict_type}")
+    
+    conn.close()
+    
+    return df
+
 def add_word(chat_id, word, translation, dict_type="personal", article=None):
     """Add a word to user's dictionary with duplicate handling and article update.
     Returns word_id on success, None on failure.
@@ -1261,3 +1336,112 @@ def get_word_id_by_german(german_word):
         return None
     finally:
         conn.close()
+
+def get_shared_dictionary_words_with_articles(chat_id, shared_dict_id=None):
+    """Get words with articles from a shared dictionary for a specific user"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # If shared_dict_id not provided, get it from user profile
+    if not shared_dict_id:
+        cursor.execute('SELECT shared_dict_id FROM users WHERE chat_id = ?', (chat_id,))
+        result = cursor.fetchone()
+        if not result or not result[0]:
+            conn.close()
+            return pd.DataFrame()
+        shared_dict_id = result[0]
+    
+    # Verify user has access to this dictionary
+    cursor.execute('''
+    SELECT 1 FROM shared_dict_users 
+    WHERE user_id = ? AND dict_id = ?
+    ''', (chat_id, shared_dict_id))
+    
+    if not cursor.fetchone():
+        print(f"User {chat_id} does not have access to shared dictionary {shared_dict_id}")
+        conn.close()
+        return pd.DataFrame()
+    
+    # Get user language
+    language = get_user_language(chat_id) or "uk"
+    other_language = "uk" if language == "ru" else "ru"
+    
+    # Verify shared dictionary table exists
+    cursor.execute(f"""
+    SELECT name FROM sqlite_master 
+    WHERE type='table' AND name='shared_dict_{shared_dict_id}'
+    """)
+    if not cursor.fetchone():
+        conn.close()
+        return pd.DataFrame()
+    
+    # Ensure user column exists in shared dictionary table
+    cursor.execute(f"PRAGMA table_info(shared_dict_{shared_dict_id})")
+    columns = [col[1] for col in cursor.fetchall()]
+    user_col = f"user_{chat_id}"
+    
+    if user_col not in columns:
+        # Add column if it doesn't exist
+        cursor.execute(f'''
+        ALTER TABLE shared_dict_{shared_dict_id} ADD COLUMN {user_col} REAL DEFAULT 0.0
+        ''')
+        conn.commit()
+    
+    # Get words with articles (article_id != 4 excludes words without articles)
+    query = f'''
+    SELECT w.id, w.word, w.{language}_tran as translation, w.{other_language}_tran as other_translation,
+           a.article, COALESCE(sd.{user_col}, 0.0) as priority
+    FROM shared_dict_{shared_dict_id} sd
+    JOIN words w ON sd.word_id = w.id
+    JOIN article a ON w.article_id = a.id
+    WHERE w.article_id != 4 AND w.article_id IS NOT NULL
+    ORDER BY priority DESC
+    '''
+    
+    cursor.execute(query)
+    
+    # Get results
+    results = cursor.fetchall()
+    
+    # Convert results to DataFrame
+    columns = ['id', 'word', 'translation', 'other_translation', 'article', 'priority']
+    df = pd.DataFrame(results, columns=columns)
+    
+    # Auto-translate missing translations if needed
+    words_to_translate = df[df['translation'].isnull() & df['other_translation'].notnull()]
+    if not words_to_translate.empty:
+        print(f"Found {len(words_to_translate)} words without {language} translation. Auto-translating...")
+        
+        try:
+            from config import translator
+            for index, row in words_to_translate.iterrows():
+                try:
+                    source_text = row['other_translation']
+                    source_lang = other_language
+                    auto_translation = translator.translate(source_text, src=source_lang, dest=language).text
+                    
+                    cursor.execute(f'''
+                    UPDATE words SET {language}_tran = ? WHERE id = ?
+                    ''', (auto_translation, row['id']))
+                    
+                    df.at[index, 'translation'] = auto_translation
+                    print(f"Auto-translated word ID {row['id']}: '{source_text}' -> '{auto_translation}'")
+                except Exception as e:
+                    print(f"Error translating word ID {row['id']}: {e}")
+            
+            conn.commit()
+        except ImportError:
+            print("Google translator not available for automatic translation")
+        except Exception as e:
+            print(f"Error during auto-translation: {e}")
+    
+    # Filter out entries that still lack translations
+    df = df[df['translation'].notnull()]
+    
+    # Remove the now-unnecessary other_translation column
+    if 'other_translation' in df.columns:
+        df = df.drop(columns=['other_translation'])
+    
+    conn.close()
+    
+    return df

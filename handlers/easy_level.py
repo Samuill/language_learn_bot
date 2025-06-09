@@ -585,7 +585,7 @@ def start_article_activity(chat_id):
         
         sent_message = bot.send_message(
             chat_id,
-            f"🏷️ Виберіть правильний артикль для слова:\n\n<b>{word}</b>\n\n<i>Переклад: {translation}</i>",
+            get_text("select_article",chat_id) + f"\n\n<b>{word}</b>\n\n" + get_text("translation",chat_id) + f"<i>: {translation}</i>",
             reply_markup=markup,
             parse_mode="HTML"
         )

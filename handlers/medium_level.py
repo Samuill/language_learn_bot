@@ -157,8 +157,8 @@ def spelling_choice_game(message):
         # Відправляємо завдання
         bot.send_message(
             chat_id,
-            f"🔤 Виберіть правильний варіант написання слова:\n\n"
-            f"<b>Переклад: {word_row['translation']}</b>",
+            get_text("correct_variant",chat_id)+f"\n\n" +
+            get_text("translation",chat_id) + f"<i>: {word_row['translation']}</i>",
             parse_mode="HTML",
             reply_markup=markup
         )
@@ -344,11 +344,10 @@ def generate_missing_letters_exercise(chat_id):
         
         # Відправляємо завдання
         bot.send_message(
-            chat_id,
-            f"📝 Введіть пропущені літери у слові:\n\n"
-            f"<b>{word_with_blanks}</b>\n\n"
-            f"Переклад: <b>{word_row['translation']}</b>\n\n"
-            f"Введіть <b>{num_missing}</b> пропущених літер підряд, без пробілів:",
+            chat_id, get_text("fill_in_gaps", chat_id) +
+            f"<b>{word_with_blanks}</b>\n\n" + get_text("translation",chat_id) +
+            f"<b>: {word_row['translation']}</b>\n\n"  + get_text("insert",chat_id) +
+            f" <b>{num_missing}</b> "+get_text("missing_letters",chat_id),
             parse_mode="HTML"
         )
         
@@ -359,7 +358,7 @@ def generate_missing_letters_exercise(chat_id):
         print(f"Error in missing_letters_game: {e}")
         import traceback
         traceback.print_exc()
-        bot.send_message(chat_id, "❌ Сталася помилка при створенні завдання.", reply_markup=medium_level_keyboard())
+        bot.send_message(chat_id, get_text( "error_occurred",chat_id), reply_markup=medium_level_keyboard())
 
 def handle_missing_letters_answer(message):
     """Handle user's answer in the missing letters game"""
@@ -433,8 +432,8 @@ def handle_missing_letters_answer(message):
                 bot.send_message(
                     chat_id,
                     f"❌ Неправильно! Спробуйте ще раз.\n\n"
-                    f"<b>{word_with_blanks}</b>\n\n"
-                    f"Переклад: <b>{translation}</b>",
+                    f"<b>{word_with_blanks}</b>\n\n" + get_text("translation",chat_id) +
+                    f" <b>{translation}</b>",
                     parse_mode="HTML"
                 )
                 
@@ -453,4 +452,4 @@ def handle_missing_letters_answer(message):
         print(f"Error in handle_missing_letters_answer: {e}")
         import traceback
         traceback.print_exc()
-        bot.send_message(chat_id, "❌ Сталася помилка при обробці відповіді.", reply_markup=medium_level_keyboard())
+        bot.send_message(chat_id, get_text( "error_occurred",chat_id), reply_markup=medium_level_keyboard())
