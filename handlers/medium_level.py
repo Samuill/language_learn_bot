@@ -12,7 +12,7 @@ from config import bot, user_state
 from utils import clear_state, medium_level_keyboard, main_menu_keyboard
 import db_manager
 from utils.input_handlers import safe_next_step_handler, sanitize_user_input
-
+from utils.language_utils import get_text
 # Константи для зміни рейтингу
 MEDIUM_RATING_DECREASE = -0.1  # Зменшення рейтингу при правильній відповіді
 MEDIUM_RATING_INCREASE = 0.1   # Збільшення рейтингу при неправильній відповіді
@@ -88,7 +88,7 @@ def create_misspelled_versions(word, num_versions=3):
     
     return misspelled[:num_versions]
 
-@bot.message_handler(func=lambda message: message.text == "🔤 Вибір правильного написання")
+@bot.message_handler(func=lambda message: message.text == "🔤 Вибір правильного написання" or message.text == get_text("choose_correct_spelling", message.chat.id))
 def spelling_choice_game(message):
     """Game where user selects the correct spelling from 4 options"""
     chat_id = message.chat.id
@@ -124,8 +124,8 @@ def spelling_choice_game(message):
         
         # Перевіряємо наявність слів
         if df is None or df.empty:
-            dict_name = "спільному словнику" if dict_type == "shared" else "загальному словнику" if dict_type == "common" else "персональному словнику"
-            bot.send_message(chat_id, f"📭 У {dict_name} ще немає доданих слів.", reply_markup=medium_level_keyboard())
+            dict_name = get_text("shared_dictionary", chat_id) if dict_type == "shared" else get_text("common_dictionary", chat_id, "загальному словнику") if dict_type == "common" else get_text("personal_dictionary", chat_id)
+            bot.send_message(chat_id, f"{get_text('in', chat_id)} {dict_name} {get_text('no_words', chat_id)}", reply_markup=medium_level_keyboard(chat_id))
             return
             
         # Вибираємо випадкове слово
@@ -253,7 +253,7 @@ def spelling_choice_game_new_word(chat_id):
     except Exception as e:
         print(f"Error starting new spelling game: {e}")
 
-@bot.message_handler(func=lambda message: message.text == "📝 Заповніть пропуски")
+@bot.message_handler(func=lambda message: message.text == "📝 Заповніть пропуски" or message.text == get_text("fill_in_gaps", message.chat.id))
 def missing_letters_game(message):
     """Game where user needs to fill in missing letters"""
     chat_id = message.chat.id

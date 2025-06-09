@@ -5,12 +5,13 @@
 """
 
 from config import bot, user_state, ADMIN_ID
-from utils import main_menu_keyboard, clear_state
+from utils import main_menu_keyboard, clear_state, easy_level_keyboard, medium_level_keyboard, hard_level_keyboard
 from utils.state_helpers import save_message_id
 from dictionary import toggle_dictionary, set_dictionary_type
 import db_manager
 from utils.language_utils import get_text
 from utils.input_handlers import safe_next_step_handler, sanitize_user_input
+from utils.console_logger import log_menu_transition, log_displayed_buttons, MENU_MAIN, MENU_EASY, MENU_MEDIUM, MENU_HARD, MENU_SHARED
 
 # Make sure switch_dictionary function exists for backward compatibility
 def switch_dictionary(message):
@@ -43,40 +44,61 @@ def set_difficulty_level(message):
     # Визначаємо рівень та клавіатуру в залежності від кнопки
     if message.text in ["🟢 Легкий рівень", get_text("easy_level", chat_id)]:
         level = "easy"
-        from utils import easy_level_keyboard
+        menu_type = MENU_EASY
         keyboard = easy_level_keyboard(chat_id)  # Передаємо chat_id для локалізації
         message_text = get_text("easy_level_select_activity", chat_id)
+        log_menu_transition(chat_id, user_state.get(chat_id, {}).get("current_menu", "UNKNOWN"), MENU_EASY, f"Button: {message.text}")
     elif message.text in ["🟠 Середній рівень", get_text("medium_level", chat_id)]:
         level = "medium"
-        from utils import medium_level_keyboard
+        menu_type = MENU_MEDIUM
         keyboard = medium_level_keyboard(chat_id)  # Передаємо chat_id для локалізації
         message_text = get_text("medium_level_select_activity", chat_id)
+        log_menu_transition(chat_id, user_state.get(chat_id, {}).get("current_menu", "UNKNOWN"), MENU_MEDIUM, f"Button: {message.text}")
     else:  # "🔴 Складний рівень" або локалізований варіант
         level = "hard"
-        from utils import hard_level_keyboard
+        menu_type = MENU_HARD
         keyboard = hard_level_keyboard(chat_id)  # Передаємо chat_id для локалізації
         message_text = get_text("hard_level_select_activity", chat_id)
+        log_menu_transition(chat_id, user_state.get(chat_id, {}).get("current_menu", "UNKNOWN"), MENU_HARD, f"Button: {message.text}")
     
     # Оновлюємо рівень у стані користувача
     dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
     shared_dict_id = user_state.get(chat_id, {}).get("shared_dict_id", None)
     
     if chat_id in user_state:
-        user_state[chat_id].update({"level": level})
+        user_state[chat_id].update({
+            "level": level,
+            "current_menu": menu_type
+        })
     else:
-        user_state[chat_id] = {"dict_type": dict_type, "level": level}
+        user_state[chat_id] = {
+            "dict_type": dict_type, 
+            "level": level,
+            "current_menu": menu_type
+        }
         
     if shared_dict_id:
         user_state[chat_id]["shared_dict_id"] = shared_dict_id
+        
+    # Логируем отображаемые кнопки
+    button_texts = [button.text for row in keyboard.keyboard for button in row]
+    log_displayed_buttons(chat_id, button_texts, menu_type)
     
     # Відправляємо меню відповідного рівня
-    sent_message = bot.send_message(chat_id, message_text, reply_markup=keyboard)
+    sent_message = bot.send_message(
+        chat_id, 
+        message_text, 
+        reply_markup=keyboard
+    )
     save_message_id(chat_id, sent_message.message_id)
 
 @bot.message_handler(func=lambda message: message.text in ["👤 Персональний словник", get_text("personal_dictionary", message.chat.id)])
 def personal_dictionary_button(message):
     """Switch to personal dictionary"""
     chat_id = message.chat.id
+    
+    # Log transition
+    log_menu_transition(chat_id, user_state.get(chat_id, {}).get("current_menu", "UNKNOWN"), MENU_MAIN, "Switched to personal dictionary")
     
     # Оновлюємо БД для очищення shared_dict_id
     conn = db_manager.get_connection()
@@ -87,20 +109,26 @@ def personal_dictionary_button(message):
     
     # Оновлюємо стан в пам'яті
     if chat_id in user_state:
-        user_state[chat_id].update({"dict_type": "personal"})
+        user_state[chat_id].update({"dict_type": "personal", "current_menu": "main"})
         if "shared_dict_id" in user_state[chat_id]:
             del user_state[chat_id]["shared_dict_id"]
     else:
-        user_state[chat_id] = {"dict_type": "personal"}
+        user_state[chat_id] = {"dict_type": "personal", "current_menu": "main"}
     
     # Зберігаємо важливі дані, такі як рівень складності
     level = user_state.get(chat_id, {}).get("level", "easy")
     if level:
         user_state[chat_id]["level"] = level
+        
+    keyboard = main_menu_keyboard(chat_id)
+    
+    # Логируем отображаемые кнопки
+    button_texts = [button.text for row in keyboard.keyboard for button in row]
+    log_displayed_buttons(chat_id, button_texts, MENU_MAIN)
     
     sent_message = bot.send_message(
         chat_id, 
         get_text("selected_dict", chat_id),
-        reply_markup=main_menu_keyboard(chat_id)  # Передаємо chat_id для локалізації
+        reply_markup=keyboard
     )
     save_message_id(chat_id, sent_message.message_id)

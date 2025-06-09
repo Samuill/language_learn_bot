@@ -18,7 +18,7 @@ from utils.language_utils import get_text, is_command
 HARD_RATING_DECREASE = -0.1    # Зменшення рейтингу при правильній відповіді
 HARD_RATING_INCREASE = 0.2     # Збільшення рейтингу при неправильній відповіді
 
-@bot.message_handler(func=lambda message: message.text == "🧩 Складна гра")
+@bot.message_handler(func=lambda message: message.text == "🧩 Складна гра" or message.text == get_text("advanced_game", message.chat.id))
 def hard_game(message):
     """Placeholder for a complex game (to be developed)"""
     chat_id = message.chat.id
@@ -33,7 +33,7 @@ def hard_game(message):
         reply_markup=hard_level_keyboard()
     )
 
-@bot.message_handler(func=lambda message: message.text == "📝 Введення слів")
+@bot.message_handler(func=lambda message: message.text == "📝 Введення слів" or message.text == get_text("word_typing", message.chat.id))
 def word_typing_game(message):
     """Game where user needs to type German translation of a Ukrainian word"""
     chat_id = message.chat.id
@@ -66,8 +66,8 @@ def word_typing_game(message):
         
         # Перевіряємо наявність слів
         if df is None or df.empty:
-            dict_name = "спільному словнику" if dict_type == "shared" else "загальному словнику" if dict_type == "common" else "персональному словнику"
-            bot.send_message(chat_id,get_text("in",chat_id) + f"{dict_name}"+ get_text("no_words",chat_id), reply_markup=hard_level_keyboard())
+            dict_name = get_text("shared_dictionary", chat_id) if dict_type == "shared" else get_text("common_dictionary", chat_id, "загальному словнику") if dict_type == "common" else get_text("personal_dictionary", chat_id)
+            bot.send_message(chat_id, f"{get_text('in', chat_id)} {dict_name} {get_text('no_words', chat_id)}", reply_markup=hard_level_keyboard())
             return
             
         # Для складного рівня вибираємо слова з найвищим рейтингом
@@ -95,7 +95,7 @@ def word_typing_game(message):
         if shared_dict_id:
             user_state[chat_id]["shared_dict_id"] = shared_dict_id
         
-        # Відправляємо запит на переклад с использованием безопасного обработчика
+        # Відправляємо запит на переклад с использованием безпечного обработчика
         sent_message = bot.send_message(
             chat_id,
             get_text("enter_german_translation", chat_id).format(word=word_row['translation']),
@@ -190,7 +190,7 @@ def handle_word_typing_answer(message):
         import traceback
         traceback.print_exc()
 
-@bot.message_handler(func=lambda message: message.text == "🏷️ Введення артиклів")
+@bot.message_handler(func=lambda message: message.text == "🏷️ Введення артиклів" or message.text == get_text("article_typing", message.chat.id))
 def article_typing_game(message):
     """Game where user needs to type correct article for a German word"""
     chat_id = message.chat.id
@@ -266,7 +266,8 @@ def article_typing_game(message):
             result = random.choice(top_results)
         else:
             # Якщо результатів немає, повідомляємо про це
-            bot.send_message(chat_id, get_text("in"+"dictionary"+"", chat_id),
+            bot.send_message(chat_id,get_text("in",chat_id) + get_text("dictionary",chat_id) + get_text("no_words",chat_id)
+,
                            reply_markup=hard_level_keyboard())
             conn.close()
             return

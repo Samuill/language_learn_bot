@@ -16,6 +16,8 @@ if not os.path.exists(LOGS_DIR):
 DEBUG_LOG = os.path.join(LOGS_DIR, "debug.log")
 ERROR_LOG = os.path.join(LOGS_DIR, "error.log")
 COMMAND_LOG = os.path.join(LOGS_DIR, "commands.log")
+USER_INPUT_LOG = os.path.join(LOGS_DIR, "user_inputs.log")
+NAVIGATION_LOG = os.path.join(LOGS_DIR, "navigation.log")
 
 def get_timestamp():
     """Return formatted timestamp for logging"""
@@ -55,12 +57,16 @@ def log_message(message, response=None):
         with open(COMMAND_LOG, 'a', encoding='utf-8') as f:
             f.write(f"{log_str}\n")
     
+    # Always log all user input messages (commands and regular messages)
+    with open(USER_INPUT_LOG, 'a', encoding='utf-8') as f:
+        f.write(f"{log_str}\n")
+    
     # Write to debug log
     with open(DEBUG_LOG, 'a', encoding='utf-8') as f:
         f.write(f"{log_str}\n")
     
     # Print to console for immediate feedback
-    print(log_str)
+    print(f"📩 INPUT: {log_str}")
     
     return log_entry
 
@@ -87,9 +93,55 @@ def log_response(user_id, response_text, original_entry=None):
         f.write(f"{log_str}\n")
     
     # Print to console for immediate feedback
-    print(log_str)
+    print(f"📤 OUTPUT: {log_str}")
     
     return log_entry
+
+def log_navigation(chat_id, from_section, to_section, via_button=None):
+    """Log user navigation between sections"""
+    timestamp = get_timestamp()
+    
+    # Create log entry
+    log_str = f"[{timestamp}] NAVIGATION: User {chat_id} moved from '{from_section}' to '{to_section}'"
+    if via_button:
+        log_str += f" via button '{via_button}'"
+    
+    # Write to navigation log
+    with open(NAVIGATION_LOG, 'a', encoding='utf-8') as f:
+        f.write(f"{log_str}\n")
+    
+    # Write to debug log
+    with open(DEBUG_LOG, 'a', encoding='utf-8') as f:
+        f.write(f"{log_str}\n")
+    
+    # Print to console for immediate feedback
+    print(f"🧭 {log_str}")
+
+def log_callback(call):
+    """Log callback query (button click) with user info and timestamp"""
+    timestamp = get_timestamp()
+    
+    # Extract user information
+    user_id = call.from_user.id if call.from_user else "Unknown"
+    username = call.from_user.username if call.from_user and call.from_user.username else "No username"
+    first_name = call.from_user.first_name if call.from_user and call.from_user.first_name else "No name"
+    
+    # Get callback data
+    callback_data = call.data if hasattr(call, 'data') else "No data"
+    
+    # Create log entry
+    log_str = f"[{timestamp}] User {user_id} ({username}/{first_name}) clicked button: '{callback_data}'"
+    
+    # Write to debug log
+    with open(DEBUG_LOG, 'a', encoding='utf-8') as f:
+        f.write(f"{log_str}\n")
+    
+    # Write to navigation log
+    with open(NAVIGATION_LOG, 'a', encoding='utf-8') as f:
+        f.write(f"{log_str}\n")
+    
+    # Print to console for immediate feedback
+    print(f"🔘 BUTTON: {log_str}")
 
 def log_error(error, context=None):
     """Log errors with timestamp and context"""
@@ -116,7 +168,7 @@ def log_error(error, context=None):
         f.write(f"{log_str}\n")
     
     # Print to console for immediate feedback
-    print(log_str)
+    print(f"❌ {log_str}")
     
     return log_entry
 
@@ -124,7 +176,7 @@ def log_dict_operation(chat_id, operation, dict_type, path, success=True):
     """Log dictionary operations with more detail"""
     timestamp = get_timestamp()
     
-    is_admin = chat_id == ADMIN_ID  # Тепер ADMIN_ID буде визначений
+    is_admin = chat_id == ADMIN_ID
     admin_text = " (ADMIN)" if is_admin else ""
     
     # Create log entry
@@ -137,7 +189,27 @@ def log_dict_operation(chat_id, operation, dict_type, path, success=True):
         f.write(f"{log_str}\n")
     
     # Print to console for immediate feedback
-    print(log_str)
+    print(f"📚 {log_str}")
+
+def log_section_change(chat_id, section_name, additional_info=None):
+    """Log when a user enters a specific section of the bot"""
+    timestamp = get_timestamp()
+    
+    # Create log entry
+    log_str = f"[{timestamp}] SECTION: User {chat_id} entered section '{section_name}'"
+    if additional_info:
+        log_str += f" | {additional_info}"
+    
+    # Write to navigation log
+    with open(NAVIGATION_LOG, 'a', encoding='utf-8') as f:
+        f.write(f"{log_str}\n")
+    
+    # Write to debug log
+    with open(DEBUG_LOG, 'a', encoding='utf-8') as f:
+        f.write(f"{log_str}\n")
+    
+    # Print to console for immediate feedback
+    print(f"📋 {log_str}")
 
 # Create a decorator for message handlers that adds logging
 def log_handler(func):

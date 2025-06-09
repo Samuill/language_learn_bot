@@ -7,51 +7,43 @@ from datetime import datetime
 from config import bot, user_state, ADMIN_ID
 
 def clear_state(chat_id, preserve_dict_type=False, preserve_messages=False, preserve_level=False):
-    """Clear user state and delete message if exists
+    """
+    Clear user state, optionally preserving some parts
     
     Args:
-        chat_id: User's chat ID
-        preserve_dict_type: If True, preserve the dict_type setting for this user
-        preserve_messages: If True, don't delete associated messages
-        preserve_level: If True, preserve the level setting for this user
+        chat_id (int): User's chat ID
+        preserve_dict_type (bool): Whether to preserve dictionary type
+        preserve_messages (bool): Whether to preserve message IDs
+        preserve_level (bool): Whether to preserve difficulty level
     """
-    if chat_id in user_state:
-        # Зберігаємо важливі дані перед очищенням
-        preserved_data = {}
-        
-        # Тип словника
-        if preserve_dict_type and "dict_type" in user_state[chat_id]:
-            preserved_data["dict_type"] = user_state[chat_id]["dict_type"]
-        
-        # Рівень складності
-        if preserve_level and "level" in user_state[chat_id]:
-            preserved_data["level"] = user_state[chat_id]["level"]
-        
-        # Shared dict ID, якщо є
-        if preserve_dict_type and "shared_dict_id" in user_state[chat_id]:
-            preserved_data["shared_dict_id"] = user_state[chat_id]["shared_dict_id"]
-            
-        # ID повідомлення, якщо потрібно зберегти
-        message_id = None
-        if preserve_messages and "message_id" in user_state[chat_id]:
-            message_id = user_state[chat_id]["message_id"]
-            preserved_data["message_id"] = message_id
-            
-        # Видаляємо повідомлення, якщо є і не потрібно зберігати
-        if not preserve_messages and "message_id" in user_state[chat_id]:
-            try:
-                bot.delete_message(chat_id, user_state[chat_id]["message_id"])
-            except Exception as e:
-                print(f"Error deleting message: {e}")
-        
-        # Видаляємо запис користувача з user_state
-        del user_state[chat_id]
-        
-        # Відновлюємо збережені дані
-        if preserved_data:
-            user_state[chat_id] = preserved_data
-            debug_info = ", ".join([f"{k}={v}" for k, v in preserved_data.items()])
-            print(f"Debug: Preserved data for user {chat_id}: {debug_info}")
+    if chat_id not in user_state:
+        return
+    
+    # Store the parts we want to preserve
+    dict_type = user_state[chat_id].get("dict_type", "personal") if preserve_dict_type else None
+    shared_dict_id = user_state[chat_id].get("shared_dict_id") if preserve_dict_type else None
+    level = user_state[chat_id].get("level", "easy") if preserve_level else None
+    
+    # Store message IDs if needed
+    message_ids = None
+    if preserve_messages and "message_ids" in user_state[chat_id]:
+        message_ids = user_state[chat_id]["message_ids"]
+    
+    # Clear the state
+    user_state[chat_id] = {}
+    
+    # Restore preserved parts
+    if preserve_dict_type:
+        user_state[chat_id]["dict_type"] = dict_type
+        # Always preserve shared_dict_id when preserving dict_type
+        if shared_dict_id is not None:
+            user_state[chat_id]["shared_dict_id"] = shared_dict_id
+    
+    if preserve_level and level:
+        user_state[chat_id]["level"] = level
+    
+    if preserve_messages and message_ids:
+        user_state[chat_id]["message_ids"] = message_ids
 
 def get_user_params_path(chat_id):
     """Get path to user parameters file"""
@@ -95,107 +87,39 @@ def track_activity(chat_id):
     return update_streak(chat_id)
 
 def main_menu_keyboard(chat_id=None):
-    """Create main menu keyboard with dictionary selection"""
+    """Create main menu keyboard with localized buttons"""
     keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
     
-    # Add dictionary selector button
-    dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
-    shared_dict_id = user_state.get(chat_id, {}).get("shared_dict_id", None)
-    
-    print(f"Debug main_menu_keyboard: chat_id={chat_id}, dict_type={dict_type}, shared_dict_id={shared_dict_id}")
-    
-    # Додаємо кнопку "Додати слово" відповідно до типу словника і прав
-    add_word_button = False
-    
-    if dict_type == "personal":
-        # У персональному словнику всі можуть додавати слова
-        add_word_button = True
-    elif dict_type == "common" and chat_id == ADMIN_ID:
-        # У загальному словнику тільки адмін може додавати слова
-        add_word_button = True
-    elif dict_type == "shared":
-        # Перевіряємо, чи користувач є адміністратором цього спільного словника
-        try:
-            import db_manager
-            conn = db_manager.get_connection()
-            cursor = conn.cursor()
-            
-            # Отримуємо ID спільного словника, якщо його немає у стані
-            if not shared_dict_id:
-                cursor.execute("SELECT shared_dict_id FROM users WHERE chat_id = ?", (chat_id,))
-                result = cursor.fetchone()
-                if result and result[0]:
-                    shared_dict_id = result[0]
-                    # Оновлюємо стан користувача, щоб зберегти ID
-                    if chat_id in user_state:
-                        user_state[chat_id]["shared_dict_id"] = shared_dict_id
-            
-            # Якщо є shared_dict_id, перевіряємо, чи користувач є адміном
-            if shared_dict_id:
-                # Перевірка чи користувач є творцем словника
-                cursor.execute("""
-                    SELECT 1 FROM shared_dictionaries 
-                    WHERE id = ? AND created_by = ?
-                """, (shared_dict_id, chat_id))
-                is_creator = cursor.fetchone() is not None
-                
-                # Перевірка чи користувач є адміном словника
-                cursor.execute("""
-                    SELECT shared_dict_admin FROM users
-                    WHERE chat_id = ? AND shared_dict_id = ?
-                """, (chat_id, shared_dict_id))
-                admin_result = cursor.fetchone()
-                is_admin = admin_result and admin_result[0]
-                
-                # Якщо користувач адмін або творець, показуємо кнопку
-                add_word_button = is_creator or is_admin or chat_id == ADMIN_ID
-                
-            conn.close()
-        except Exception as e:
-            print(f"Error checking shared dictionary admin status: {e}")
-    
-    # Додаємо кнопку додавання слова, якщо потрібно
-    if add_word_button:
-        keyboard.add("➕ Додати нове слово")
-    
-    # Додаємо кнопки рівнів складності
-    keyboard.add("🟢 Легкий рівень", "🟠 Середній рівень", "🔴 Складний рівень")
-    
-    # Додаємо кнопки перемикання словників
-    if dict_type == "shared":
-        # Для спільного словника показуємо назву
-        try:
-            import db_manager
-            conn = db_manager.get_connection()
-            cursor = conn.cursor()
-            
-            # Отримуємо ID словника, якщо його немає в стані
-            if not shared_dict_id:
-                cursor.execute("SELECT shared_dict_id FROM users WHERE chat_id = ?", (chat_id,))
-                result = cursor.fetchone()
-                if result and result[0]:
-                    shared_dict_id = result[0]
-            
-            # Отримуємо назву словника
-            if shared_dict_id:
-                cursor.execute('SELECT name FROM shared_dictionaries WHERE id = ?', (shared_dict_id,))
-                result = cursor.fetchone()
-                dict_name = result[0] if result else "Невідомий"
-                
-                keyboard.add(
-                    f"👤 Персональний словник", 
-                    f"👥 Спільний словник ({dict_name})"
-                )
-            else:
-                keyboard.add("👤 Персональний словник", "👥 Спільний словник")
-            
-            conn.close()
-        except Exception as e:
-            print(f"Error getting shared dictionary name: {e}")
-            keyboard.add("👤 Персональний словник", "👥 Спільний словник")
+    # If chat_id is provided, use language-specific texts and customize for user
+    if chat_id:
+        from utils.language_utils import get_text
+        
+        # Always get dictionary type from database instead of relying on state
+        dict_type = get_user_dict_type(chat_id)
+        
+        # Get language for this user
+        import db_manager
+        language = db_manager.get_user_language(chat_id) or "uk"
+        
+        # Dictionary type button based on actual state from database
+        dict_button = get_text("shared_dictionary", chat_id) if dict_type == "shared" else get_text("personal_dictionary", chat_id)
+        
+        # First row - dictionary type and add word
+        keyboard.row(dict_button, get_text("add_new_word", chat_id))
+        
+        # Second row - difficulty levels (get names from localization)
+        keyboard.row(
+            get_text("easy_level", chat_id),
+            get_text("medium_level", chat_id),
+            get_text("hard_level", chat_id)
+        )
     else:
-        # Для персонального та загального словника
-        keyboard.add("👤 Персональний словник", "👥 Спільний словник")
+        # Fallback to Ukrainian if no chat_id provided
+        # Dictionary type button
+        keyboard.row("👤 Персональний словник", "➕ Додати нове слово")
+        
+        # Difficulty levels
+        keyboard.row("🟢 Легкий рівень", "🟠 Середній рівень", "🔴 Складний рівень")
     
     return keyboard
 
@@ -242,3 +166,72 @@ def language_selection_keyboard():
     keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
     keyboard.add("🇺🇦 Українська", "🇷🇺 Російська")
     return keyboard
+
+def get_user_dict_type(chat_id):
+    """Get user's dictionary type from the database (with fallback to state)"""
+    import db_manager
+    from config import user_state
+    
+    # First try to get from database
+    conn = db_manager.get_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Check if user has a shared dictionary set
+        cursor.execute("SELECT shared_dict_id FROM users WHERE chat_id = ?", (chat_id,))
+        result = cursor.fetchone()
+        
+        if result and result[0]:
+            dict_type = "shared"
+        else:
+            # Default to personal if no shared dict is set
+            dict_type = "personal"
+        
+        # Update the in-memory state to match database
+        if chat_id in user_state:
+            user_state[chat_id]["dict_type"] = dict_type
+            if dict_type == "shared" and result and result[0]:
+                user_state[chat_id]["shared_dict_id"] = result[0]
+            elif dict_type == "personal" and "shared_dict_id" in user_state[chat_id]:
+                del user_state[chat_id]["shared_dict_id"]
+        else:
+            # Initialize state if it doesn't exist
+            user_state[chat_id] = {"dict_type": dict_type}
+            if dict_type == "shared" and result and result[0]:
+                user_state[chat_id]["shared_dict_id"] = result[0]
+        
+        return dict_type
+    except Exception as e:
+        print(f"Error getting dictionary type from database: {e}")
+        # Fallback to in-memory state
+        return user_state.get(chat_id, {}).get("dict_type", "personal")
+    finally:
+        conn.close()
+
+def get_user_shared_dict_id(chat_id):
+    """Get user's shared dictionary ID from the database"""
+    import db_manager
+    from config import user_state
+    
+    # First try to get from database
+    conn = db_manager.get_connection()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute("SELECT shared_dict_id FROM users WHERE chat_id = ?", (chat_id,))
+        result = cursor.fetchone()
+        
+        shared_dict_id = result[0] if result and result[0] else None
+        
+        # Update the in-memory state
+        if shared_dict_id and chat_id in user_state:
+            user_state[chat_id]["shared_dict_id"] = shared_dict_id
+            user_state[chat_id]["dict_type"] = "shared"
+        
+        return shared_dict_id
+    except Exception as e:
+        print(f"Error getting shared dictionary ID from database: {e}")
+        # Fallback to in-memory state
+        return user_state.get(chat_id, {}).get("shared_dict_id")
+    finally:
+        conn.close()

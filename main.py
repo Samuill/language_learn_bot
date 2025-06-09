@@ -1,18 +1,21 @@
 # -*- coding: utf-8 -*-
-import time
-import requests
+import datetime
+import logging
 import os
-import sys
 import signal
-import traceback
-import telebot
-import sqlite3  # Додаємо імпорт sqlite3
-from config import bot, scheduler, user_state, DEBUG_MODE
-from scheduler import setup_scheduler
-import handlers  # Import handlers to register them
-from utils.language_utils import create_language_keyboard  # Додаємо імпорт для клавіатури мов
-from utils.logger import log_action, log_error
-from apscheduler.schedulers.base import SchedulerNotRunningError
+import sys
+import time
+import threading
+
+# Enable middleware support before initializing the bot
+import telebot.apihelper
+telebot.apihelper.ENABLE_MIDDLEWARE = True
+
+# Now import the bot and other modules
+from config import bot, scheduler
+import db_manager
+import handlers
+# Import everything else...
 
 # Шлях до PID файлу для запобігання запуску кількох екземплярів бота
 PID_FILE = "bot.pid"
@@ -160,92 +163,146 @@ def setup_scheduler():
         import traceback
         traceback.print_exc()
 
+def setup_logging():
+    """Set up logging configuration"""
+    # Create logs directory if it doesn't exist
+    logs_dir = "logs"
+    if not os.path.exists(logs_dir):
+        os.makedirs(logs_dir)
+        
+    # Set up file handler for logging
+    log_file = os.path.join(logs_dir, "debug.log")
+    file_handler = logging.FileHandler(log_file, encoding='utf-8')
+    file_handler.setLevel(logging.DEBUG)
+    
+    # Set up formatter
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    file_handler.setFormatter(formatter)
+    
+    # Get logger and add handler
+    logger = logging.getLogger()
+    logger.addHandler(file_handler)
+    logger.setLevel(logging.DEBUG)
+    
+    print(f"Debug logging enabled. Logs will be saved to {log_file}")
+    
+    # Setup console logger for important messages
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
+    
+    # Set up comprehensive interaction logging middleware
+    try:
+        from logging_middleware import setup_logging_middleware
+        setup_logging_middleware()
+        print("Comprehensive logging middleware enabled")
+    except Exception as e:
+        print(f"Error setting up logging middleware: {e}")
+        import traceback
+        traceback.print_exc()
+
 def main():
     """Main function to run the bot"""
-    # Перевірка, чи вже запущено екземпляр бота
-    if not check_instance():
-        return
-    
-    # Реєстрація обробників сигналів для правильного завершення
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
-    
-    # При виході з програми видаляємо PID файл
-    import atexit
-    atexit.register(cleanup)
-    
-    # Скидаємо всі активні словники до персонального
-    reset_dictionaries()
-    
-    # Перевіряємо доступ до бази даних
     try:
-        import db_manager
-        conn = db_manager.get_connection()
-        print(f"Successfully connected to database at {db_manager.DB_PATH}")
+        # Import required modules at the top
+        import traceback  # Add explicit import of traceback
+        import db_manager  # Ensure db_manager is imported
+        import datetime
         
-        # Міграція та виправлення даних спільних словників
-        try:
-            from migration_tools import migrate_shared_dictionary_users, fix_dictionary_admin_status
-            migrate_shared_dictionary_users()
-            fix_dictionary_admin_status()
-        except Exception as e:
-            print(f"Error during shared dictionary migration: {e}")
-            import traceback as tb  # Перейменовуємо імпорт, щоб уникнути конфлікту
-            tb.print_exc()
+        # Initialize logging
+        import logging
+        logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
         
-        conn.close()
+        # Load user states from database to ensure consistency
+        print("Loading user states from database...")
+        db_manager.update_user_state_from_db()
+        
+        # Initialize database
+        print("Initializing database...")
+        # Use create_database instead of setup_database
+        db_manager.create_database()
+        
+        # Перевірка, чи вже запущено екземпляр бота
+        if not check_instance():
+            return
+        
+        # Реєстрація обробників сигналів для правильного завершення
+        signal.signal(signal.SIGINT, signal_handler)
+        signal.signal(signal.SIGTERM, signal_handler)
+        
+        # При виході з програми видаляємо PID файл
+        import atexit
+        atexit.register(cleanup)
+        
+        # Скидаємо всі активні словники до персонального
+        reset_dictionaries()
+        
+        # Завантаження станів користувачів з бази даних для забезпечення узгодженості
+        print("Loading user states from database...")
+        db_manager.update_user_state_from_db()
+        
+        # Додамо логування для відстеження типів словників при старті
+        print("Initializing user dictionaries state:")
+        for chat_id, state in user_state.items():
+            dict_type = state.get("dict_type", "personal")
+            print(f"User {chat_id} using dictionary type: {dict_type}")
+        
+        # Setup the scheduler
+        setup_scheduler()
+        
+        # Setup debug logging
+        if DEBUG_MODE:
+            from debug_logger import log_error, log_dict_operation
+            print(f"Debug logging enabled. Logs will be saved to logs/debug.log")
+        
+        # Register command handlers
+        bot.set_my_commands([
+            telebot.types.BotCommand("/start", "Start the bot"),
+            telebot.types.BotCommand("/language", "Change language")
+        ])
+        
+        # Setup enhanced logging
+        setup_logging()
+        
+        print(f"Bot started at {time.strftime('%Y-%m-%d %H:%M:%S')}...")
+        print("Press Ctrl+C to stop the bot")
+        
+        # Start polling in a try-except block
+        while True:
+            try:
+                bot.polling(none_stop=True, interval=1, timeout=60)
+                break  # If polling exits normally, break the loop
+            except requests.exceptions.ConnectionError:
+                print("Connection error. Retrying in 5 seconds...")
+                time.sleep(5)
+            except requests.exceptions.ReadTimeout:
+                print("Read timeout. Retrying in 5 seconds...")
+                time.sleep(5)
+            except Exception as e:
+                print(f"Critical error: {e}")
+                traceback.print_exc()
+                if DEBUG_MODE:
+                    from debug_logger import log_error
+                    log_error(e, "Critical error in main loop")
+                time.sleep(5)
     except Exception as e:
-        print(f"Error connecting to database: {e}")
+        log_error(f"Critical error: {e}", "Critical error in main loop")
+        print(f"Critical error: {e}")
+        import traceback  # Import traceback here as well for redundancy
         traceback.print_exc()
-    
-    # Додамо логування для відстеження типів словників при старті
-    print("Initializing user dictionaries state:")
-    for chat_id, state in user_state.items():
-        dict_type = state.get("dict_type", "personal")
-        print(f"User {chat_id} using dictionary type: {dict_type}")
-    
-    # Setup the scheduler
-    setup_scheduler()
-    
-    # Setup debug logging
-    if DEBUG_MODE:
-        from debug_logger import log_error, log_dict_operation
-        print(f"Debug logging enabled. Logs will be saved to logs/debug.log")
-    
-    # Register command handlers
-    bot.set_my_commands([
-        telebot.types.BotCommand("/start", "Start the bot"),
-        telebot.types.BotCommand("/language", "Change language")
-    ])
-    
-    print(f"Bot started at {time.strftime('%Y-%m-%d %H:%M:%S')}...")
-    print("Press Ctrl+C to stop the bot")
-    
-    # Start polling in a try-except block
-    while True:
-        try:
-            bot.polling(none_stop=True, interval=1, timeout=60)
-            break  # If polling exits normally, break the loop
-        except requests.exceptions.ConnectionError:
-            print("Connection error. Retrying in 5 seconds...")
-            time.sleep(5)
-        except requests.exceptions.ReadTimeout:
-            print("Read timeout. Retrying in 5 seconds...")
-            time.sleep(5)
-        except Exception as e:
-            print(f"Critical error: {e}")
-            traceback.print_exc()
-            if DEBUG_MODE:
-                from debug_logger import log_error
-                log_error(e, "Critical error in main loop")
-            time.sleep(5)
 
 if __name__ == "__main__":
     try:
-        print("Bot is starting...")
-        main()  # Call the main function instead of trying to poll directly
+        # Initialize database before starting the bot
+        import db_manager
+        # Use create_database instead of setup_database
+        db_manager.create_database()
+        print("Database initialized successfully")
+        main()
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error setting up database: {e}")
+        import traceback  # Import traceback here for redundancy
         traceback.print_exc()
 
 # -*- coding: utf-8 -*-

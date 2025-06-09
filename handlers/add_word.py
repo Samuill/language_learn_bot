@@ -14,7 +14,8 @@ from utils.language_utils import get_text
 from utils.input_handlers import is_system_command, safe_next_step_handler, sanitize_user_input
 from utils.logger import log_handler, log_action, extract_user_info
 from utils.bot_utils import send_message_with_logging
-
+import db_manager
+import traceback
 @bot.message_handler(func=lambda message: message.text == get_text("add_new_word", message.chat.id) or message.text == "➕ Додати нове слово")
 @log_handler
 def add_word(message):
@@ -75,16 +76,28 @@ def handle_translation(message):
         # Отримання мови перекладу
         language = "uk"  # Default
         if dict_type == "personal":
-            file_path, language = get_user_file_path(chat_id)
-            if not file_path:
-                bot.send_message(chat_id, get_text("language_not_selected", chat_id, "❌ Мову перекладу не обрано. Спробуйте /start."))
-                return
+            try:
+                file_path, language = get_user_file_path(chat_id)
+                if not file_path:
+                    bot.send_message(chat_id, get_text("language_not_selected", chat_id, "❌ Мову перекладу не обрано. Спробуйте /start."))
+                    return
+            except Exception as e:
+                print(f"Error getting file path: {e}")
+                language = db_manager.get_user_language(chat_id) or "uk"
         else:
-            from storage import get_common_file_path
-            _, language = get_common_file_path()
+            try:
+                from storage import get_common_file_path
+                _, language = get_common_file_path()
+            except Exception as e:
+                print(f"Error getting common file path: {e}")
+                language = "uk"  # Default to Ukrainian
 
         # Отримання перекладу
-        translation = translator.translate(word, src="de", dest=language).text
+        try:
+            translation = translator.translate(word, src="de", dest=language).text
+        except Exception as e:
+            print(f"Translation error: {e}")
+            translation = None
 
         if translation:
             user_state[chat_id].update({
@@ -115,6 +128,7 @@ def handle_translation(message):
             
     except Exception as e:
         print(f"Error in handle_translation: {e}")
+        traceback.print_exc()
         bot.send_message(
             chat_id, 
             get_text("error_occurred", chat_id),

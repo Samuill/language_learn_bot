@@ -7,27 +7,36 @@
 import random
 import telebot
 import pandas as pd
+import traceback
+import db_manager  # Add explicit import of db_manager
 from config import bot, user_state
-import db_manager
 from dictionary import return_to_appropriate_menu
-from utils.language_utils import get_text, is_command  # add is_command here
+from utils.language_utils import get_text, is_command
+from utils import clear_state
 
 @bot.message_handler(func=lambda message: is_command(message, "learning_new_words"))
 def learn_words(message):
     """Handler for learning new words activity"""
     chat_id = message.chat.id
     
-    # Get the current dictionary type and shared dictionary ID
-    dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
-    shared_dict_id = user_state.get(chat_id, {}).get("shared_dict_id", None)
+    # Always get dictionary info from database rather than state
+    dict_type, shared_dict_id, _ = db_manager.get_user_dictionary_info(chat_id)
+    
+    # Update in-memory state to match database
+    if chat_id in user_state:
+        user_state[chat_id]["dict_type"] = dict_type
+        if dict_type == "shared" and shared_dict_id:
+            user_state[chat_id]["shared_dict_id"] = shared_dict_id
+        elif "shared_dict_id" in user_state[chat_id]:
+            del user_state[chat_id]["shared_dict_id"]
     
     try:
-        # Get dataframe from the appropriate dictionary - FIX THE DICTIONARY ACCESS
+        # Get dataframe from the appropriate dictionary
         if dict_type == "shared" and shared_dict_id:
             # For shared dictionary
             df = db_manager.get_shared_dictionary_words(chat_id, shared_dict_id)
         elif dict_type == "common":
-            # For common dictionary - get directly from database instead of deprecated get_dataframe
+            # For common dictionary
             df = db_manager.get_user_words(chat_id, "common")
             print(f"Got common dictionary for user {chat_id}: {len(df)} words")
         else:
@@ -36,8 +45,20 @@ def learn_words(message):
             print(f"Got personal dictionary for user {chat_id}: {len(df)} words")
         
         if df is None or df.empty:
-            dict_name = "спільному словнику" if dict_type == "shared" else "загальному словнику" if dict_type == "common" else "персональному словнику"
-            bot.send_message(chat_id, f"📭 У {dict_name} ще немає доданих слів.")
+            dict_type_text = ""
+            if dict_type == "shared":
+                # Get the shared dictionary name
+                conn = db_manager.get_connection()
+                cursor = conn.cursor()
+                cursor.execute("SELECT name FROM shared_dictionaries WHERE id = ?", (shared_dict_id,))
+                result = cursor.fetchone()  # Store the result first
+                dict_name = result[0] if result else get_text("shared_dictionary", chat_id)  # Use stored result
+                conn.close()
+                dict_type_text = f"«{dict_name}»"
+            else:
+                dict_type_text = get_text(f"{dict_type}_dictionary", chat_id)
+                
+            bot.send_message(chat_id, f"{get_text('no_words_in_dictionary', chat_id)} ({dict_type_text})")
             return
             
         # Start learning activity
@@ -51,16 +72,15 @@ def learn_words(message):
         import traceback
         traceback.print_exc()
         
-        # Replace hardcoded Ukrainian string with localized text
-        from utils.language_utils import get_localized_text
-        error_message = get_localized_text("error_learning_activity", chat_id)
+        # Replace get_localized_text with standard get_text
+        error_message = get_text("error_learning_activity", chat_id, "Сталася помилка при вивченні слів")
         bot.send_message(chat_id, error_message)
 
 def start_learning(chat_id, df):
     """Start learning new words activity"""
     # Перевірка структури DataFrame
     if df.empty:
-        bot.send_message(chat_id, "📭 У вашому словнику поки немає слів для вивчення.")
+        bot.send_message(chat_id, get_text("no_words_in_dictionary", chat_id))
         return False
     
     # Перевіряємо наявність потрібних колонок
@@ -226,8 +246,8 @@ def repeat_words(message):
             print(f"Got personal dictionary for repetition: {len(df)} words")
         
         if df is None or df.empty:
-            dict_name = "спільному словнику" if dict_type == "shared" else "загальному словнику" if dict_type == "common" else "персональному словнику"
-            bot.send_message(chat_id, f"📭 У {dict_name} ще немає доданих слів.")
+            dict_name = get_text("shared_dictionary", chat_id) if dict_type == "shared" else get_text("common_dictionary", chat_id, "загальному словнику") if dict_type == "common" else get_text("personal_dictionary", chat_id)
+            bot.send_message(chat_id, f"{get_text('in', chat_id)} {dict_name} {get_text('no_words', chat_id)}")
             return
             
         # Use the centralized start_repetition function
@@ -297,18 +317,18 @@ def handle_answer(call):
             try:
                 word_id = db_manager.get_word_id_by_german(word)
                 if word_id:
-                    # Единый подход к рейтингам для легкого уровня
+                    # Единый підхід до рейтингів для легкого рівня
                     rating_change = -0.1 if is_correct else 0.1
                     db_manager.update_word_rating_shared_dict(chat_id, word_id, rating_change, shared_dict_id)
                     print(f"Updated rating for shared dict word {word_id}: {rating_change}")
             except Exception as e:
                 print(f"Error updating shared dict rating: {e}")
         else:
-            # Для личного словаря
+            # Для особистого словника
             from storage import get_dataframe, save_dataframe, get_user_file_path
             df = get_dataframe(chat_id)
             
-            # Проверяем наличие нужных колонок
+            # Перевіряємо наявність потрібних колонок
             if 'word' in df.columns and 'priority' in df.columns:
                 mask = df['word'] == word
                 if mask.any():
@@ -344,44 +364,34 @@ def learn_articles(message):
 
 def start_article_activity(chat_id):
     """Start learning articles activity"""
-    # Спочатку завжди перевіряємо поточний тип словника в стані користувача
-    dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
-    shared_dict_id = user_state.get(chat_id, {}).get("shared_dict_id", None)
+    # Always check database for current dictionary type
+    dict_type, shared_dict_id, _ = db_manager.get_user_dictionary_info(chat_id)
+    
+    # Get user language directly from database to ensure accuracy
+    language = db_manager.get_user_language(chat_id) or "uk"
+    
+    # Update in-memory state to match database
+    if chat_id in user_state:
+        user_state[chat_id]["dict_type"] = dict_type
+        user_state[chat_id]["language"] = language  # Always set language in state
+        
+        if dict_type == "shared" and shared_dict_id:
+            user_state[chat_id]["shared_dict_id"] = shared_dict_id
+        elif "shared_dict_id" in user_state[chat_id]:
+            del user_state[chat_id]["shared_dict_id"]
+    else:
+        user_state[chat_id] = {
+            "dict_type": dict_type,
+            "language": language  # Always set language when creating new state
+        }
+        if dict_type == "shared" and shared_dict_id:
+            user_state[chat_id]["shared_dict_id"] = shared_dict_id
     
     print(f"Debug: Starting article activity for user {chat_id} with dict_type={dict_type}, shared_dict_id={shared_dict_id}")
-    
-    # Для спільного словника, перевіряємо, чи є ID словника в БД, якщо немає в стані
-    if dict_type == "shared" and not shared_dict_id:
-        try:
-            conn = db_manager.get_connection()
-            cursor = conn.cursor()
-            cursor.execute("SELECT shared_dict_id FROM users WHERE chat_id = ?", (chat_id,))
-            result = cursor.fetchone()
-            conn.close()
-            
-            if result and result[0]:
-                shared_dict_id = result[0]
-                # Оновлюємо стан користувача
-                if chat_id in user_state:
-                    user_state[chat_id]["shared_dict_id"] = shared_dict_id
-                print(f"Retrieved shared_dict_id={shared_dict_id} from database for user {chat_id}")
-            else:
-                # Якщо немає активного спільного словника, перемикаємо на персональний
-                dict_type = "personal"
-                if chat_id in user_state:
-                    user_state[chat_id]["dict_type"] = "personal"
-                print(f"No active shared dictionary found, switching to personal dictionary")
-        except Exception as e:
-            print(f"Error retrieving shared_dict_id: {e}")
-            dict_type = "personal"  # Перемикаємо на персональний в разі помилки
-            if chat_id in user_state:
-                user_state[chat_id]["dict_type"] = "personal"
     
     try:
         # Отримуємо останнє слово, яке було показано, щоб не повторювати його
         last_word_id = user_state.get(chat_id, {}).get("last_article_word_id", None)
-        
-        import db_manager
         conn = db_manager.get_connection()
         cursor = conn.cursor()
         
@@ -393,8 +403,8 @@ def start_article_activity(chat_id):
             if not has_words:
                 # Якщо таблиця порожня або тільки створена
                 from dictionary import return_to_appropriate_menu
-                bot.send_message(chat_id, "📭 У персональному словнику ще немає доданих слів.")
-                return_to_appropriate_menu(chat_id, False, "У словнику немає слів з артиклями для вивчення.")
+                # DON'T send message here - let return_to_appropriate_menu do it
+                return_to_appropriate_menu(chat_id, False, get_text("no_words_in_dictionary", chat_id))
                 return False
         
         # Отримуємо всі слова з артиклями, виключаючи артикль з ID=4 (порожній) 
@@ -490,13 +500,30 @@ def start_article_activity(chat_id):
         conn.close()
         
         if not results:
+            # IMPORTANT: Preserve shared_dict_id when sending error message
+            preserved_dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
+            preserved_shared_id = user_state.get(chat_id, {}).get("shared_dict_id")
+            preserved_level = user_state.get(chat_id, {}).get("level", "easy")
+            preserved_language = language  # Always preserve language
+            
             from dictionary import return_to_appropriate_menu
-            bot.send_message(chat_id, "📭 У словнику немає слів з артиклями для вивчення.")
-            return_to_appropriate_menu(chat_id, False, "У словнику немає слів з артиклями для вивчення.")
+            
+            # Use clear_state with proper preservation
+            clear_state(chat_id, preserve_dict_type=True, preserve_messages=False)
+            
+            # Manually restore shared_dict_id if it existed
+            if chat_id in user_state:
+                user_state[chat_id]["shared_dict_id"] = preserved_shared_id if preserved_shared_id else None
+                user_state[chat_id]["dict_type"] = preserved_dict_type
+                user_state[chat_id]["level"] = preserved_level
+                user_state[chat_id]["language"] = preserved_language  # Restore language
+                print(f"Debug: Preserved data for user {chat_id}: dict_type={preserved_dict_type}, shared_dict_id={preserved_shared_id}, language={preserved_language}")
+            
+            # Only send the message once through return_to_appropriate_menu
+            return_to_appropriate_menu(chat_id, False, get_text("no_words_with_articles", chat_id, "У словнику немає слів з артиклями для вивчення."))
             return False
             
         # Вибираємо випадкове слово з результатів
-        import random
         result = random.choice(results)
         print(f"Debug: Selected result: {result}")
         
@@ -548,10 +575,8 @@ def start_article_activity(chat_id):
         
         user_state[chat_id]["message_id"] = sent_message.message_id
         return True
-        
     except Exception as e:
         print(f"Error in start_article_activity: {e}")
-        import traceback
         traceback.print_exc()
         bot.send_message(chat_id, get_text("error_occupated", chat_id))
         return False

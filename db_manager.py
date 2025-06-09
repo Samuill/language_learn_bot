@@ -110,67 +110,57 @@ def initialize_user(chat_id, language):
     return True
 
 def set_user_language(chat_id, language):
-    """
-    Set or update user language
-    
-    Args:
-        chat_id: User's chat ID
-        language: Language code (en, uk, ru, tr, ar)
-        
-    Returns:
-        bool: True if successful, False otherwise
-    """
-    print(f"DB: Setting language for user {chat_id} to {language}")
-    
-    # Validate inputs
-    if not chat_id or not language:
-        print(f"DB ERROR: Invalid input - chat_id: {chat_id}, language: {language}")
-        return False
-    
+    """Set language for a user"""
     try:
+        # Ensure chat_id is an integer
+        chat_id = int(chat_id)
+        
+        # Print a debug message
+        print(f"DB: Setting language for user {chat_id} to {language}")
+        
+        # Get a connection
         conn = get_connection()
         cursor = conn.cursor()
         
-        # For debugging, output the database structure
-        try:
-            cursor.execute("PRAGMA table_info(users)")
-            columns = cursor.fetchall()
-            print(f"DB DEBUG: Users table columns: {columns}")
-        except Exception as e:
-            print(f"DB ERROR checking table structure: {e}")
+        # Check if the user exists
+        cursor.execute("SELECT COUNT(*) FROM users WHERE chat_id = ?", (chat_id,))
+        user_exists = cursor.fetchone()[0] > 0
         
-        # Check if user exists
-        cursor.execute('SELECT 1 FROM users WHERE chat_id = ?', (chat_id,))
-        user_exists = cursor.fetchone() is not None
+        # Debug output - show table structure
+        cursor.execute("PRAGMA table_info(users)")
+        columns = cursor.fetchall()
+        print(f"DB DEBUG: Users table columns: {columns}")
         
+        # Update or insert language
         if user_exists:
             print(f"DB: User {chat_id} exists, updating language to {language}")
-            cursor.execute('UPDATE users SET language = ? WHERE chat_id = ?', (language, chat_id))
+            cursor.execute("UPDATE users SET language = ? WHERE chat_id = ?", (language, chat_id))
         else:
-            print(f"DB: User {chat_id} doesn't exist, creating new user with language {language}")
-            cursor.execute('INSERT INTO users (chat_id, language) VALUES (?, ?)', (chat_id, language))
-            create_user_table(chat_id)
+            print(f"DB: User {chat_id} does not exist, inserting with language {language}")
+            cursor.execute("INSERT INTO users (chat_id, language) VALUES (?, ?)", (chat_id, language))
         
-        # Check update success
-        rows_affected = cursor.rowcount
+        # Commit and close
+        conn.commit()
+        rows_affected = conn.total_changes
         print(f"DB: Updated {rows_affected} rows")
         
-        conn.commit()
-        
-        # Verify update
-        cursor.execute('SELECT language FROM users WHERE chat_id = ?', (chat_id,))
+        # Verify language was set correctly
+        cursor.execute("SELECT language FROM users WHERE chat_id = ?", (chat_id,))
         result = cursor.fetchone()
-        if result:
-            print(f"DB: Verified language for user {chat_id}: {result[0]}")
-            conn.close()
-            return True
+        print(f"DB: Verified language for user {chat_id}: {result[0] if result else 'None'}")
         
-        print(f"DB: Could not verify language update for user {chat_id}")
         conn.close()
-        return False
         
+        # Also clear the language cache in language_utils if it exists
+        try:
+            from utils.language_utils import clear_language_cache
+            clear_language_cache(chat_id)
+        except ImportError:
+            pass
+            
+        return True
     except Exception as e:
-        print(f"DB ERROR setting language: {e}")
+        print(f"Error setting language: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -1068,3 +1058,75 @@ def get_case_explanation(case, language="uk"):
     }
     
     return explanations.get(case, {}).get(language, explanations[case]["uk"])
+
+def get_user_dictionary_info(chat_id):
+    """Get user's dictionary type and shared dictionary ID from the database"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Check if user has a shared dictionary set
+        cursor.execute("""
+            SELECT shared_dict_id, shared_dict_admin 
+            FROM users 
+            WHERE chat_id = ?
+        """, (chat_id,))
+        
+        result = cursor.fetchone()
+        
+        if not result:
+            # User not found in database
+            return "personal", None, False
+        
+        shared_dict_id, is_admin = result
+        
+        if shared_dict_id:
+            # User has a shared dictionary set
+            return "shared", shared_dict_id, bool(is_admin)
+        else:
+            # User has no shared dictionary
+            return "personal", None, False
+    except Exception as e:
+        print(f"Error getting user dictionary info: {e}")
+        return "personal", None, False
+    finally:
+        conn.close()
+
+def update_user_state_from_db():
+    """Update all in-memory user states from database"""
+    from config import user_state
+    
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Get all users with their dictionary settings
+        cursor.execute("""
+            SELECT chat_id, language, shared_dict_id, shared_dict_admin
+            FROM users
+        """)
+        
+        for chat_id, language, shared_dict_id, is_admin in cursor.fetchall():
+            # Initialize user state if it doesn't exist
+            if chat_id not in user_state:
+                user_state[chat_id] = {}
+            
+            # Set language
+            if language:
+                user_state[chat_id]["language"] = language
+            
+            # Set dictionary type and shared_dict_id
+            if shared_dict_id:
+                user_state[chat_id]["dict_type"] = "shared"
+                user_state[chat_id]["shared_dict_id"] = shared_dict_id
+                user_state[chat_id]["is_admin"] = bool(is_admin)
+            else:
+                user_state[chat_id]["dict_type"] = "personal"
+                if "shared_dict_id" in user_state[chat_id]:
+                    del user_state[chat_id]["shared_dict_id"]
+        
+        print(f"Updated in-memory state for {len(user_state)} users from database")
+    except Exception as e:
+        print(f"Error updating user states from database: {e}")
+    finally:
+        conn.close()

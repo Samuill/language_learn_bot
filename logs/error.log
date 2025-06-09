@@ -33,3 +33,10 @@
 [2025-06-09 09:03:19.192] ERROR: Scheduler is not running | Context: Critical error in main loop
 [2025-06-09 09:03:43.247] ERROR: Scheduler is not running | Context: Critical error in main loop
 [2025-06-09 09:09:01.150] ERROR: Scheduler is not running | Context: Critical error in main loop
+[2025-06-09 10:07:46.968] ERROR: Critical error: local variable 'traceback' referenced before assignment | Context: Critical error in main loop
+[2025-06-09 10:46:18.110] ERROR: name 'db_manager' is not defined | Context: Critical error in main loop
+[2025-06-09 10:46:24.125] ERROR: name 'db_manager' is not defined | Context: Critical error in main loop
+[2025-06-09 10:46:51.010] ERROR: cannot import name 'get_localized_text' from 'utils.language_utils' (C:\Users\whyfl\Desktop\2025-05-27_15-35-46\utils\language_utils.py) | Context: Critical error in main loop
+[2025-06-09 11:30:02.017] ERROR: 'dict' object has no attribute 'text' | Context: Critical error in main loop
+[2025-06-09 11:30:23.324] ERROR: 'dict' object has no attribute 'text' | Context: Critical error in main loop
+[2025-06-09 11:30:29.344] ERROR: 'dict' object has no attribute 'text' | Context: Critical error in main loop

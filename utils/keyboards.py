@@ -64,42 +64,44 @@ def easy_level_keyboard(chat_id=None):
     return keyboard
 
 def medium_level_keyboard(chat_id=None):
-    """Create keyboard for medium level activities with localized buttons"""
-    keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
+    """Medium level activity keyboard"""
+    markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
     
+    # Use localized button texts when chat_id is provided
     if chat_id:
-        keyboard.row(
-            get_text("choose_correct_spelling", chat_id),
-            get_text("fill_in_gaps", chat_id)
-        )
-        keyboard.row(get_text("learn_possessive_pronouns", chat_id))
-        keyboard.row(get_text("back_to_main_menu", chat_id))
+        from utils.language_utils import get_text
+        markup.row(get_text("choose_correct_spelling", chat_id), 
+                  get_text("fill_in_gaps", chat_id))
+        markup.row(get_text("learn_possessive_pronouns", chat_id) + " (" + get_text("medium_level", chat_id) + ")")
+        markup.row(get_text("back_to_main_menu", chat_id))
     else:
-        # Fallback на українську
-        keyboard.row("🔤 Вибір правильного написання", "📝 Заповніть пропуски")
-        keyboard.row("🧩 Вивчати присвійні займенники")
-        keyboard.row("↩️ Повернутися до головного меню")
+        # Fallback to default Ukrainian
+        markup.row("🔤 Вибір правильного написання", "📝 Заповніть пропуски")
+        markup.row("🧩 Вивчати присвійні займенники (середній)")
+        markup.row("↩️ Повернутися до головного меню")
     
-    return keyboard
+    return markup
 
 def hard_level_keyboard(chat_id=None):
-    """Create keyboard for hard level activities with localized buttons"""
-    keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
+    """Hard level activity keyboard"""
+    markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
     
+    # Use localized button texts when chat_id is provided
     if chat_id:
-        keyboard.row(
-            get_text("advanced_game", chat_id),
-            get_text("word_typing", chat_id)
-        )
-        keyboard.row(get_text("article_typing", chat_id))
-        keyboard.row(get_text("back_to_main_menu", chat_id))
+        from utils.language_utils import get_text
+        markup.row(get_text("advanced_game", chat_id))
+        markup.row(get_text("word_typing", chat_id), 
+                  get_text("article_typing", chat_id))
+        markup.row(get_text("learn_possessive_pronouns", chat_id) + " (" + get_text("hard_level", chat_id) + ")")
+        markup.row(get_text("back_to_main_menu", chat_id))
     else:
-        # Fallback на українську
-        keyboard.row("🧩 Складна гра", "📝 Введення слів")
-        keyboard.row("🏷️ Введення артиклів")
-        keyboard.row("↩️ Повернутися до головного меню")
+        # Fallback to default Ukrainian
+        markup.row("🧩 Складна гра")
+        markup.row("📝 Введення слів", "🏷️ Введення артиклів")
+        markup.row("🧩 Вивчати присвійні займенники (складний)")
+        markup.row("↩️ Повернутися до головного меню")
     
-    return keyboard
+    return markup
 
 def shared_dictionary_keyboard(chat_id=None):
     """Create keyboard for shared dictionary options with localized buttons"""

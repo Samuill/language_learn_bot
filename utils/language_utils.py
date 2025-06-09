@@ -16,6 +16,9 @@ LOCALES_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "locales"
 # Кеш локалізацій для оптимізації
 _localization_cache = {}
 
+# Add a language cache to reduce database calls
+_language_cache = {}
+
 # Define language flags and codes for easier identification
 LANGUAGE_FLAGS = {
     "🇬🇧": "en",
@@ -100,26 +103,71 @@ def clear_localization_cache():
     _localization_cache = {}
 
 def get_user_language(chat_id):
-    """Get user's language code from database or state
-    
-    Args:
-        chat_id: User's chat ID
+    """Get user's language from database with caching"""
+    # Check cache first
+    if chat_id in _language_cache:
+        return _language_cache[chat_id]
         
-    Returns:
-        str: Language code (e.g. 'uk', 'en', 'ru')
-    """
-    # Спочатку перевіряємо кеш стану користувача
-    language = user_state.get(chat_id, {}).get("language")
-        
-    # Якщо немає в кеші, беремо з бази даних
-    if not language:
-        try:
-            language = db_manager.get_user_language(chat_id)
-        except Exception as e:
-            print(f"Error getting user language: {e}")
-            language = "uk"  # Запасний варіант
+    # Otherwise query database
+    print(f"[LANG] [User {chat_id}] GET_LANG: Retrieving language from database")
+    import db_manager  # Import here to avoid circular imports
+    conn = db_manager.get_connection()
+    cursor = conn.cursor()
     
-    return language
+    cursor.execute('SELECT language FROM users WHERE chat_id = ?', (chat_id,))
+    result = cursor.fetchone()
+    conn.close()
+    
+    if result:
+        language = result[0]
+        print(f"[LANG] [User {chat_id}] GET_LANG_RESULT: Found language: {language}")
+        # Store in cache
+        _language_cache[chat_id] = language
+        return language
+    
+    # Default to Ukrainian
+    print(f"[LANG] [User {chat_id}] GET_LANG_RESULT: No language found, defaulting to 'uk'")
+    return "uk"
+
+def clear_language_cache(chat_id=None):
+    """Clear language cache for a specific user or all users"""
+    global _language_cache
+    if chat_id is not None:
+        if chat_id in _language_cache:
+            del _language_cache[chat_id]
+            print(f"[LANG] [User {chat_id}] Language cache cleared")
+    else:
+        _language_cache = {}
+        print("[LANG] All language cache cleared")
+
+# Add this as an alias to maintain compatibility 
+def get_localized_text(key, chat_id, default=""):
+    """Alias for get_text for backward compatibility"""
+    return get_text(key, chat_id, default)
+
+def set_user_language(chat_id, language):
+    """Set user's language in database and update cache"""
+    # Clear cache for this user to force a refresh
+    clear_language_cache(chat_id)
+    
+    # Update cache
+    _language_cache[chat_id] = language
+    
+    try:
+        # Update language in database
+        conn = db_manager.get_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            INSERT INTO users (chat_id, language)
+            VALUES (?, ?)
+            ON CONFLICT(chat_id) DO UPDATE SET language = ?
+        ''', (chat_id, language, language))
+        
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Error setting user language: {e}")
 
 def get_text(key, chat_id=None, default=None, **kwargs):
     """Get localized text by key and format it with provided arguments

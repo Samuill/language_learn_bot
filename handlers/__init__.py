@@ -32,3 +32,4 @@ from .admin import test_fire, stop_bot
 
 # Додаткові імпорти для зворотньої сумісності
 from .articles import learn_articles_handler
+from .edit_word import *  # Import edit word handlers

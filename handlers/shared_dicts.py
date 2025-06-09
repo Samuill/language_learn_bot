@@ -12,6 +12,7 @@ from utils.state_helpers import save_message_id
 import db_manager
 from utils.language_utils import get_text
 from utils.input_handlers import safe_next_step_handler, sanitize_user_input
+from utils.console_logger import log_menu_transition, log_displayed_buttons, MENU_MAIN, MENU_SHARED
 
 # Updated handler to work with all localized button texts
 @bot.message_handler(func=lambda message: message.text.startswith("👥 ") or 
@@ -19,6 +20,10 @@ from utils.input_handlers import safe_next_step_handler, sanitize_user_input
 def shared_dictionary_menu(message):
     """Show shared dictionary menu"""
     chat_id = message.chat.id
+    
+    # Логируем переход в меню общих словарей
+    from_menu = user_state.get(chat_id, {}).get("current_menu", "UNKNOWN")
+    log_menu_transition(chat_id, from_menu, MENU_SHARED, f"Button: {message.text}")
     
     # Ініціалізуємо таблиці для спільних словників, якщо вони не існують
     db_manager.create_shared_dictionary_tables()
@@ -31,9 +36,15 @@ def shared_dictionary_menu(message):
     
     # Оновлюємо тип словника у стані користувача
     if chat_id in user_state:
-        user_state[chat_id].update({"dict_type": "shared"})
+        user_state[chat_id].update({
+            "dict_type": "shared", 
+            "current_menu": MENU_SHARED
+        })
     else:
-        user_state[chat_id] = {"dict_type": "shared"}
+        user_state[chat_id] = {
+            "dict_type": "shared", 
+            "current_menu": MENU_SHARED
+        }
     
     # Показуємо інформацію про поточний словник, якщо є
     if result and result[0]:
@@ -46,20 +57,35 @@ def shared_dictionary_menu(message):
         dict_name = dict_info[0] if dict_info else get_text("unknown_dict", chat_id)
         
         # Повідомляємо про поточний активний словник
+        menu_message = get_text("selected_dict", chat_id) + f"<b>{dict_name}</b>\n\n" + get_text("select_activity", chat_id)
+        
+        keyboard = shared_dictionary_keyboard(chat_id)
+        
+        # Логируем отображаемые кнопки
+        button_texts = [button.text for row in keyboard.keyboard for button in row]
+        log_displayed_buttons(chat_id, button_texts, MENU_SHARED)
+        
         sent_message = bot.send_message(
             chat_id,
-            get_text("selected_dict", chat_id) +
-            f"<b>{dict_name}</b>\n\n"+
-            get_text("select_activity", chat_id),
+            menu_message,
             parse_mode="HTML",
-            reply_markup=shared_dictionary_keyboard(chat_id)  # Pass chat_id for localized buttons
+            reply_markup=keyboard
         )
     else:
         # Просто показуємо меню спільних словників
+        menu_message = get_text("select_option", chat_id)
+        
+        keyboard = shared_dictionary_keyboard(chat_id)
+        
+        # Логируем отображаемые кнопки
+        button_texts = [button.text for row in keyboard.keyboard for button in row]
+        log_displayed_buttons(chat_id, button_texts, MENU_SHARED)
+        
         sent_message = bot.send_message(
             chat_id, 
-            get_text("select_option", chat_id),
-            reply_markup=shared_dictionary_keyboard(chat_id)  # Pass chat_id for localized buttons
+            menu_message,
+            parse_mode="HTML", 
+            reply_markup=keyboard
         )
     
     save_message_id(chat_id, sent_message.message_id)

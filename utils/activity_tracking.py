@@ -19,6 +19,15 @@ def track_activity(chat_id):
         conn = db_manager.get_connection()
         cursor = conn.cursor()
         
+        # First check if the column exists
+        cursor.execute("PRAGMA table_info(users)")
+        columns = [col[1] for col in cursor.fetchall()]
+        
+        if "last_activity" not in columns:
+            # Add the missing column
+            cursor.execute("ALTER TABLE users ADD COLUMN last_activity TEXT")
+            print("Added missing column 'last_activity' to users table")
+        
         # Get current datetime
         now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         today = datetime.datetime.now().strftime('%Y-%m-%d')

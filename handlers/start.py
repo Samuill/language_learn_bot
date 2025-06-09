@@ -126,6 +126,10 @@ def handle_language_button(message):
             # Update language in database
             success = db_manager.set_user_language(chat_id, language_code)
             
+            # Clear language cache explicitly
+            from utils.language_utils import clear_language_cache
+            clear_language_cache(chat_id)
+            
             if success:
                 # Update user state
                 user_state[chat_id] = {
@@ -138,13 +142,15 @@ def handle_language_button(message):
                 if shared_dict_id:
                     user_state[chat_id]["shared_dict_id"] = shared_dict_id
                 
-                # Send confirmation using localization
-                bot.send_message(chat_id, get_text("language_selected", chat_id))
+                # Send confirmation - IMPORTANT: Get text AFTER updating the language
+                confirmation_message = get_text("language_selected", chat_id)
+                bot.send_message(chat_id, confirmation_message)
                 
                 # Send main menu using localization
+                menu_message = get_text("main_menu", chat_id)
                 sent_message = bot.send_message(
                     chat_id, 
-                    get_text("main_menu", chat_id), 
+                    menu_message, 
                     reply_markup=main_menu_keyboard(chat_id)
                 )
                 save_message_id(chat_id, sent_message.message_id)

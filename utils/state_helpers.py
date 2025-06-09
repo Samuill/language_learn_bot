@@ -55,17 +55,46 @@ def clear_state(chat_id, preserve_dict_type=False, preserve_messages=False, pres
             print(f"Debug: Preserved data for user {chat_id}: {debug_info}")
 
 def save_message_id(chat_id, message_id):
-    """Save message ID to user state for tracking and later deletion
+    """Save message ID to user state"""
+    from config import user_state
     
-    Args:
-        chat_id: User's chat ID
-        message_id: Message ID to save
-    """
+    # Ensure user_state exists for this chat_id
     if chat_id not in user_state:
         user_state[chat_id] = {}
+    
+    # Save current message ID
+    if "messages" not in user_state[chat_id]:
+        user_state[chat_id]["messages"] = []
+    
+    user_state[chat_id]["messages"].append(message_id)
+    
+    # Log state change for debugging
+    try:
+        from debug_logger import log_section_change
+        current_state = user_state.get(chat_id, {}).get("state", "Unknown")
+        log_section_change(chat_id, f"State update: {current_state}", f"Added message ID: {message_id}")
+    except ImportError:
+        pass  # If debug_logger is not available
+    
+    return True
+
+def log_state_change(chat_id, old_state=None):
+    """Log changes in user state"""
+    from config import user_state
+    
+    try:
+        from debug_logger import log_section_change
+        current_state = user_state.get(chat_id, {})
         
-    if "active_messages" not in user_state[chat_id]:
-        user_state[chat_id]["active_messages"] = []
+        # Strip out some noisy fields for logging
+        if "messages" in current_state:
+            current_state = {k: v for k, v in current_state.items() if k != "messages"}
         
-    user_state[chat_id]["active_messages"].append(message_id)
-    user_state[chat_id]["message_id"] = message_id  # Для зворотньої сумісності
+        # Log the state change
+        log_section_change(
+            chat_id, 
+            f"State: {current_state.get('state', 'Unknown')}", 
+            f"Full state: {current_state}"
+        )
+    except (ImportError, Exception) as e:
+        print(f"Error logging state change: {e}")

@@ -11,14 +11,21 @@ from config import bot, user_state
 from utils import clear_state, easy_level_keyboard, main_menu_keyboard
 from utils.input_handlers import handle_exit_from_activity  # Импорт новой утилиты
 import db_manager
+from utils.language_utils import get_text
 
-@bot.message_handler(func=lambda message: message.text in ["🧩 Вивчати присвійні займенники", "🧩 Вивчати присвійні займенники (середній)", "🧩 Вивчати присвійні займенники (складний)"])
+@bot.message_handler(func=lambda message: 
+                    message.text in ["🧩 Вивчати присвійні займенники", 
+                                    "🧩 Вивчати присвійні займенники (середній)", 
+                                    "🧩 Вивчати присвійні займенники (складний)"] or
+                    message.text == get_text("learn_possessive_pronouns", message.chat.id) or
+                    message.text == get_text("learn_possessive_pronouns", message.chat.id) + " (" + get_text("medium_level", message.chat.id) + ")" or
+                    message.text == get_text("learn_possessive_pronouns", message.chat.id) + " (" + get_text("hard_level", message.chat.id) + ")")
 def start_possessive_exercise_handler(message):
     """Handle possessive pronouns exercises at different difficulty levels"""
     # Визначаємо рівень складності за текстом кнопки
-    if message.text == "🧩 Вивчати присвійні займенники":
+    if message.text == "🧩 Вивчати присвійні займенники" or message.text == get_text("learn_possessive_pronouns", message.chat.id):
         difficulty = "easy"
-    elif message.text == "🧩 Вивчати присвійні займенники (середній)":
+    elif message.text == "🧩 Вивчати присвійні займенники (середній)" or message.text == get_text("learn_possessive_pronouns", message.chat.id) + " (" + get_text("medium_level", message.chat.id) + ")":
         difficulty = "medium" 
     else:
         difficulty = "hard"
@@ -27,13 +34,13 @@ def start_possessive_exercise_handler(message):
 
 def start_possessive_exercise(chat_id, difficulty="easy"):
     """Start an exercise for learning German possessive articles"""
-    # Clear current state but preserve dictionary type
-    clear_state(chat_id, preserve_dict_type=True, preserve_messages=False)
-    
-    # Set the exercise type in user state
+    # Clear current state but preserve dictionary type AND shared_dict_id
     dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
     shared_dict_id = user_state.get(chat_id, {}).get("shared_dict_id", None)
     
+    clear_state(chat_id, preserve_dict_type=True, preserve_messages=False)
+    
+    # Set the exercise type in user state
     user_state[chat_id] = {
         "dict_type": dict_type,
         "level": difficulty,
@@ -43,6 +50,7 @@ def start_possessive_exercise(chat_id, difficulty="easy"):
         "active_messages": []  # Додаємо список для відстеження активних повідомлень
     }
     
+    # Make sure to preserve shared_dict_id
     if shared_dict_id:
         user_state[chat_id]["shared_dict_id"] = shared_dict_id
     
@@ -95,6 +103,12 @@ def get_case_explanation(case, language="uk"):
 
 def generate_possessive_exercise(chat_id):
     """Generate a new possessive article exercise"""
+    # Ensure shared_dict_id is still preserved in state
+    shared_dict_id = user_state.get(chat_id, {}).get("shared_dict_id")
+    
+    # Log state for debugging
+    print(f"Debug: Possessive exercise for user {chat_id}, shared_dict_id={shared_dict_id}")
+    
     conn = db_manager.get_connection()
     cursor = conn.cursor()
     
@@ -123,7 +137,7 @@ def generate_possessive_exercise(chat_id):
         if not has_words:
             bot.send_message(
                 chat_id, 
-                "📭 У персональному словнику ще немає доданих слів. Спочатку додайте слова.",
+                get_text("no_words_in_dictionary", chat_id),
                 reply_markup=easy_level_keyboard()
             )
             clear_state(chat_id)
@@ -178,14 +192,32 @@ def generate_possessive_exercise(chat_id):
         
         results = cursor.fetchall()
         
-        # If no words found with articles, show message
+        # If no words found with articles, show message but preserve state
         if not results:
+            # Important: Don't clear the entire state here
+            # Only change the exercise state but keep dict_type and shared_dict_id
+            preserved_dict_type = user_state[chat_id].get("dict_type", "personal")
+            preserved_shared_dict_id = user_state[chat_id].get("shared_dict_id")
+            preserved_level = user_state[chat_id].get("level", "easy")
+            preserved_language = language  # Save user language to preserve it
+            
             bot.send_message(
                 chat_id, 
-                "📭 Недостатньо слів з артиклями у вашому словнику для цієї вправи.",
-                reply_markup=easy_level_keyboard()
+                get_text("no_words_with_articles", chat_id, "📭 Недостатньо слів з артиклями у вашому словнику для цієї вправи."),
+                reply_markup=easy_level_keyboard(chat_id)  # Pass chat_id for localization
             )
-            clear_state(chat_id)
+            
+            # Preserve important state elements instead of clearing everything
+            user_state[chat_id] = {
+                "dict_type": preserved_dict_type,
+                "level": preserved_level,
+                "language": preserved_language  # Restore the language in state
+            }
+            
+            if preserved_shared_dict_id:
+                user_state[chat_id]["shared_dict_id"] = preserved_shared_dict_id
+                print(f"Debug: Preserved shared_dict_id={preserved_shared_dict_id} for user {chat_id}")
+                
             conn.close()
             return
         
@@ -451,7 +483,8 @@ def exit_possessive_exercise(message):
             try:
                 bot.delete_message(chat_id, msg_id)
             except Exception as e:
-                print(f"Error deleting message {msg_id}: {e}")
+                # Silently ignore message deletion errors
+                pass
     
     # Используем общий обработчик выхода
     handle_exit_from_activity(message)
