@@ -1,15 +1,14 @@
 # -*- coding: utf-8 -*-
 
 """
-Helper functions for consistent dictionary operations.
+Вспомогательные функции для работы со словарем.
 """
 
 import re
-import db_manager
 from config import bot, user_state, ADMIN_ID
+import db_manager
 from utils.input_handlers import safe_next_step_handler, sanitize_user_input
 from utils.language_utils import get_text
-from utils.state_management import get_user_state_value
 
 def add_word_to_dictionary(chat_id, word, translation, dict_type="personal", article=None):
     """
@@ -133,96 +132,146 @@ def process_translation_input(message):
     if "add_word_german" in user_state[chat_id]:
         del user_state[chat_id]["add_word_german"]
 
-def load_user_dictionary(chat_id, with_name=True):
+def load_user_dictionary(chat_id):
     """
-    Load the appropriate dictionary for the user based on their settings.
-    Returns DataFrame and dictionary info.
+    Load the appropriate dictionary for a user with validation
     
     Args:
-        chat_id: User's chat ID
-        with_name: Whether to include dictionary name in result
-    
+        chat_id (int): User's chat ID
+        
     Returns:
-        Tuple: (dataframe, dict_type, dict_name or None, shared_dict_id or None, success)
+        tuple: (dataframe, dict_type, dict_name, shared_dict_id, success)
     """
+    import db_manager
+    from utils.state_management import ensure_dict_state
+    
+    # Get dictionary type from state/database (with validation)
+    dict_type, shared_dict_id = ensure_dict_state(chat_id)
+    
+    # Get dictionary name
+    dict_name = get_text(f"{dict_type}_dictionary", chat_id)
+    
+    # Load the appropriate dictionary
     try:
-        # Get dictionary info from state or database
-        dict_type = get_user_state_value(chat_id, "dict_type", "personal")
-        shared_dict_id = get_user_state_value(chat_id, "shared_dict_id")
-        
-        # Load the dictionary
-        df = None
-        dict_name = None
-        
         if dict_type == "shared" and shared_dict_id:
-            # Load shared dictionary
-            df = db_manager.get_shared_dictionary_words(chat_id, shared_dict_id)
-            
-            # Get dictionary name if requested
-            if with_name:
+            # Ensure dictionary exists before attempting to load
+            if not db_manager.shared_dictionary_exists(shared_dict_id):
+                print(f"Shared dictionary {shared_dict_id} doesn't exist for user {chat_id}, falling back to personal")
+                dict_type = "personal"
+                shared_dict_id = None
+                db_manager.reset_user_dictionary(chat_id)
+                df = db_manager.get_user_words(chat_id, "personal")
+                dict_name = get_text("personal_dictionary", chat_id)
+            else:
+                # Load shared dictionary
+                df = db_manager.get_shared_dictionary_words(chat_id, shared_dict_id)
+                
+                # Get actual dictionary name from database
                 conn = db_manager.get_connection()
                 cursor = conn.cursor()
                 cursor.execute("SELECT name FROM shared_dictionaries WHERE id = ?", (shared_dict_id,))
                 result = cursor.fetchone()
-                dict_name = f"«{result[0]}»" if result else get_text("shared_dictionary", chat_id)
+                if result:
+                    dict_name = result[0]
                 conn.close()
         else:
-            # Load personal or common dictionary
+            # Load personal dictionary
             df = db_manager.get_user_words(chat_id, dict_type)
-            
-            # Get dictionary name if requested
-            if with_name:
-                dict_name = get_text(f"{dict_type}_dictionary", chat_id)
         
-        return (df, dict_type, dict_name, shared_dict_id, True)
-        
+        return df, dict_type, dict_name, shared_dict_id, True
+    
     except Exception as e:
         print(f"Error loading dictionary: {e}")
         import traceback
         traceback.print_exc()
-        return (None, "personal", get_text("personal_dictionary", chat_id), None, False)
+        return None, dict_type, dict_name, shared_dict_id, False
 
-def handle_empty_dictionary(chat_id, level_keyboard, dict_name=None):
-    """Show an appropriate "no words" message for empty dictionary"""
-    if dict_name is None:
-        dict_type = get_user_state_value(chat_id, "dict_type", "personal")
-        dict_name = get_text(f"{dict_type}_dictionary", chat_id)
+def handle_empty_dictionary(chat_id, level_keyboard=None, dict_name=None):
+    """
+    Show an appropriate "no words" message for empty dictionary and keep user in the current menu.
+    """
+    from utils import easy_level_keyboard, medium_level_keyboard, hard_level_keyboard
+    from config import user_state
     
+    # Get the appropriate keyboard based on level if not provided
+    if level_keyboard is None:
+        level = user_state.get(chat_id, {}).get("level", "easy")
+        if level == "hard":
+            level_keyboard = hard_level_keyboard(chat_id)
+        elif level == "medium":
+            level_keyboard = medium_level_keyboard(chat_id)
+        else:
+            level_keyboard = easy_level_keyboard(chat_id)
+    
+    # Get dict_name if not provided
+    if dict_name is None:
+        dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
+        shared_dict_id = user_state.get(chat_id, {}).get("shared_dict_id")
+        
+        if dict_type == "shared" and shared_dict_id:
+            # Get shared dictionary name
+            conn = db_manager.get_connection()
+            cursor = conn.cursor()
+            cursor.execute("SELECT name FROM shared_dictionaries WHERE id = ?", (shared_dict_id,))
+            result = cursor.fetchone()
+            dict_name = f"«{result[0]}»" if result else get_text("shared_dictionary", chat_id)
+            conn.close()
+        else:
+            dict_name = get_text(f"{dict_type}_dictionary", chat_id)
+    
+    # Send the message with appropriate keyboard
     bot.send_message(
         chat_id,
         f"{get_text('in', chat_id)} {dict_name} {get_text('no_words', chat_id)}",
         reply_markup=level_keyboard
     )
     
-    return False
+    return False  # Indicate no words found
 
-def update_word_rating(chat_id, word_id, is_correct, difficulty="easy"):
-    """Update word rating based on correctness with standardized values"""
-    dict_type = get_user_state_value(chat_id, "dict_type", "personal")
-    shared_dict_id = get_user_state_value(chat_id, "shared_dict_id")
+def update_word_rating(chat_id, word_id, is_correct, level="easy"):
+    """
+    Update word rating based on game performance with dictionary state preservation
     
-    # Define rating changes based on difficulty and correctness
-    rating_changes = {
-        "easy": {"correct": -0.1, "incorrect": 0.1},
-        "medium": {"correct": -0.1, "incorrect": 0.1},
-        "hard": {"correct": -0.1, "incorrect": 0.2}
-    }
+    Args:
+        chat_id (int): User's chat ID
+        word_id (int): Word ID
+        is_correct (bool): Whether user answered correctly
+        level (str): Difficulty level
+    """
+    import db_manager
+    from config import user_state
     
-    # Get appropriate rating change
-    rating_change = rating_changes.get(
-        difficulty, rating_changes["easy"]
-    ).get("correct" if is_correct else "incorrect")
+    dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
+    shared_dict_id = user_state.get(chat_id, {}).get("shared_dict_id")
     
-    try:
-        # Update rating based on dictionary type
-        if dict_type == "shared" and shared_dict_id:
+    # Calculate rating change based on correctness and level
+    if is_correct:
+        if level == "easy":
+            rating_change = -0.1
+        elif level == "medium":
+            rating_change = -0.1
+        elif level == "hard":
+            rating_change = -0.1
+    else:
+        if level == "easy":
+            rating_change = 0.1
+        elif level == "medium":
+            rating_change = 0.1
+        elif level == "hard":
+            rating_change = 0.2
+    
+    # Update rating in the appropriate dictionary
+    if dict_type == "shared" and shared_dict_id:
+        # Validate shared dictionary exists before updating
+        if db_manager.shared_dictionary_exists(shared_dict_id):
             db_manager.update_word_rating_shared_dict(chat_id, word_id, rating_change, shared_dict_id)
         else:
-            db_manager.update_word_rating(chat_id, word_id, rating_change)
-        
-        return True
-    except Exception as e:
-        print(f"Error updating word rating: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
+            print(f"Cannot update rating: shared dictionary {shared_dict_id} not found for user {chat_id}")
+            # Reset to personal dictionary
+            db_manager.reset_user_dictionary(chat_id)
+            if chat_id in user_state:
+                user_state[chat_id]["dict_type"] = "personal"
+                if "shared_dict_id" in user_state[chat_id]:
+                    del user_state[chat_id]["shared_dict_id"]
+    else:
+        db_manager.update_word_rating(chat_id, word_id, rating_change)

@@ -88,6 +88,16 @@ def ensure_dict_state(chat_id):
             db_dict_type, db_shared_id, _ = db_info
             dict_type = db_dict_type
             shared_dict_id = db_shared_id
+            
+            # Validate that the shared dictionary actually exists if dict_type is "shared"
+            if dict_type == "shared" and shared_dict_id:
+                # Check if the shared dictionary exists
+                if not db_manager.shared_dictionary_exists(shared_dict_id):
+                    print(f"WARNING: Shared dictionary {shared_dict_id} does not exist for user {chat_id}, resetting to personal")
+                    dict_type = "personal"
+                    shared_dict_id = None
+                    # Update the database to reset user's dictionary to personal
+                    db_manager.reset_user_dictionary(chat_id)
     except Exception as e:
         print(f"Error getting dictionary info from database: {e}")
     

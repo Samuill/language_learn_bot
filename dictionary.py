@@ -283,3 +283,51 @@ def toggle_dictionary(chat_id):
         new_type = "personal"
     
     return set_dictionary_type(chat_id, new_type)
+
+def get_current_dictionary_display(chat_id):
+    """
+    Get properly formatted text displaying the current dictionary
+    
+    Args:
+        chat_id: User's chat ID
+        
+    Returns:
+        str: Formatted text showing current dictionary
+    """
+    from config import user_state
+    from utils.language_utils import get_text
+    import db_manager
+    
+    dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
+    shared_dict_id = user_state.get(chat_id, {}).get("shared_dict_id")
+    
+    # Extra validation for shared dictionaries
+    if dict_type == "shared" and shared_dict_id:
+        exists, has_access, dict_name = db_manager.validate_shared_dictionary_access(chat_id, shared_dict_id)
+        
+        if not exists or not has_access:
+            # Reset to personal dictionary
+            db_manager.reset_to_personal_dictionary(chat_id)
+            dict_type = "personal"
+            shared_dict_id = None
+            
+            # Update in-memory state
+            if chat_id in user_state:
+                user_state[chat_id]["dict_type"] = "personal"
+                if "shared_dict_id" in user_state[chat_id]:
+                    del user_state[chat_id]["shared_dict_id"]
+    
+    if dict_type == "shared" and shared_dict_id:
+        # Get shared dictionary name
+        conn = db_manager.get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM shared_dictionaries WHERE id = ?", (shared_dict_id,))
+        result = cursor.fetchone()
+        dict_name = result[0] if result else get_text("shared_dictionary", chat_id)
+        conn.close()
+        
+        return f"📚 {get_text('current_dictionary', chat_id)}: <b>{dict_name}</b> ({get_text('shared_dictionary', chat_id)})"
+    elif dict_type == "common":
+        return f"📚 {get_text('current_dictionary', chat_id)}: <b>{get_text('common_dictionary', chat_id)}</b>"
+    else:
+        return f"📚 {get_text('current_dictionary', chat_id)}: <b>{get_text('personal_dictionary', chat_id)}</b>"

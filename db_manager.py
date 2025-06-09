@@ -1152,3 +1152,50 @@ def init_db():
         import traceback
         traceback.print_exc()
         return False
+
+def shared_dictionary_exists(shared_dict_id):
+    """Check if a shared dictionary exists in the database"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Check for the shared dictionary in the shared_dictionaries table
+        cursor.execute("SELECT 1 FROM shared_dictionaries WHERE id = ?", (shared_dict_id,))
+        result = cursor.fetchone() is not None
+        
+        # Also check if the dictionary table exists
+        if result:
+            cursor.execute(f"""
+            SELECT name FROM sqlite_master 
+            WHERE type='table' AND name='shared_dict_{shared_dict_id}'
+            """)
+            table_exists = cursor.fetchone() is not None
+            result = result and table_exists
+            
+        return result
+    except Exception as e:
+        print(f"Error checking if shared dictionary {shared_dict_id} exists: {e}")
+        return False
+    finally:
+        conn.close()
+
+def reset_user_dictionary(chat_id):
+    """Reset user's dictionary to personal"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Update the users table
+        cursor.execute("""
+        UPDATE users SET shared_dict_id = NULL, shared_dict_admin = 0
+        WHERE chat_id = ?
+        """, (chat_id,))
+        
+        conn.commit()
+        print(f"Reset dictionary for user {chat_id} to personal")
+        return True
+    except Exception as e:
+        print(f"Error resetting dictionary for user {chat_id}: {e}")
+        return False
+    finally:
+        conn.close()

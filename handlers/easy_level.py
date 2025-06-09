@@ -23,6 +23,9 @@ def learn_words(message):
     """Handler for learning new words activity"""
     chat_id = message.chat.id
     
+    # Ensure dictionary state is consistent before starting
+    dict_type, shared_dict_id = ensure_dict_state(chat_id)
+    
     # Load dictionary with our unified helper
     from utils.dictionary_helpers import load_user_dictionary, handle_empty_dictionary
     df, dict_type, dict_name, shared_dict_id, success = load_user_dictionary(chat_id)
@@ -134,18 +137,22 @@ def handle_pairs(call):
         bot.answer_callback_query(call.id, get_text("error_exception", chat_id))
         return
     
+    # Preserve important state values before any operations
+    dict_type = user_state[chat_id].get("dict_type", "personal")
+    shared_dict_id = user_state[chat_id].get("shared_dict_id")
+    
     state = user_state[chat_id]
     
     if call.data.startswith('tr_'):
         if state.get('selected_tr'):
-            bot.answer_callback_query(call.id, get_text("wait_for_selection", chat_id))  # was "⏳ Спочатку завершіть поточний вибір"
+            bot.answer_callback_query(call.id, get_text("wait_for_selection", chat_id))
             return
         state['selected_tr'] = call.data[3:]
         bot.answer_callback_query(call.id,get_text("selected",chat_id) + f"{state['selected_tr']}")
     
     elif call.data.startswith('de_'):
         if not state.get('selected_tr'):
-            bot.answer_callback_query(call.id, get_text("select_translation_first", chat_id))  # was "❗ Спочатку оберіть переклад"
+            bot.answer_callback_query(call.id, get_text("select_translation_first", chat_id))
             return
         
         selected_de = call.data[3:]
@@ -197,6 +204,19 @@ def handle_pairs(call):
                 
                 if len(state["found_pairs"]) == len(state["pairs"]):
                     bot.delete_message(chat_id, call.message.message_id)
+                    # Preserve dictionary state when starting a new game
+                    preserved_state = {
+                        "dict_type": dict_type,
+                        "shared_dict_id": shared_dict_id
+                    }
+                    if chat_id in user_state:
+                        if dict_type == "shared" and shared_dict_id:
+                            user_state[chat_id]["dict_type"] = dict_type
+                            user_state[chat_id]["shared_dict_id"] = shared_dict_id
+                        else:
+                            user_state[chat_id]["dict_type"] = dict_type
+                            if "shared_dict_id" in user_state[chat_id]:
+                                del user_state[chat_id]["shared_dict_id"]
                     learn_words(call.message)
             else:
                 bot.answer_callback_query(call.id, get_text("correct",chat_id))
@@ -213,37 +233,34 @@ def handle_pairs(call):
 def repeat_words(message):
     """Handler for the repeat words command"""
     chat_id = message.chat.id
-    
-    # Get the current dictionary type and shared dictionary ID
-    dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
-    shared_dict_id = user_state.get(chat_id, {}).get("shared_dict_id", None)
-    
+
+    # Re-read and update dictionary state from database
+    dict_type, shared_dict_id = ensure_dict_state(chat_id)
+
+    # Use refreshed state from user_state
+    user_state[chat_id]["dict_type"] = dict_type
+    if shared_dict_id:
+        user_state[chat_id]["shared_dict_id"] = shared_dict_id
+    else:
+        user_state[chat_id].pop("shared_dict_id", None)
+
     try:
-        # Get dataframe from the appropriate dictionary - FIX THE DICTIONARY ACCESS
         if dict_type == "shared" and shared_dict_id:
             df = db_manager.get_shared_dictionary_words(chat_id, shared_dict_id)
-        elif dict_type == "common":
-            # For common dictionary - direct database access
-            df = db_manager.get_user_words(chat_id, "common")
-            print(f"Got common dictionary for repetition: {len(df)} words")
+            
+            # Get shared dictionary name
+            conn = db_manager.get_connection()
+            cursor = conn.cursor()
+            cursor.execute("SELECT name FROM shared_dictionaries WHERE id = ?", (shared_dict_id,))
+            result = cursor.fetchone()
+            dict_name = f"«{result[0]}»" if result else get_text("shared_dictionary", chat_id)
+            conn.close()
         else:
-            # For personal dictionary - direct database access
+            # Force personal dictionary key regardless of dict_type value
+            dict_name = get_text("personal_dictionary", chat_id)
             df = db_manager.get_user_words(chat_id, "personal")
-            print(f"Got personal dictionary for repetition: {len(df)} words")
         
         if df is None or df.empty:
-            # Use localized message with dictionary name
-            if dict_type == "shared" and shared_dict_id:
-                # Get shared dictionary name
-                conn = db_manager.get_connection()
-                cursor = conn.cursor()
-                cursor.execute("SELECT name FROM shared_dictionaries WHERE id = ?", (shared_dict_id,))
-                result = cursor.fetchone()
-                dict_name = f"«{result[0] if result else ''}»" if result else get_text("shared_dictionary", chat_id)
-                conn.close()
-            else:
-                dict_name = get_text(f"{dict_type}_dictionary", chat_id)
-                
             bot.send_message(chat_id, f"{get_text('in', chat_id)} {dict_name} {get_text('no_words', chat_id)}", 
                              reply_markup=easy_level_keyboard(chat_id))
             return
@@ -269,7 +286,18 @@ def start_repetition(chat_id, df):
         return False
         
     word = df.sample(1).iloc[0]
-    sample_size = min(3, len(df))
+    
+    # --- Debugging: Log the selected word ---
+    print(f"DEBUG: easy_level.py:start_repetition: Selected word object: {word}")
+    if 'word' not in word or not word['word']:
+        print(f"ERROR: easy_level.py:start_repetition: Word key is missing or empty in word object: {word}")
+        # Optionally, handle this error, e.g., by trying to sample another word or returning False
+        # For now, let it proceed to see the .format() behavior
+    else:
+        print(f"DEBUG: easy_level.py:start_repetition: German word to display: {word['word']}")
+    # --- End Debugging ---
+
+    sample_size = min(4, len(df))
     translations = df['translation'].sample(sample_size).tolist()
     if word['translation'] not in translations:
         translations[0] = word['translation']
@@ -277,14 +305,17 @@ def start_repetition(chat_id, df):
     
     markup = telebot.types.InlineKeyboardMarkup()
     for tr in translations:
+        # Use a delimiter "||" unlikely to be in the word or translation
         markup.add(telebot.types.InlineKeyboardButton(
             tr, 
-            callback_data=f"ans_{word['word']}_{tr}"
+            callback_data=f"ans||{word['word']}||{tr}"
         ))
     
-    # Localize the message
-    message_text = get_text("select_translation", chat_id).format(word=word['word'])
-    sent_message = bot.send_message(chat_id, message_text, reply_markup=markup)
+    message_text = get_text("select_translation", chat_id)   + f" {word['word']}"#don`t DELETE.format(word=word['word'])
+    # --- Debugging: Log the message_text ---
+    print(f"DEBUG: easy_level.py:start_repetition: Generated message_text: {message_text}")
+    # --- End Debugging ---
+    sent_message = bot.send_message(chat_id, message_text, reply_markup=markup, parse_mode="HTML")
     
     user_state[chat_id] = {
         "current_word": word,
@@ -293,63 +324,58 @@ def start_repetition(chat_id, df):
     }
     return True
 
-@bot.callback_query_handler(func=lambda call: call.data.startswith("ans_"))
+@bot.callback_query_handler(func=lambda call: call.data.startswith("ans||"))
 def handle_answer(call):
     chat_id = call.message.chat.id
     if chat_id not in user_state:
         bot.answer_callback_query(call.id, get_text("error_exception", chat_id))
         return
     
-    # Разбираем данные из callback
-    _, word, selected_tr = call.data.split('_')
+    # Split using the new delimiter "||"
+    parts = call.data.split("||")
+    if len(parts) < 3:
+        bot.answer_callback_query(call.id, get_text("error_exception", chat_id))
+        return
+    # parts[0] is "ans", parts[1] is the German word, parts[2] is the selected translation
+    selected_tr = parts[2]
+    
     correct_tr = user_state[chat_id]["current_word"]['translation']
     
-    # Проверяем ответ
     is_correct = selected_tr == correct_tr
     
-    # Обновляем рейтинг слова
     dict_type = user_state[chat_id].get("dict_type", "personal")
     shared_dict_id = user_state[chat_id].get("shared_dict_id")
     
     try:
-        # Обновляем рейтинг в зависимости от типа словаря
         if dict_type == "shared" and shared_dict_id:
-            # Для общего словаря
             try:
-                word_id = db_manager.get_word_id_by_german(word)
+                word_id = db_manager.get_word_id_by_german(user_state[chat_id]["current_word"]['word'])
                 if word_id:
-                    # Единий підхід до рейтингів для легкого рівня
                     rating_change = -0.1 if is_correct else 0.1
                     db_manager.update_word_rating_shared_dict(chat_id, word_id, rating_change, shared_dict_id)
                     print(f"Updated rating for shared dict word {word_id}: {rating_change}")
             except Exception as e:
                 print(f"Error updating shared dict rating: {e}")
         else:
-            # Для особистого словника
             from storage import get_dataframe, save_dataframe, get_user_file_path
             df = get_dataframe(chat_id)
             
-            # Перевіряємо наявність потрібних колонок
             if 'word' in df.columns and 'priority' in df.columns:
-                mask = df['word'] == word
+                mask = df['word'] == user_state[chat_id]["current_word"]['word']
                 if mask.any():
                     rating_change = -0.1 if is_correct else 0.1
                     df.loc[mask, 'priority'] += rating_change
-                    print(f"Updated rating for personal dict word {word}: {rating_change}")
-                
-                # Сохраняем DataFrame
-                file_path, lang = get_user_file_path(chat_id) if dict_type == "personal" else (None, None)
-                save_dataframe(chat_id, df, lang if lang else "common")
+                    print(f"Updated rating for personal dict word {user_state[chat_id]['current_word']['word']}: {rating_change}")
+                    
+            file_path, lang = get_user_file_path(chat_id) if dict_type == "personal" else (None, None)
+            save_dataframe(chat_id, df, lang if lang else "common")
         
         if is_correct:
-            from utils.language_utils import get_text
             bot.answer_callback_query(call.id, get_text("correct", chat_id))
         else:
-            from utils.language_utils import get_text
             incorrect_msg = get_text("incorrect", chat_id) + f" {correct_tr}"
             bot.answer_callback_query(call.id, incorrect_msg)
             
-        # Удаляем сообщение і продовжуємо гру
         bot.delete_message(chat_id, call.message.message_id)
         repeat_words(call.message)
     except Exception as e:
