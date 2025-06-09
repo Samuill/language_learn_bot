@@ -5917,3 +5917,4 @@ Name: 1, dtype: object, 'message_id': 4360, 'dict_type': 'shared'}
 
 📚 Поточний словник: 👤 Персональний словник'
 [2025-06-09 13:05:48.641] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 5052
+2025-06-09 13:06:09,516 - urllib3.connectionpool - DEBUG - https://api.telegram.org:443 "GET /bot7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw/getUpdates?offset=989871407&timeout=20 HTTP/11" 200 23

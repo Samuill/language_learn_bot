@@ -6,15 +6,16 @@
 
 import random
 import telebot
-import pandas as pd
 import traceback
-import db_manager  # Add explicit import of db_manager
+import db_manager
 from config import bot, user_state
 from dictionary import return_to_appropriate_menu
 from utils.language_utils import get_text, is_command
-from utils import clear_state
-from utils import clear_state, main_menu_keyboard, easy_level_keyboard
-from utils.input_handlers import safe_next_step_handler, sanitize_user_input, is_menu_navigation_command, handle_exit_from_activity
+from utils import clear_state, easy_level_keyboard
+from utils.input_handlers import safe_next_step_handler, sanitize_user_input, is_menu_navigation_command
+from utils.state_management import update_user_state, get_user_state_value, ensure_dict_state
+from utils.dictionary_helpers import load_user_dictionary, handle_empty_dictionary, update_word_rating
+from utils.game_helpers import handle_game_result, handle_game_error, create_article_options_keyboard
 
 @bot.message_handler(func=lambda message: is_command(message, "learning_new_words"))
 def learn_words(message):
@@ -347,7 +348,7 @@ def handle_answer(call):
             incorrect_msg = get_text("incorrect", chat_id) + f" {correct_tr}"
             bot.answer_callback_query(call.id, incorrect_msg)
             
-        # Удаляем сообщение и продолжаем игру
+        # Удаляем сообщение і продовжуємо гру
         bot.delete_message(chat_id, call.message.message_id)
         repeat_words(call.message)
     except Exception as e:
@@ -363,32 +364,23 @@ def learn_articles(message):
 
 def start_article_activity(chat_id):
     """Start learning articles activity"""
-    # Always check database for current dictionary type
-    dict_type, shared_dict_id, _ = db_manager.get_user_dictionary_info(chat_id)
-    
-    # Get user language directly from database to ensure accuracy
-    language = db_manager.get_user_language(chat_id) or "uk"
-    
-    # Update in-memory state to match database
-    if chat_id in user_state:
-        user_state[chat_id]["dict_type"] = dict_type
-        user_state[chat_id]["language"] = language  # Always set language in state
-        
-        if dict_type == "shared" and shared_dict_id:
-            user_state[chat_id]["shared_dict_id"] = shared_dict_id
-        elif "shared_dict_id" in user_state[chat_id]:
-            del user_state[chat_id]["shared_dict_id"]
-    else:
-        user_state[chat_id] = {
-            "dict_type": dict_type,
-            "language": language  # Always set language when creating new state
-        }
-        if dict_type == "shared" and shared_dict_id:
-            user_state[chat_id]["shared_dict_id"] = shared_dict_id
-    
-    print(f"Debug: Starting article activity for user {chat_id} with dict_type={dict_type}, shared_dict_id={shared_dict_id}")
-    
     try:
+        # Get dictionary info using our utility function
+        dict_type, shared_dict_id = ensure_dict_state(chat_id)
+        
+        # Get user language consistently
+        language = db_manager.get_user_language(chat_id) or "uk"
+        
+        # Update state using our unified state manager
+        update_user_state(chat_id, {
+            "dict_type": dict_type,
+            "language": language, 
+            "level": "easy"
+        })
+        
+        if shared_dict_id:
+            set_user_state_value(chat_id, "shared_dict_id", shared_dict_id)
+        
         # Отримуємо останнє слово, яке було показано, щоб не повторювати його
         last_word_id = user_state.get(chat_id, {}).get("last_article_word_id", None)
         conn = db_manager.get_connection()
@@ -589,40 +581,39 @@ def handle_article_answer(call):
         bot.answer_callback_query(call.id, get_text("error_exception", chat_id))
         return
     
-    # Получаем данные из callback і стану
+    # Get data using our utility functions
     user_article = call.data.split("_")[1]
-    correct_article = user_state[chat_id].get("correct_article")
-    word = user_state[chat_id].get("word")
-    word_id = user_state[chat_id].get("word_id")
+    correct_article = get_user_state_value(chat_id, "correct_article")
+    word = get_user_state_value(chat_id, "word")
+    word_id = get_user_state_value(chat_id, "word_id")
     
-    # Проверяем ответ
+    # Check answer
     is_correct = user_article.lower() == correct_article.lower()
     
-    # Обновляем рейтинг слова
-    dict_type = user_state[chat_id].get("dict_type", "personal")
-    shared_dict_id = user_state[chat_id].get("shared_dict_id")
-    
     try:
+        # Use unified feedback handling
         if is_correct:
             bot.answer_callback_query(call.id, get_text("correct", chat_id))
-            rating_change = -0.1  # Уменьшаем рейтинг для правильных ответов
+            feedback = get_text("correct_article_answer", chat_id).format(
+                word=word, article=correct_article
+            )
         else:
             incorrect_msg = get_text("incorrect", chat_id) + f" {correct_article}"
             bot.answer_callback_query(call.id, incorrect_msg)
-            rating_change = 0.1   # Увеличиваем рейтинг для неправильних відповідей
-            
-        # Обновляем рейтинг в зависимости от типа словаря
-        if dict_type == "shared" and shared_dict_id:
-            db_manager.update_word_rating_shared_dict(chat_id, word_id, rating_change, shared_dict_id)
-            print(f"Updated rating for shared dict word {word_id}: {rating_change}")
-        else:
-            db_manager.update_word_rating(chat_id, word_id, rating_change)
-            print(f"Updated rating for personal dict word {word_id}: {rating_change}")
+            feedback = get_text("incorrect_article_final", chat_id).format(
+                word=word, article=correct_article
+            )
         
-        # Удаляем сообщение і продовжуємо гру
+        # Use our unified rating update function
+        update_word_rating(chat_id, word_id, is_correct, "easy")
+        
+        # Delete message and continue game
         bot.delete_message(chat_id, call.message.message_id)
+        
+        # Show feedback and continue game
+        bot.send_message(chat_id, feedback, parse_mode="HTML")
+        bot.send_message(chat_id, get_text("continue_game", chat_id))
         start_article_activity(chat_id)
+        
     except Exception as e:
-        print(f"Error in handle_article_answer: {e}")
-        import traceback
-        traceback.print_exc()
+        handle_game_error(chat_id, e)
