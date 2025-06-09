@@ -39,11 +39,12 @@ def cancel_action(message):
     """Cancel current action and return to main menu"""
     chat_id = message.chat.id
     clear_state(chat_id)
-    bot.send_message(
+    sent_message = bot.send_message(
         chat_id, 
         get_text("cancelled", chat_id), 
         reply_markup=main_menu_keyboard(chat_id)  # Передаємо chat_id для локалізації
     )
+    save_message_id(chat_id, sent_message.message_id)
 
 @bot.message_handler(func=lambda message: message.text == "↩️ Повернутися до головного меню" or message.text == get_text("back_to_main_menu", message.chat.id))
 def return_to_main_menu(message):

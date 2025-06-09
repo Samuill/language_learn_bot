@@ -13,7 +13,9 @@ import db_manager
 from utils.language_utils import get_text
 from utils.input_handlers import safe_next_step_handler, sanitize_user_input
 
-@bot.message_handler(func=lambda message: message.text.startswith("👥 Спільний словник"))
+# Updated handler to work with all localized button texts
+@bot.message_handler(func=lambda message: message.text.startswith("👥 ") or 
+                    message.text == get_text("shared_dictionary", message.chat.id))
 def shared_dictionary_menu(message):
     """Show shared dictionary menu"""
     chat_id = message.chat.id
@@ -50,20 +52,21 @@ def shared_dictionary_menu(message):
             f"<b>{dict_name}</b>\n\n"+
             get_text("select_activity", chat_id),
             parse_mode="HTML",
-            reply_markup=shared_dictionary_keyboard()
+            reply_markup=shared_dictionary_keyboard(chat_id)  # Pass chat_id for localized buttons
         )
     else:
         # Просто показуємо меню спільних словників
         sent_message = bot.send_message(
             chat_id, 
             get_text("select_option", chat_id),
-            reply_markup=shared_dictionary_keyboard()
+            reply_markup=shared_dictionary_keyboard(chat_id)  # Pass chat_id for localized buttons
         )
     
     save_message_id(chat_id, sent_message.message_id)
     conn.close()
 
-@bot.message_handler(func=lambda message: message.text == "🆕 Створити спільний словник")
+@bot.message_handler(func=lambda message: message.text == "🆕 Створити спільний словник" or
+                    message.text == get_text("create_shared_dict", message.chat.id))
 def create_shared_dictionary(message):
     """Create a new shared dictionary"""
     chat_id = message.chat.id
@@ -131,7 +134,8 @@ def handle_shared_dict_name(message):
         )
         clear_state(chat_id)
 
-@bot.message_handler(func=lambda message: message.text == "🔑 Вступити до спільного словника")
+@bot.message_handler(func=lambda message: message.text == "🔑 Вступити до спільного словника" or
+                    message.text == get_text("join_shared_dict", message.chat.id))
 def join_shared_dictionary(message):
     """Join an existing shared dictionary"""
     chat_id = message.chat.id
@@ -195,7 +199,8 @@ def handle_shared_dict_code(message):
         )
         clear_state(chat_id)
 
-@bot.message_handler(func=lambda message: message.text == "📋 Мої спільні словники")
+@bot.message_handler(func=lambda message: message.text == "📋 Мої спільні словники" or
+                    message.text == get_text("your_dict", message.chat.id).split(":")[0].strip())
 def my_shared_dictionaries(message):
     """Show user's shared dictionaries"""
     chat_id = message.chat.id

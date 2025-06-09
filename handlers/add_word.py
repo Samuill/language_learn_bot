@@ -12,18 +12,18 @@ from storage import get_user_file_path
 from dictionary import save_word
 from utils.language_utils import get_text
 from utils.input_handlers import is_system_command, safe_next_step_handler, sanitize_user_input
-from utils.logger import log_handler, log_action
+from utils.logger import log_handler, log_action, extract_user_info
 from utils.bot_utils import send_message_with_logging
 
 @bot.message_handler(func=lambda message: message.text == get_text("add_new_word", message.chat.id) or message.text == "➕ Додати нове слово")
-@log_handler  # Декоратор для автоматичного логування
+@log_handler
 def add_word(message):
     """Start process of adding a new word"""
     chat_id = message.chat.id
     clear_state(chat_id)
     
-    # Використовуємо логування
-    log_action("add_word_started", {"chat_id": chat_id}, _extract_user_info(message))
+    # Використовуємо логування з функцією з модуля logger
+    log_action("add_word_started", {"chat_id": chat_id}, extract_user_info(message))
     
     # Використовуємо функцію з логуванням
     sent_message = send_message_with_logging(

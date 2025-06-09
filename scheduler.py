@@ -1,8 +1,15 @@
 # -*- coding: utf-8 -*-
+
+"""
+Планувальник для відправки нагадувань про вивчення слів.
+"""
+
+import datetime
+import db_manager
 import os
 import random
 from config import bot, scheduler
-from utils import get_user_params_path
+from utils import get_user_params_path, language_utils
 
 def send_streak_info(chat_id):
     """Send streak info to user"""
@@ -47,17 +54,66 @@ def send_streak_info(chat_id):
         send_streak_info(chat_id)
 
 def send_reminder():
-    """Send reminders to all users"""
-    for filename in os.listdir():
-        if filename.startswith("params_") and filename.endswith(".json"):
-            chat_id = filename.split('_')[1].split('.')[0]
+    """Send reminders to users who haven't been active for more than 24 hours"""
+    print("Running scheduled reminder task...")
+    
+    try:
+        # Get users who were last active more than 24 hours ago
+        conn = db_manager.get_connection()
+        cursor = conn.cursor()
+        
+        # Get current time minus 24 hours to find inactive users
+        yesterday = (datetime.datetime.now() - datetime.timedelta(days=1)).strftime('%Y-%m-%d %H:%M:%S')
+        
+        # Select users who were active more than 24 hours ago or have never been active
+        cursor.execute("""
+            SELECT chat_id, language, active_days 
+            FROM users 
+            WHERE last_activity < ? OR last_activity IS NULL
+        """, (yesterday,))
+        
+        inactive_users = cursor.fetchall()
+        
+        # Count of messages sent
+        sent_count = 0
+        
+        for user_id, language, active_days in inactive_users:
             try:
-                send_streak_info(chat_id)
+                # Active days might be NULL in the database
+                if active_days is None:
+                    active_days = 0
+                
+                # Construct message based on activity streak
+                if active_days == 0:
+                    message_key = "reminder_new"
+                elif active_days < 3:
+                    message_key = "reminder_short_streak"
+                elif active_days < 7:
+                    message_key = "reminder_medium_streak" 
+                else:
+                    message_key = "reminder_long_streak"
+                
+                # Get localized message
+                message = language_utils.get_text(message_key, user_id, f"Time to practice German! You've been active for {active_days} days.")
+                
+                # Send reminder
+                bot.send_message(user_id, message)
+                sent_count += 1
+                
+                print(f"Sent reminder to user {user_id} with {active_days} active days")
+                
             except Exception as e:
-                print(f"Помилка для {chat_id}: {e}")
+                print(f"Failed to send reminder to user {user_id}: {e}")
+        
+        print(f"Reminder task completed: sent {sent_count} reminders")
+        conn.close()
+        
+    except Exception as e:
+        print(f"Error in send_reminder: {e}")
+        import traceback
+        traceback.print_exc()
 
+# Schedule the reminder task to run daily at 18:00
 def setup_scheduler():
-    """Setup reminder scheduler"""
-    scheduler.add_job(send_reminder, 'cron', hour=random.randint(10,22), minute=random.randint(0,59))
-    if not scheduler.running:
-        scheduler.start()
+    scheduler.add_job(send_reminder, 'cron', hour=18, minute=0, id='daily_reminder')
+    print("Daily reminder scheduled for 18:00")

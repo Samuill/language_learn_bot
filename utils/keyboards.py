@@ -11,13 +11,17 @@ def main_menu_keyboard(chat_id):
     """Create main menu keyboard with localized buttons"""
     keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
     
-    # Використовуємо локалізацію для всіх кнопок
+    # Основні кнопки
     keyboard.row(get_text("add_new_word", chat_id))
+    
+    # Рівні складності - по два в ряд
     keyboard.row(
         get_text("easy_level", chat_id), 
         get_text("medium_level", chat_id)
     )
     keyboard.row(get_text("hard_level", chat_id))
+    
+    # Словники - по два в ряд
     keyboard.row(
         get_text("personal_dictionary", chat_id), 
         get_text("shared_dictionary", chat_id)
@@ -40,17 +44,21 @@ def easy_level_keyboard(chat_id=None):
     keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
     
     if chat_id:
-        keyboard.row(get_text("learning_new_words", chat_id))
-        keyboard.row(get_text("repetition", chat_id))
-        keyboard.row(get_text("learn_articles", chat_id))
-        keyboard.row(get_text("learn_possessive_pronouns", chat_id))
+        # По дві кнопки в ряд для активностей
+        keyboard.row(
+            get_text("learning_new_words", chat_id),
+            get_text("repetition", chat_id)
+        )
+        keyboard.row(
+            get_text("learn_articles", chat_id),
+            get_text("learn_possessive_pronouns", chat_id)
+        )
+        # Окрема кнопка повернення на весь рядок
         keyboard.row(get_text("back_to_main_menu", chat_id))
     else:
         # Fallback на українську, якщо chat_id не передано
-        keyboard.row("📖 Вчити нові слова")
-        keyboard.row("🔄 Повторити")
-        keyboard.row("🏷️ Вивчати артиклі")
-        keyboard.row("🧩 Вивчати присвійні займенники")
+        keyboard.row("📖 Вчити нові слова", "🔄 Повторити")
+        keyboard.row("🏷️ Вивчати артиклі", "🧩 Вивчати присвійні займенники")
         keyboard.row("↩️ Повернутися до головного меню")
     
     return keyboard
@@ -60,14 +68,15 @@ def medium_level_keyboard(chat_id=None):
     keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
     
     if chat_id:
-        keyboard.row(get_text("choose_correct_spelling", chat_id))
-        keyboard.row(get_text("fill_in_gaps", chat_id))
+        keyboard.row(
+            get_text("choose_correct_spelling", chat_id),
+            get_text("fill_in_gaps", chat_id)
+        )
         keyboard.row(get_text("learn_possessive_pronouns", chat_id))
         keyboard.row(get_text("back_to_main_menu", chat_id))
     else:
         # Fallback на українську
-        keyboard.row("🔤 Вибір правильного написання")
-        keyboard.row("📝 Заповніть пропуски")
+        keyboard.row("🔤 Вибір правильного написання", "📝 Заповніть пропуски")
         keyboard.row("🧩 Вивчати присвійні займенники")
         keyboard.row("↩️ Повернутися до головного меню")
     
@@ -78,14 +87,15 @@ def hard_level_keyboard(chat_id=None):
     keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
     
     if chat_id:
-        keyboard.row(get_text("advanced_game", chat_id))
-        keyboard.row(get_text("word_typing", chat_id))
+        keyboard.row(
+            get_text("advanced_game", chat_id),
+            get_text("word_typing", chat_id)
+        )
         keyboard.row(get_text("article_typing", chat_id))
         keyboard.row(get_text("back_to_main_menu", chat_id))
     else:
         # Fallback на українську
-        keyboard.row("🧩 Складна гра")
-        keyboard.row("📝 Введення слів")
+        keyboard.row("🧩 Складна гра", "📝 Введення слів")
         keyboard.row("🏷️ Введення артиклів")
         keyboard.row("↩️ Повернутися до головного меню")
     
@@ -96,11 +106,16 @@ def shared_dictionary_keyboard(chat_id=None):
     keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
     
     if chat_id:
-        keyboard.row(get_text("your_dict", chat_id))
+        # Перша кнопка на весь рядок
+        keyboard.row(get_text("your_dict", chat_id).split(":")[0].strip())
+        
+        # Дві кнопки в одному рядку
         keyboard.row(
             get_text("create_shared_dict", chat_id), 
             get_text("join_shared_dict", chat_id)
         )
+        
+        # Кнопка повернення на весь рядок
         keyboard.row(get_text("back_to_main_menu", chat_id))
     else:
         # Fallback на українську

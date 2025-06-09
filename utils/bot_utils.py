@@ -5,7 +5,7 @@
 """
 
 from config import bot
-from utils.logger import log_response, log_error, _extract_user_info
+from utils.logger import log_response, log_error, extract_user_info
 
 def send_message_with_logging(chat_id, text, reply_markup=None, parse_mode=None):
     """
@@ -136,6 +136,7 @@ def register_next_step_handler_with_logging(message, callback, *args, **kwargs):
     """
     def logged_callback(next_message, *callback_args, **callback_kwargs):
         # Логуємо вхідне повідомлення
+        from utils.logger import log_message
         log_message(next_message)
         
         # Викликаємо оригінальний callback

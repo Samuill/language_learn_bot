@@ -189,6 +189,7 @@ from config import bot, scheduler
 import db_manager
 from utils.language_utils import create_language_keyboard
 from utils.logger import log_action, log_error
+from scheduler import setup_scheduler  # Import the scheduler setup function
 
 # Load environment variables from .env file
 load_dotenv()
@@ -196,6 +197,10 @@ print("Using environment variables from .env file")
 
 # Логуємо запуск бота
 log_action("Bot starting", {"version": "1.0", "environment": os.environ.get("ENVIRONMENT", "production")})
+
+# Set up scheduler
+setup_scheduler()
+log_action("Reminder scheduler initialized")
 
 # Set up database
 try:

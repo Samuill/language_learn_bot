@@ -9,7 +9,6 @@ import os
 import json
 import traceback
 from datetime import datetime
-import telebot
 from config import ADMIN_ID
 
 # Створення директорії для логів, якщо вона не існує
@@ -48,7 +47,7 @@ def _format_log_entry(level, message, additional_data=None):
     
     return log_entry
 
-def _extract_user_info(message):
+def extract_user_info(message):
     """Витягує інформацію про користувача з повідомлення"""
     if not message or not hasattr(message, 'from_user'):
         return {"user_id": "Unknown", "username": "Unknown", "first_name": "Unknown", "last_name": "Unknown"}
@@ -63,6 +62,9 @@ def _extract_user_info(message):
         "chat_id": message.chat.id if hasattr(message, 'chat') else None,
         "chat_type": message.chat.type if hasattr(message, 'chat') else None
     }
+
+# Для зворотної сумісності
+_extract_user_info = extract_user_info
 
 def _write_to_log(entry):
     """Записує запис логу у файл та виводить в консоль"""
@@ -82,7 +84,7 @@ def log_message(message, level=LOG_LEVEL_INFO):
     if not message:
         return
     
-    user_info = _extract_user_info(message)
+    user_info = extract_user_info(message)
     
     # Отримуємо вміст повідомлення
     content = message.text if hasattr(message, 'text') and message.text else "No text"
@@ -125,7 +127,7 @@ def log_callback(callback, level=LOG_LEVEL_INFO):
     if not callback:
         return
     
-    user_info = _extract_user_info(callback)
+    user_info = extract_user_info(callback)
     
     # Отримуємо дані callback
     callback_data = callback.data if hasattr(callback, 'data') else "No callback data"
