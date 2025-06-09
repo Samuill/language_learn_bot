@@ -204,24 +204,24 @@ def handle_spelling_choice(call):
             print(f"Updated personal dict rating for word {word_id}: {rating_change}")
                 
         if is_correct:
-            bot.answer_callback_query(call.id, "✅ Правильно!")
+            bot.answer_callback_query(call.id, get_text("correct",chat_id))
             
             # Оновлюємо повідомлення
-            bot.edit_message_text(
-                f"✅ Правильно!\n\n"
+            bot.edit_message_text( get_text("correct",chat_id) +
+                f"\n\n"
                 f"<b>{correct_option}</b> = <b>{user_state[chat_id]['translation']}</b>",
                 chat_id=chat_id,
                 message_id=call.message.message_id,
                 parse_mode="HTML"
             )
         else:
-            bot.answer_callback_query(call.id, "❌ Неправильно!")
+            bot.answer_callback_query(call.id, get_text("incorrect",chat_id))
             
             # Оновлюємо повідомлення
-            bot.edit_message_text(
-                f"❌ Неправильно!\n\n"
-                f"Ви обрали: <b>{selected_option}</b>\n"
-                f"Правильно: <b>{correct_option}</b> = <b>{user_state[chat_id]['translation']}</b>",
+            bot.edit_message_text( get_text("incorrect",chat_id)+
+                f"\n\n" +get_text("you_selected",chat_id)+
+                f"<b>{selected_option}</b>\n" + get_text("translation",chat_id) +
+                f": <b>{correct_option}</b> = <b>{user_state[chat_id]['translation']}</b>",
                 chat_id=chat_id,
                 message_id=call.message.message_id,
                 parse_mode="HTML"
@@ -240,7 +240,8 @@ def spelling_choice_game_new_word(chat_id):
     try:
         # Запускаємо нову гру з тими самими налаштуваннями
         if chat_id in user_state and user_state[chat_id].get("game") == "spelling_choice":
-            bot.send_message(chat_id, "Наступне слово...")
+            # Відправляємо повідомлення з текстом наступного слова
+            bot.send_message(chat_id, get_text("next_word", chat_id))
             
             # Створюємо фіктивне повідомлення для передачі в функцію
             class FakeMessage:
@@ -345,7 +346,7 @@ def generate_missing_letters_exercise(chat_id):
         # Відправляємо завдання
         bot.send_message(
             chat_id, get_text("fill_in_gaps", chat_id) +
-            f"<b>{word_with_blanks}</b>\n\n" + get_text("translation",chat_id) +
+            f" <b>{word_with_blanks}</b>\n\n" + get_text("translation",chat_id) +
             f"<b>: {word_row['translation']}</b>\n\n"  + get_text("insert",chat_id) +
             f" <b>{num_missing}</b> "+get_text("missing_letters",chat_id),
             parse_mode="HTML"
@@ -397,14 +398,14 @@ def handle_missing_letters_answer(message):
             
             # Відправляємо повідомлення про успіх
             bot.send_message(
-                chat_id,
-                f"✅ Правильно!\n\n"
+                chat_id, get_text("correct",chat_id) +
+                f"!\n\n"
                 f"<b>{word}</b> = <b>{translation}</b>",
                 parse_mode="HTML"
             )
             
             # Запускаємо нову гру після паузи
-            bot.send_message(chat_id, "Наступне слово...")
+            bot.send_message(chat_id, get_text("next_word", chat_id))
             generate_missing_letters_exercise(chat_id)
         else:
             # Збільшуємо рейтинг слова (воно стає важчим)
@@ -417,21 +418,21 @@ def handle_missing_letters_answer(message):
             if attempts >= 2:
                 # Після двох спроб показуємо правильну відповідь
                 bot.send_message(
-                    chat_id,
-                    f"❌ Неправильно!\n\n"
-                    f"Правильна відповідь: <b>{correct_letters}</b>\n"
-                    f"Повне слово: <b>{word}</b> = <b>{translation}</b>",
+                    chat_id,get_text("incorrect",chat_id) +
+                    f"\n\n" +get_text("translation",chat_id)+
+                    f": <b>{correct_letters}</b>\n" +get_text("full_word", chat_id)+
+                    f"<b>{word}</b> = <b>{translation}</b>",
                     parse_mode="HTML"
                 )
                 
                 # Запускаємо нову гру після паузи
-                bot.send_message(chat_id, "Наступне слово...")
+                bot.send_message(chat_id, get_text("next_word", chat_id))
                 generate_missing_letters_exercise(chat_id)
             else:
                 # Даємо ще одну спробу
                 bot.send_message(
-                    chat_id,
-                    f"❌ Неправильно! Спробуйте ще раз.\n\n"
+                    chat_id, get_text("incorrect_try_again_2",chat_id)+
+                    f"\n\n"
                     f"<b>{word_with_blanks}</b>\n\n" + get_text("translation",chat_id) +
                     f" <b>{translation}</b>",
                     parse_mode="HTML"

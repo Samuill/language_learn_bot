@@ -1,7 +1,7 @@
 {
-  "access_code": "",
-  "access_code_length_error": "",
-  "add_new_word": "",
+  "access_code": "Erişim kodu:",
+  "access_code_length_error": "❌ Erişim kodu 6 karakter içermelidir.",
+  "add_new_word": "➕ Yeni kelime ekle",
   "admin": "👑 Yönetici",
   "advanced_game": "🧩 İleri seviye oyun",
   "article_typing": "🏷️ Artikelleri yazma",
@@ -40,6 +40,9 @@
   "hard_level_select_activity": "🔴 Zor seviye - aktivite seçin:",
   "in": "📭 ",
   "incorrect": "❌ Yanlış!",
+  "you_selected": "Seçtiğiniz: ",
+  "full_word": "Tam kelime: ",
+  "incorrect_try_again_2": "❌ Yanlış! Tekrar deneyin",
   "incorrect_article_final": "❌ Yanlış!\n\nDoğru cevap: <b>{article}</b>\n\n<b>{word}</b> kelimesinin artikeli <b>{article}</b>.",
   "incorrect_article_retry": "❌ Yanlış! Tekrar deneyin.\n\n<b>{word}</b> kelimesi için artikeli girin",
   "incorrect_translation_final": "❌ Yanlış!\n\nDoğru cevap: <b>{word}</b>\n\n<b>{translation}</b> = <b>{word}</b>",
@@ -161,5 +164,7 @@
   "add_word_shared_not_admin": "❌ Bu paylaşılan sözlüğün yöneticisi değilsiniz ve kelime ekleyemezsiniz.",
   "add_word_common_not_admin": "❌ Genel sözlüğe sadece botun ana yöneticisi kelime ekleyebilir.",
   "cannot_add_word_in_shared": "Bu paylaşılan sözlüğe yeni kelime ekleme izniniz yok.",
-  "correct_variant": "🔤 Kelimenin doğru biçimini seçin: "
+  "correct_variant": "🔤 Kelimenin doğru biçimini seçin: ",
+  "insert": "Ekle",
+  "missing_letters": "harfleri tamamlayın"
 }

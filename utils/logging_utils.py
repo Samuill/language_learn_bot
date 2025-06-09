@@ -8,7 +8,6 @@ import os
 import time
 import datetime
 import traceback
-import logging
 
 # Directory for log files
 LOG_DIR = "logs"
@@ -21,14 +20,6 @@ if not os.path.exists(LOG_DIR):
 DEBUG_LOG = os.path.join(LOG_DIR, "debug.log")
 LANGUAGE_LOG = os.path.join(LOG_DIR, "language_selection.log")
 ERROR_LOG = os.path.join(LOG_DIR, "error.log")
-
-# Set up logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='[%(asctime)s] [%(levelname)s] %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
-logger = logging.getLogger(__name__)
 
 def log_debug(message):
     """Log a debug message"""
@@ -57,33 +48,6 @@ def log_error(error, context=""):
     
     # Write to log file
     _write_log(ERROR_LOG, f"{message}\n{traceback_msg}")
-
-def log_action(action, data=None):
-    """Log user actions with optional associated data
-    
-    Args:
-        action (str): The action being performed
-        data (dict, optional): Associated data for the action
-    """
-    timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    
-    if data is None:
-        data = {}
-    
-    user_info = ""
-    if 'chat_id' in data:
-        user_info = f"User {data['chat_id']}: "
-    
-    log_message = f"[{timestamp}] [ACTION] {user_info}{action}"
-    
-    # Add detailed data if available
-    if len(data) > 0:
-        data_str = ', '.join([f"{k}={v}" for k, v in data.items()])
-        log_message += f" | {data_str}"
-    
-    logger.info(log_message)
-    print(log_message)
-    return True
 
 def log_language_event(chat_id, event_type, details):
     """

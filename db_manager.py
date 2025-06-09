@@ -336,6 +336,7 @@ def get_user_words_with_articles(chat_id, dict_type="personal"):
     
     return df
 
+
 def add_word(chat_id, word, translation, dict_type="personal", article=None):
     """Add a word to user's dictionary with duplicate handling and article update.
     Returns word_id on success, None on failure.
