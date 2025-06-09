@@ -37,7 +37,7 @@
   "hard_level": "🔴 Hard level",
   "hard_level_select_activity": "🔴 Hard level - select activity:",
   "in": "📭 In ",
-  "incorrect": "❌ Wrong! Correct answer:",
+  "incorrect": "❌ Wrong!",
   "incorrect_article_final": "❌ Incorrect!\n\nCorrect answer: <b>{article}</b>\n\nThe word <b>{word}</b> has the article <b>{article}</b>.",
   "incorrect_article_retry": "❌ Incorrect! Try again.\n\nEnter the article for the word <b>{word}</b>",
   "incorrect_translation_final": "❌ Incorrect!\n\nCorrect answer: <b>{word}</b>\n\n<b>{translation}</b> = <b>{word}</b>",
@@ -84,5 +84,14 @@
   "word_added_success": "✅ Word successfully added with your translation!",
   "word_typing": "📝 Word typing",
   "you_admin": " (you are administrator)",
-  "your_dict": "📋 Your shared dictionaries: "
+  "your_dict": "📋 Your shared dictionaries: ",
+  "add_word_prompt": "Enter the word you want to add:",
+  "enter_word_error": "❌ Please enter the word as text!",
+  "empty_word_error": "❌ Please enter a non-empty word!",
+  "admin_only_error": "❌ Only an administrator can add words to the common dictionary!",
+  "language_not_selected": "❌ Translation language not selected. Please try /start.",
+  "reminder_new": "👋 Hello! It's time to study German! Start now and improve your skills.",
+  "reminder_short_streak": "⚡ Don't lose pace! You have been active for {active_days} days. Continue learning to develop your German skills.",
+  "reminder_medium_streak": "🔥 Great progress! You have been active for {active_days} days. Keep going!",
+  "reminder_long_streak": "🏆 Impressive! You have been active for {active_days} days. Maintain your excellent streak!"
 }

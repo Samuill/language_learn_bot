@@ -92,5 +92,14 @@
   "error_exception": "❗ Önce ilgili bölümü seçin",
   "error_occupated": "❌ Bir hata oluştu. Lütfen daha sonra deneyin.",
   "no": "Hayır",
-  "yes": "Evet"
+  "yes": "Evet",
+  "add_word_prompt": "Eklemek istediğiniz kelimeyi girin:",
+  "enter_word_error": "❌ Lütfen kelimeyi metin olarak girin!",
+  "empty_word_error": "❌ Lütfen boş bir kelime girmeyin!",
+  "admin_only_error": "❌ Sadece yönetici ortak sözlüğe kelime ekleyebilir!",
+  "language_not_selected": "❌ Çeviri dili seçilmedi. Lütfen /start komutunu deneyin.",
+  "reminder_new": "👋 Merhaba! Şimdi Almanca öğrenme zamanı! Hemen başlayın ve becerilerinizi geliştirin.",
+  "reminder_short_streak": "⚡ Hızınızı kaybetmeyin! {active_days} gündür aktifsiniz. Almanca becerilerinizi geliştirmek için çalışmaya devam edin.",
+  "reminder_medium_streak": "🔥 Harika bir ilerleme! {active_days} gündür aktifsiniz. Şimdi durmayın!",
+  "reminder_long_streak": "🏆 Etkileyici! {active_days} gündür aktifsiniz. Harika serinizi koruyun!"
 }
