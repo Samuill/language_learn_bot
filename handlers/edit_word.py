@@ -4,15 +4,19 @@
 Обробники для редагування слів у словнику.
 """
 
-import telebot
+import telebot  # Add explicit import for telebot
 from config import bot, user_state
 from utils import clear_state, main_menu_keyboard, main_menu_cancel
 from utils.state_helpers import save_message_id
 from utils.language_utils import get_text
-from utils.input_handlers import safe_next_step_handler, sanitize_user_input, is_system_command, is_menu_navigation_command, handle_exit_from_activity # Added missing imports
+from utils.input_handlers import safe_next_step_handler, sanitize_user_input, is_system_command, is_menu_navigation_command, handle_exit_from_activity
 import db_manager
-import pandas as pd # Import pandas for DataFrame conversion if needed
-from config import translator # Import translator
+import pandas as pd
+from config import translator
+from concurrent.futures import ThreadPoolExecutor
+
+# Створюємо пул потоків для асинхронної обробки запитів до БД
+executor = ThreadPoolExecutor()
 
 WORDS_PER_PAGE_EDIT = 18
 
@@ -96,18 +100,26 @@ def handle_word_management_choice(message):
 
 def initiate_single_word_edit_or_delete(message):
     """Start the process for editing or deleting a single word."""
+    chat_id = message.chat.id
+    # Зберігаємо стан користувача у змінній, щоб передати її у асинхронний метод
+    current_state = {
+        "dict_type": user_state.get(chat_id, {}).get("dict_type", "personal"),
+        "shared_dict_id": user_state.get(chat_id, {}).get("shared_dict_id")
+    }
+    # Запуск завантаження даних у окремому потоці
+    executor.submit(_async_load_words_for_edit, chat_id, current_state, message)
+
+def _async_load_words_for_edit(chat_id, state, message):
+    """Асинхронно завантажує слова для редагування."""
     try:
-        chat_id = message.chat.id
+        dict_type = state["dict_type"]
+        shared_dict_id = state["shared_dict_id"]
         
-        # Ensure user_state[chat_id] exists and dict_type is preserved or fetched
-        if chat_id not in user_state: # Should be set by edit_word_start
+        # Перевіряємо стан і втановлюємо його
+        if chat_id not in user_state:
             user_state[chat_id] = {}
         
-        # Get current dictionary type (should be preserved from edit_word_start)
-        dict_type = user_state[chat_id].get("dict_type", "personal")
-        shared_dict_id = user_state[chat_id].get("shared_dict_id")
-        
-        # Check if user has words to edit
+        # Завантажуємо слова з БД
         df = None
         if dict_type == "shared" and shared_dict_id:
             df = db_manager.get_shared_dictionary_words(chat_id, shared_dict_id)
@@ -123,27 +135,28 @@ def initiate_single_word_edit_or_delete(message):
                 f"{get_text('in', chat_id)} {dict_name_text} {get_text('no_words_to_edit', chat_id, 'немає слів для редагування.')}",
                 reply_markup=word_management_menu_keyboard(chat_id) # Back to word management menu
             )
-            safe_next_step_handler(message, handle_word_management_choice) # Re-register for word management menu
+            safe_next_step_handler(message, handle_word_management_choice)
             return
         
         # Update user state for selecting a single word to edit
         user_state[chat_id]["step"] = "selecting_word_to_edit" # This state is used by callback handlers
         user_state[chat_id]["available_words_list"] = df.to_dict('records') # Store as list of dicts
         user_state[chat_id]['edit_current_page'] = 0
-        # dict_type and shared_dict_id should already be in user_state[chat_id]
+        # dict_type and shared_dict_id should be preserved
+        user_state[chat_id]["dict_type"] = dict_type
+        user_state[chat_id]["shared_dict_id"] = shared_dict_id
         
         # Show word selection (inline keyboard)
         show_word_selection_page(chat_id, message_to_edit=None) # Send initial page
-        
+            
     except Exception as e:
-        print(f"Error in initiate_single_word_edit_or_delete for chat_id {message.chat.id if message else 'N/A'}: {e}")
-        if message and message.chat:
-            bot.send_message(
-                message.chat.id,
-                get_text("error_occurred", message.chat.id),
-                reply_markup=main_menu_keyboard(message.chat.id) # Fallback to main menu
-            )
-            clear_state(message.chat.id)
+        print(f"Error in _async_load_words_for_edit for chat_id {chat_id}: {e}")
+        bot.send_message(
+            chat_id,
+            get_text("error_occurred", chat_id),
+            reply_markup=main_menu_keyboard(chat_id)
+        )
+        clear_state(chat_id)
 
 def show_word_selection_page(chat_id, message_to_edit=None):
     """Show a page of available words for editing with pagination."""
@@ -552,21 +565,32 @@ def handle_new_translation(message):
 
 def initiate_bulk_delete(message):
     """Start the process for bulk deleting words."""
+    chat_id = message.chat.id
+    current_state = {
+        "dict_type": user_state.get(chat_id, {}).get("dict_type", "personal"),
+        "shared_dict_id": user_state.get(chat_id, {}).get("shared_dict_id")
+    }
+    # Запуск завантаження даних у окремому потоці
+    executor.submit(_async_load_words_for_bulk_delete, chat_id, current_state, message)
+
+def _async_load_words_for_bulk_delete(chat_id, state, message):
+    """Асинхронно завантажує слова для масового видалення."""
     try:
-        chat_id = message.chat.id
-        
         if chat_id not in user_state:
             user_state[chat_id] = {}
-        
+            
         # Preserve dict_type, clear other relevant states for bulk delete
-        clear_state(chat_id, preserve_dict_type=True, preserve_messages=False) 
+        clear_state(chat_id, preserve_dict_type=True, preserve_messages=False)
         user_state[chat_id]["step"] = "bulk_deleting_words"
         user_state[chat_id]["bulk_delete_selected_ids"] = set()
         user_state[chat_id]['bulk_delete_current_page'] = 0
+        user_state[chat_id]["dict_type"] = state["dict_type"]
+        user_state[chat_id]["shared_dict_id"] = state["shared_dict_id"]
         
-        dict_type = user_state[chat_id].get("dict_type", "personal")
-        shared_dict_id = user_state[chat_id].get("shared_dict_id")
+        dict_type = state["dict_type"]
+        shared_dict_id = state["shared_dict_id"]
         
+        # Завантаження даних з БД
         df = None
         if dict_type == "shared" and shared_dict_id:
             df = db_manager.get_shared_dictionary_words(chat_id, shared_dict_id)
@@ -586,16 +610,15 @@ def initiate_bulk_delete(message):
             
         user_state[chat_id]["bulk_available_words_list"] = df.to_dict('records')
         show_bulk_delete_page(chat_id, message_to_edit=None)
-        
+            
     except Exception as e:
-        print(f"Error in initiate_bulk_delete for chat_id {message.chat.id if message else 'N/A'}: {e}")
-        if message and message.chat:
-            bot.send_message(
-                message.chat.id,
-                get_text("error_occurred", message.chat.id),
-                reply_markup=main_menu_keyboard(message.chat.id)
-            )
-            clear_state(message.chat.id)
+        print(f"Error in _async_load_words_for_bulk_delete for chat_id {chat_id}: {e}")
+        bot.send_message(
+            chat_id,
+            get_text("error_occurred", chat_id),
+            reply_markup=main_menu_keyboard(chat_id)
+        )
+        clear_state(chat_id)
 
 def show_bulk_delete_page(chat_id, message_to_edit=None):
     """Show a page of available words for bulk editing with pagination."""
@@ -706,24 +729,34 @@ def perform_bulk_delete(chat_id):
 
 def refresh_bulk_delete_word_list(chat_id):
     """Refreshes the list of available words for bulk deletion from the DB."""
-    dict_type = user_state[chat_id].get("dict_type", "personal")
-    shared_dict_id = user_state[chat_id].get("shared_dict_id")
-    df_new = None
-    if dict_type == "shared" and shared_dict_id:
-        df_new = db_manager.get_shared_dictionary_words(chat_id, shared_dict_id)
-    else:
-        df_new = db_manager.get_user_words(chat_id, dict_type)
-    
-    user_state[chat_id]["bulk_available_words_list"] = df_new.to_dict('records') if df_new is not None and not df_new.empty else []
+    # Запускаємо в окремому потоці для уникнення блокування
+    executor.submit(_async_refresh_bulk_delete_word_list, chat_id)
 
-    # Adjust current page if it's now out of bounds
-    all_words_list_new = user_state[chat_id]["bulk_available_words_list"]
-    current_page = user_state[chat_id].get('bulk_delete_current_page', 0)
-    max_page = (len(all_words_list_new) - 1) // WORDS_PER_PAGE_EDIT
-    if max_page < 0: max_page = 0 # Handle empty list
-    if current_page > max_page:
-        user_state[chat_id]['bulk_delete_current_page'] = max_page
+def _async_refresh_bulk_delete_word_list(chat_id):
+    """Асинхронно оновлює список слів для масового видалення."""
+    try:
+        dict_type = user_state[chat_id].get("dict_type", "personal")
+        shared_dict_id = user_state[chat_id].get("shared_dict_id")
+        df_new = None
+        
+        if dict_type == "shared" and shared_dict_id:
+            df_new = db_manager.get_shared_dictionary_words(chat_id, shared_dict_id)
+        else:
+            df_new = db_manager.get_user_words(chat_id, dict_type)
+        
+        user_state[chat_id]["bulk_available_words_list"] = df_new.to_dict('records') if df_new is not None and not df_new.empty else []
 
+        # Adjust current page if it's now out of bounds
+        all_words_list_new = user_state[chat_id]["bulk_available_words_list"]
+        current_page = user_state[chat_id].get('bulk_delete_current_page', 0)
+        max_page = (len(all_words_list_new) - 1) // WORDS_PER_PAGE_EDIT
+        if max_page < 0: max_page = 0 # Handle empty list
+        if current_page > max_page:
+            user_state[chat_id]['bulk_delete_current_page'] = max_page
+            
+    except Exception as e:
+        print(f"Error in _async_refresh_bulk_delete_word_list for chat_id {chat_id}: {e}")
+        # Не показуємо користувачеві помилку, оскільки ця функція викликається асинхронно
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("bulk_toggle_"))
 def handle_bulk_toggle_word(call):
@@ -827,13 +860,9 @@ def initiate_bulk_add_words(message):
 
     can_add = True
     if current_dict_type == "shared":
-        if not current_shared_dict_id or not db_manager.is_user_admin_of_shared_dict(chat_id, current_shared_dict_id):
-            can_add = False
-            bot.send_message(chat_id, get_text("add_word_shared_not_admin", chat_id), reply_markup=word_management_menu_keyboard(chat_id))
-            # Повернення до меню керування словами
-            user_state[chat_id]["step"] = "word_management_menu"
-            safe_next_step_handler(message, handle_word_management_choice) # Потрібно передати message для safe_next_step_handler
-            return
+        # Перевіряємо права адміна у окремому потоці, щоб не блокувати основний
+        executor.submit(_async_check_admin_and_start_bulk_add, chat_id, current_dict_type, current_shared_dict_id, message)
+        return
     elif current_dict_type == "common" and str(chat_id) != str(db_manager.ADMIN_ID): # Ensure ADMIN_ID is string for comparison if chat_id is string
         can_add = False
         bot.send_message(chat_id, get_text("add_word_common_not_admin", chat_id), reply_markup=word_management_menu_keyboard(chat_id))
@@ -843,12 +872,41 @@ def initiate_bulk_add_words(message):
     
     if not can_add: # Подвійна перевірка, хоча вище вже є return
         return
+        
+    # Для персонального словника продовжуємо без додаткових перевірок
+    _start_bulk_add_process(chat_id, message)
 
+def _async_check_admin_and_start_bulk_add(chat_id, dict_type, shared_dict_id, message):
+    """Асинхронно перевіряє права адміна для спільного словника."""
+    try:
+        can_add = True
+        if dict_type == "shared":
+            if not shared_dict_id or not db_manager.is_user_admin_of_shared_dict(chat_id, shared_dict_id):
+                can_add = False
+                bot.send_message(chat_id, get_text("add_word_shared_not_admin", chat_id), reply_markup=word_management_menu_keyboard(chat_id))
+                # Повернення до меню керування словами
+                user_state[chat_id]["step"] = "word_management_menu"
+                safe_next_step_handler(message, handle_word_management_choice)
+                return
+                
+        if can_add:
+            _start_bulk_add_process(chat_id, message)
+            
+    except Exception as e:
+        print(f"Error in _async_check_admin_and_start_bulk_add for chat_id {chat_id}: {e}")
+        bot.send_message(
+            chat_id,
+            get_text("error_occurred", chat_id),
+            reply_markup=word_management_menu_keyboard(chat_id)
+        )
+
+def _start_bulk_add_process(chat_id, message):
+    """Запускає процес масового додавання слів після перевірки прав."""
     if chat_id not in user_state: 
         user_state[chat_id] = {}
     
     # Очищаємо стан, зберігаючи тип словника
-    clear_state(chat_id, preserve_dict_type=True, preserve_messages=True) # Preserve messages to avoid deleting this prompt
+    clear_state(chat_id, preserve_dict_type=True, preserve_messages=True)
     user_state[chat_id]["step"] = "bulk_add_awaiting_words"
     user_state[chat_id]["bulk_add_words_data"] = [] 
     user_state[chat_id]["bulk_add_active_word_index"] = None
@@ -859,7 +917,6 @@ def initiate_bulk_add_words(message):
                            f"Введіть слова для додавання (кожне з нового рядка, максимум {BULK_ADD_MAX_WORDS} слів).\nКоли закінчите, натисніть кнопку 'Готово' нижче.")
     
     sent_msg = bot.send_message(chat_id, prompt_text, reply_markup=bulk_add_reply_keyboard(chat_id))
-    # Не зберігаємо ID цього повідомлення через save_message_id, оскільки воно не має видалятися clear_state
     safe_next_step_handler(sent_msg, handle_bulk_words_input)
 
 def handle_bulk_words_input(message):

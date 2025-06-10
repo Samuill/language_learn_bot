@@ -12,7 +12,7 @@ def main_menu_keyboard(chat_id):
     keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
     
     # Основні кнопки
-    keyboard.row(get_text("add_new_word", chat_id))
+    keyboard.row(get_text("add_new_word", chat_id), get_text("edit_word", chat_id))
     
     # Рівні складності - по два в ряд
     keyboard.row(
