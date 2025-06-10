@@ -7822,3 +7822,4 @@ insert <b>2</b> missing_letters'
 
 📚 Текущий словарь: A1 німецька (👥 Общий словарь)'
 [2025-06-09 20:48:15.944] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 5989
+[2025-06-11 00:07:20.340] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-11 00:07:20.340", "action": "Bot stopped", "reason": "shutdown_signal"}
