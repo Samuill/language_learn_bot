@@ -13,6 +13,9 @@ from utils import clear_state, medium_level_keyboard, main_menu_keyboard
 import db_manager
 from utils.input_handlers import safe_next_step_handler, sanitize_user_input, is_menu_navigation_command, handle_exit_from_activity
 from utils.language_utils import get_text
+from concurrent.futures import ThreadPoolExecutor
+executor = ThreadPoolExecutor()  # default max_workers, підходить для IO-bound завдань
+
 # Константи для зміни рейтингу
 MEDIUM_RATING_DECREASE = -0.1  # Зменшення рейтингу при правильній відповіді
 MEDIUM_RATING_INCREASE = 0.1   # Збільшення рейтингу при неправильній відповіді
@@ -110,7 +113,15 @@ def spelling_choice_game(message):
     if shared_dict_id:
         user_state[chat_id]["shared_dict_id"] = shared_dict_id
     
+    # делегуємо завантаження даних в окремий потік
+    executor.submit(_load_and_start_spelling_choice, message)
+
+def _load_and_start_spelling_choice(message):
+    chat_id = message.chat.id
     try:
+        dict_type = user_state.get(chat_id,{}).get("dict_type","personal")
+        shared_dict_id = user_state.get(chat_id,{}).get("shared_dict_id")
+        
         # Отримуємо слова для гри
         df = None
         if dict_type == "shared":

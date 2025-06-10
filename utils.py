@@ -16,34 +16,43 @@ def clear_state(chat_id, preserve_dict_type=False, preserve_messages=False, pres
         preserve_messages (bool): Whether to preserve message IDs
         preserve_level (bool): Whether to preserve difficulty level
     """
-    if chat_id not in user_state:
-        return
-    
-    # Store the parts we want to preserve
-    dict_type = user_state[chat_id].get("dict_type", "personal") if preserve_dict_type else None
-    shared_dict_id = user_state[chat_id].get("shared_dict_id") if preserve_dict_type else None
-    level = user_state[chat_id].get("level", "easy") if preserve_level else None
-    
-    # Store message IDs if needed
-    message_ids = None
-    if preserve_messages and "message_ids" in user_state[chat_id]:
-        message_ids = user_state[chat_id]["message_ids"]
-    
-    # Clear the state
-    user_state[chat_id] = {}
-    
-    # Restore preserved parts
-    if preserve_dict_type:
-        user_state[chat_id]["dict_type"] = dict_type
-        # Always preserve shared_dict_id when preserving dict_type
-        if shared_dict_id is not None:
-            user_state[chat_id]["shared_dict_id"] = shared_dict_id
-    
-    if preserve_level and level:
-        user_state[chat_id]["level"] = level
-    
-    if preserve_messages and message_ids:
-        user_state[chat_id]["message_ids"] = message_ids
+    try:
+        if chat_id not in user_state:
+            user_state[chat_id] = {} # Initialize if not exists
+            return # Nothing to clear or preserve if it was just initialized
+        
+        # Store the parts we want to preserve
+        current_user_state = user_state.get(chat_id, {})
+        dict_type = current_user_state.get("dict_type", "personal") if preserve_dict_type else None
+        shared_dict_id = current_user_state.get("shared_dict_id") if preserve_dict_type else None
+        level = current_user_state.get("level", "easy") if preserve_level else None
+        
+        # Store message IDs if needed
+        message_ids = None
+        if preserve_messages and "message_ids" in current_user_state:
+            message_ids = current_user_state.get("message_ids")
+        
+        # Clear the state
+        user_state[chat_id] = {}
+        
+        # Restore preserved parts
+        if preserve_dict_type:
+            if dict_type:
+                user_state[chat_id]["dict_type"] = dict_type
+            if shared_dict_id:
+                user_state[chat_id]["shared_dict_id"] = shared_dict_id
+        
+        if preserve_level and level:
+            user_state[chat_id]["level"] = level
+        
+        if preserve_messages and message_ids:
+            user_state[chat_id]["message_ids"] = message_ids
+            
+    except Exception as e:
+        print(f"Error in clear_state for chat_id {chat_id}: {e}")
+        # Initialize to a clean state in case of error
+        user_state[chat_id] = {}
+
 
 def get_user_params_path(chat_id):
     """Get path to user parameters file"""

@@ -17,10 +17,15 @@ from utils.state_management import get_user_state_value, set_user_state_value, u
 from utils.dictionary_helpers import update_word_rating
 from utils.game_helpers import handle_game_error
 from utils.grammar_helpers import get_case_explanation, get_pronoun_translation, get_case_name_in_ukrainian
+from concurrent.futures import ThreadPoolExecutor
+
+executor = ThreadPoolExecutor()
 
 @bot.message_handler(func=lambda message: is_command(message, "learning_new_words"))
 def learn_words(message):
-    """Handler for learning new words activity"""
+    executor.submit(_async_learn_words, message)
+
+def _async_learn_words(message):
     chat_id = message.chat.id
     
     # Ensure dictionary state is consistent before starting
@@ -227,7 +232,9 @@ def handle_pairs(call):
 
 @bot.message_handler(func=lambda message: is_command(message, "repetition"))
 def repeat_words(message):
-    """Handler for the repeat words command"""
+    executor.submit(_async_repeat_words, message)
+
+def _async_repeat_words(message):
     chat_id = message.chat.id
 
     # Re-read and update dictionary state from database

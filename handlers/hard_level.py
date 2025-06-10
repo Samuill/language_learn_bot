@@ -14,6 +14,8 @@ from utils.language_utils import get_text
 from utils.console_logger import log_menu_transition, log_displayed_buttons, MENU_MAIN, MENU_EASY, MENU_MEDIUM, MENU_HARD, MENU_SHARED
 # Add import for grammar helpers
 from utils.grammar_helpers import get_case_explanation, get_pronoun_translation, get_case_name_in_ukrainian
+from concurrent.futures import ThreadPoolExecutor
+executor = ThreadPoolExecutor()  # default max_workers, can be omitted or tuned per навантаження
 
 # Додаємо константи для зміни рейтингу на високому рівні
 HARD_RATING_DECREASE = -0.1    # Зменшення рейтингу при правильній відповіді
@@ -57,74 +59,101 @@ def hard_game(message):
 
 @bot.message_handler(func=lambda message: message.text == "📝 Введення слів" or message.text == get_text("word_typing", message.chat.id))
 def word_typing_game(message):
-    """Game where user needs to type German translation of a Ukrainian word"""
     chat_id = message.chat.id
-    
-    # Видаляємо повідомлення активності, зберігаючи тип словника та рівень
     clear_state(chat_id, preserve_dict_type=True, preserve_messages=False, preserve_level=True)
-    
-    # Переконуємося, що рівень встановлено як "hard"
     if chat_id in user_state:
         user_state[chat_id].update({
-            "level": "hard",
-            "game": "word_typing",
-            "attempts": 0,
-            "current_menu": MENU_HARD
+            "level":"hard","game":"word_typing","attempts":0,"current_menu":MENU_HARD
         })
     else:
         user_state[chat_id] = {
-            "dict_type": "personal",
-            "level": "hard",
-            "game": "word_typing",
-            "attempts": 0,
-            "current_menu": MENU_HARD
+            "dict_type":"personal","level":"hard","game":"word_typing",
+            "attempts":0,"current_menu":MENU_HARD
         }
-    
-    # Отримуємо тип словника
-    dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
-    shared_dict_id = user_state.get(chat_id, {}).get("shared_dict_id", None)
-    
+    dict_type = user_state[chat_id].get("dict_type","personal")
+    shared_dict_id = user_state[chat_id].get("shared_dict_id")
+    executor.submit(_load_and_start_word_typing, chat_id, dict_type, shared_dict_id)
+
+@bot.message_handler(func=lambda message: message.text == "🏷️ Введення артиклів" or message.text == get_text("article_typing", message.chat.id))
+def article_typing_game(message):
+    chat_id = message.chat.id
+    clear_state(chat_id, preserve_dict_type=True, preserve_messages=False, preserve_level=True)
+    if chat_id in user_state:
+        user_state[chat_id].update({
+            "level":"hard","game":"article_typing","attempts":0,"current_menu":MENU_HARD
+        })
+    else:
+        user_state[chat_id] = {
+            "dict_type":"personal","level":"hard","game":"article_typing",
+            "attempts":0,"current_menu":MENU_HARD
+        }
+    dict_type = user_state[chat_id].get("dict_type","personal")
+    shared_dict_id = user_state[chat_id].get("shared_dict_id")
+    executor.submit(_load_and_start_article_typing, chat_id, dict_type, shared_dict_id)
+
+# асинхронні хелпери
+def _load_and_start_word_typing(chat_id, dict_type, shared_dict_id):
     try:
-        # Отримуємо слова з відповідного словника
-        df = None
         if dict_type == "shared" and shared_dict_id:
             df = db_manager.get_shared_dictionary_words(chat_id, shared_dict_id)
         else:
             df = db_manager.get_user_words(chat_id, dict_type)
-        
         if df is None or df.empty:
-            dict_name = get_text("shared_dictionary", chat_id) if dict_type == "shared" else get_text("personal_dictionary", chat_id)
-            bot.send_message(chat_id, f"{get_text('in', chat_id)} {dict_name} {get_text('no_words', chat_id)}", reply_markup=hard_level_keyboard(chat_id))
+            dict_name = (get_text("shared_dictionary",chat_id) if dict_type=="shared"
+                         else get_text("personal_dictionary",chat_id))
+            bot.send_message(
+                chat_id,
+                f"{get_text('in',chat_id)} {dict_name} {get_text('no_words',chat_id)}",
+                reply_markup=hard_level_keyboard(chat_id)
+            )
             return
-            
-        # Вибираємо випадкове слово
         word = df.sample(1).iloc[0]
-        
-        # Зберігаємо інформацію про слово в стані користувача
         user_state[chat_id].update({
-            "word_id": word['id'],
-            "word": word['word'],
-            "translation": word['translation']
+            "word_id": word["id"],
+            "word": word["word"],
+            "translation": word["translation"],
+            "attempts": 0
         })
-        
-        # Відправляємо завдання ввести слово за перекладом
         bot.send_message(
             chat_id,
-            get_text("enter_german_translation", chat_id).format(word=word['translation']),
+            get_text("enter_german_translation",chat_id).format(word=word["translation"]),
             parse_mode="HTML"
         )
-        
-        # Реєструємо обробник для введення відповіді
         bot.register_next_step_handler_by_chat_id(chat_id, handle_word_typing_answer)
-            
     except Exception as e:
-        print(f"Error in word_typing_game: {e}")
-        traceback.print_exc()
+        print(f"Error loading words asynchronously: {e}")
+        bot.send_message(chat_id, get_text("error_activity",chat_id), reply_markup=hard_level_keyboard(chat_id))
+
+def _load_and_start_article_typing(chat_id, dict_type, shared_dict_id):
+    try:
+        if dict_type == "shared" and shared_dict_id:
+            df = db_manager.get_shared_dictionary_words_with_articles(chat_id, shared_dict_id)
+        else:
+            df = db_manager.get_user_words_with_articles(chat_id, dict_type)
+        if df is None or df.empty:
+            bot.send_message(chat_id, get_text("no_words_with_articles",chat_id), reply_markup=hard_level_keyboard(chat_id))
+            return
+        word = df.sample(1).iloc[0]
+        user_state[chat_id].update({
+            "word_id": word["id"],
+            "word": word["word"],
+            "correct_article": word["article"],
+            "translation": word["translation"],
+            "attempts": 0
+        })
         bot.send_message(
-            chat_id, 
-            get_text("error_activity", chat_id), 
-            reply_markup=hard_level_keyboard(chat_id)
+            chat_id,
+            get_text("enter_article",chat_id).format(
+                word=word["word"],
+                translation=word["translation"],
+                case_explanation=""
+            ),
+            parse_mode="HTML"
         )
+        bot.register_next_step_handler_by_chat_id(chat_id, handle_article_typing_answer)
+    except Exception as e:
+        print(f"Error loading articles asynchronously: {e}")
+        bot.send_message(chat_id, get_text("error_activity",chat_id), reply_markup=hard_level_keyboard(chat_id))
 
 def handle_word_typing_answer(message):
     """Handle user's answer in word typing game"""
@@ -204,82 +233,6 @@ def handle_word_typing_answer(message):
     except Exception as e:
         print(f"Error processing answer: {e}")
         traceback.print_exc()
-
-@bot.message_handler(func=lambda message: message.text == "🏷️ Введення артиклів" or message.text == get_text("article_typing", message.chat.id))
-def article_typing_game(message):
-    """Game where user needs to type correct article for a German word"""
-    chat_id = message.chat.id
-    
-    # Видаляємо повідомлення активності, зберігаючи тип словника та рівень
-    clear_state(chat_id, preserve_dict_type=True, preserve_messages=False, preserve_level=True)
-    
-    # Переконуємося, що рівень встановлено як "hard"
-    if chat_id in user_state:
-        user_state[chat_id].update({
-            "level": "hard",
-            "game": "article_typing",
-            "attempts": 0,
-            "current_menu": MENU_HARD
-        })
-    else:
-        user_state[chat_id] = {
-            "dict_type": "personal",
-            "level": "hard",
-            "game": "article_typing",
-            "attempts": 0,
-            "current_menu": MENU_HARD
-        }
-    
-    # Отримуємо тип словника
-    dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
-    shared_dict_id = user_state.get(chat_id, {}).get("shared_dict_id", None)
-    
-    try:
-        # Отримуємо слова з артиклями
-        df = None
-        if dict_type == "shared" and shared_dict_id:
-            df = db_manager.get_shared_dictionary_words_with_articles(chat_id, shared_dict_id)
-        else:
-            df = db_manager.get_user_words_with_articles(chat_id, dict_type)
-        
-        if df is None or df.empty:
-            dict_name = get_text("shared_dictionary", chat_id) if dict_type == "shared" else get_text("personal_dictionary", chat_id)
-            bot.send_message(chat_id, f"{get_text('no_words_with_articles', chat_id)}", reply_markup=hard_level_keyboard(chat_id))
-            return
-            
-        # Вибираємо випадкове слово з артиклем
-        word = df.sample(1).iloc[0]
-        
-        # Зберігаємо інформацію про слово в стані користувача
-        user_state[chat_id].update({
-            "word_id": word['id'],
-            "word": word['word'],
-            "correct_article": word['article'],
-            "translation": word['translation']
-        })
-        
-        # Відправляємо завдання ввести артикль
-        bot.send_message(
-            chat_id,
-            get_text("enter_article", chat_id).format(
-                word=word['word'],
-                translation=word['translation'],
-                case_explanation=""
-            ),
-            parse_mode="HTML"
-        )
-        
-        # Реєструємо обробник для введення відповіді
-        bot.register_next_step_handler_by_chat_id(chat_id, handle_article_typing_answer)
-            
-    except Exception as e:
-        print(f"Error in article_typing_game: {e}")
-        traceback.print_exc()
-        bot.send_message(
-            chat_id, 
-            get_text("error_activity", chat_id), 
-            reply_markup=hard_level_keyboard(chat_id)
-        )
 
 def handle_article_typing_answer(message):
     """Handle user's answer in article typing game"""
