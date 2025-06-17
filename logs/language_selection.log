@@ -6903,3 +6903,75 @@
 [2025-06-09 20:47:55] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ru
 [2025-06-09 20:48:15] [LANG] [User 476376623] GET_LANG: Retrieving language from database
 [2025-06-09 20:48:15] [LANG] [User 476376623] GET_LANG_RESULT: Found language: ru
+[2025-06-17 13:53:29] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-17 13:53:29] [User 476376623] [Language retrieved] ru
+[2025-06-17 13:53:29] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-17 13:53:29] [User 476376623] [Language retrieved] ru
+[2025-06-17 13:55:00] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-17 13:55:00] [User 476376623] [Language retrieved] ru
+[2025-06-17 13:55:00] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-17 13:55:00] [User 476376623] [Language retrieved] ru
+[2025-06-17 13:56:48] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-17 13:56:48] [User 476376623] [Language retrieved] ru
+[2025-06-17 13:56:48] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-17 13:56:48] [User 476376623] [Language retrieved] ru
+[2025-06-17 13:58:44] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-17 13:58:44] [User 476376623] [Language retrieved] tr
+[2025-06-17 13:58:44] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-17 13:58:44] [User 476376623] [Language retrieved] tr
+[2025-06-17 14:23:51] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-17 14:23:51] [User 476376623] [Language retrieved] uk
+[2025-06-17 14:23:51] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-17 14:23:51] [User 476376623] [Language retrieved] uk
+[2025-06-17 14:37:23] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-17 14:37:23] [User 476376623] [Language retrieved] uk
+[2025-06-17 14:37:23] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-17 14:37:23] [User 476376623] [Language retrieved] uk
+[2025-06-17 14:37:36] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-17 14:37:36] [User 476376623] [Language retrieved] uk
+[2025-06-17 14:37:36] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-17 14:37:36] [User 476376623] [Language retrieved] uk
+[2025-06-17 14:38:22] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-17 14:38:22] [User 476376623] [Language retrieved] uk
+[2025-06-17 14:38:22] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-17 14:38:22] [User 476376623] [Language retrieved] uk
+[2025-06-17 14:38:30] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-17 14:38:30] [User 476376623] [Language retrieved] uk
+[2025-06-17 14:38:30] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-17 14:38:30] [User 476376623] [Language retrieved] uk
+[2025-06-17 14:43:26] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-17 14:43:26] [User 476376623] [Language retrieved] uk
+[2025-06-17 14:43:26] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-17 14:43:26] [User 476376623] [Language retrieved] uk
+[2025-06-17 14:58:00] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-17 14:58:00] [User 476376623] [Language retrieved] uk
+[2025-06-17 15:04:24] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-17 15:04:24] [User 476376623] [Language retrieved] uk
+[2025-06-17 15:06:55] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-17 15:06:55] [User 476376623] [Language retrieved] uk
+[2025-06-17 15:06:56] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-17 15:06:56] [User 476376623] [Language retrieved] uk
+[2025-06-17 15:07:10] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-17 15:07:10] [User 476376623] [Language retrieved] uk
+[2025-06-17 15:07:42] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-17 15:07:42] [User 476376623] [Language retrieved] uk
+[2025-06-17 15:08:20] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-17 15:08:20] [User 476376623] [Language retrieved] uk
+[2025-06-17 15:26:37] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-17 15:26:37] [User 476376623] [Language retrieved] uk
+[2025-06-17 15:26:37] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-17 15:26:37] [User 476376623] [Language retrieved] uk
+[2025-06-17 15:26:54] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-17 15:26:54] [User 476376623] [Language retrieved] uk
+[2025-06-17 15:45:45] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-17 15:45:45] [User 476376623] [Language retrieved] uk
+[2025-06-17 15:46:20] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-17 15:46:20] [User 476376623] [Language retrieved] uk
+[2025-06-17 15:47:43] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-17 15:47:43] [User 476376623] [Language retrieved] uk
+[2025-06-17 15:48:09] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-17 15:48:09] [User 476376623] [Language retrieved] uk
+[2025-06-17 15:48:17] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-17 15:48:17] [User 476376623] [Language retrieved] uk
+[2025-06-17 15:48:37] [LANG] [User 476376623] GET_LANG: Retrieving language from database
+[2025-06-17 15:48:37] [User 476376623] [Language retrieved] uk

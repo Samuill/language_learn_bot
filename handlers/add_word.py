@@ -11,6 +11,7 @@ from utils.language_utils import get_text
 from utils import clear_state, main_menu_keyboard, main_menu_cancel
 from utils.input_handlers import safe_next_step_handler, sanitize_user_input
 from utils.state_helpers import save_message_id
+import asyncio
 
 # Import the functions that were previously undefined
 from utils.input_handlers import is_menu_navigation_command, handle_exit_from_activity
@@ -35,11 +36,7 @@ def add_word_started(message):
                                  get_text("cannot_add_word_in_shared", chat_id,
                                           "Ви не маєте дозволу додавати нові слова до спільного словника або словник не обрано."))
                 return
-        elif dict_type == "common" and chat_id != db_manager.ADMIN_ID:  # Use ADMIN_ID from db_manager or config
-            bot.send_message(chat_id,
-                             get_text("add_word_common_not_admin", chat_id, 
-                                      "❌ Тільки головний адміністратор бота може додавати слова до загального словника."))
-            return
+        # Removed the common dictionary type check
         
         # Clear state but preserve dictionary type
         clear_state(chat_id, preserve_dict_type=True, preserve_messages=False)
@@ -78,12 +75,11 @@ def process_word_input(message):
     """Process the word input from the user"""
     try:
         chat_id = message.chat.id
-        
+
         # Check for menu navigation commands (e.g. "Cancel", "Main Menu")
         if is_menu_navigation_command(message):
-        
             handle_exit_from_activity(message)
-        return
+            return  # exit only on navigation commands
     
         # Validate input
         if not message.text:
@@ -109,34 +105,35 @@ def process_word_input(message):
                 return
             
             # Translate from German to user's language
-            translation = translator.translate(word_to_add, src='de', dest=language).text
+            translation_result = asyncio.run(translator.translate(word_to_add, src='de', dest=language))
+            translation = translation_result.text
             
             # Ask for confirmation
             markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
             markup.add(get_text("yes", chat_id), get_text("no", chat_id), get_text("cancel", chat_id))
             
-            bot.send_message(
+            confirm_msg = bot.send_message(
                 chat_id,
                 f"{get_text('found_translation_confirm', chat_id)} {translation}{get_text('translation_confirm', chat_id)}",
                 reply_markup=markup
             )
             
-            # Register handler for confirmation
-            safe_next_step_handler(message, lambda m: process_translation_confirm(m, word_to_add, translation, None))
+            # Register handler for confirmation on the sent message
+            safe_next_step_handler(confirm_msg, lambda m: process_translation_confirm(m, word_to_add, translation, None))
             
         except Exception as e:
             print(f"Translation error for word '{word_to_add}': {e}")
             bot.send_message(chat_id, get_text("translation_failed", chat_id, "Failed to translate word. Please try again."))
             
             # Ask for manual translation
-            bot.send_message(
+            manual_msg = bot.send_message(
                 chat_id,
                 get_text("enter_translation_manually", chat_id, "Enter the correct translation manually:"),
                 reply_markup=main_menu_cancel()
             )
             
-            # Register handler for manual translation
-            safe_next_step_handler(message, lambda m: process_manual_translation(m, word_to_add))
+            # Register handler for manual translation on the sent message
+            safe_next_step_handler(manual_msg, lambda m: process_manual_translation(m, word_to_add))
     except Exception as e:
         print(f"Error in process_word_input for chat_id {message.chat.id if message else 'N/A'}: {e}")
         if message and message.chat:
@@ -152,7 +149,7 @@ def process_manual_translation(message, word_to_add):
         # Check for menu navigation commands
         if is_menu_navigation_command(message):
             handle_exit_from_activity(message)
-        return
+            return
     
         translation = sanitize_user_input(message.text)
         
@@ -191,7 +188,7 @@ def process_translation_confirm(message, word_to_add, translation_to_add, articl
         # Check for menu navigation commands
         if is_menu_navigation_command(message):
             handle_exit_from_activity(message)
-        return
+            return
     
         user_input = sanitize_user_input(message.text)
         
@@ -240,9 +237,8 @@ def process_translation_confirm(message, word_to_add, translation_to_add, articl
                     else:
                         # This case should ideally not happen if dict_type is shared and state is consistent
                         bot.send_message(chat_id, get_text("error_shared_dict_not_selected_for_add", chat_id, "Помилка: спільний словник не обрано або не існує для додавання."), reply_markup=main_menu_keyboard(chat_id))
-                elif dict_type == "common":
-                    bot.send_message(chat_id, get_text("word_added_to_common_successfully", chat_id, "✅ Слово успішно додано до загального словника!"), reply_markup=main_menu_keyboard(chat_id))
-                else:  # Personal dictionary
+                # Removed the common dictionary type message
+                else:  # Personal dictionary (default)
                     bot.send_message(chat_id, get_text("word_added_successfully", chat_id, "✅ Слово успішно додано!"), reply_markup=main_menu_keyboard(chat_id))
             else:
                 bot.send_message(chat_id, get_text("error_adding_word", chat_id, "❌ Error adding word."), reply_markup=main_menu_keyboard(chat_id))
@@ -251,14 +247,14 @@ def process_translation_confirm(message, word_to_add, translation_to_add, articl
             
         elif user_input.lower() == get_text("no", chat_id).lower():
             # Ask for manual translation
-            bot.send_message(
+            manual_msg = bot.send_message(
                 chat_id,
                 get_text("enter_translation_manually", chat_id, "Enter the correct translation manually:"),
                 reply_markup=main_menu_cancel()
             )
             
-            # Register handler for manual translation
-            safe_next_step_handler(message, lambda m: process_manual_translation(m, word_to_add))
+            # Register handler for manual translation on the sent message
+            safe_next_step_handler(manual_msg, lambda m: process_manual_translation(m, word_to_add))
             
         elif user_input.lower() == get_text("cancel", chat_id).lower():
             handle_exit_from_activity(message)

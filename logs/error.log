@@ -99,3 +99,5 @@
 [2025-06-09 17:34:04.565] ERROR: HTTPSConnectionPool(host='api.telegram.org', port=443): Max retries exceeded with url: /bot7588170834:AAEpkiHnLxUY_HJBmY3_OEeGB0q_gg259Dw/getUpdates?offset=989871706&timeout=20 (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x0000022DFFE80E80>: Failed to resolve 'api.telegram.org' ([Errno 11001] getaddrinfo failed)")) | Context: Critical error in main loop
 [2025-06-09 19:01:25.416] ERROR: 476376623 | Context: Critical error in main loop
 [2025-06-09 19:02:54.112] ERROR: cannot import name 'log_action' from 'utils.logging_utils' (C:\Users\whyfl\Desktop\2025-05-27_15-35-46\utils\logging_utils.py) | Context: Critical error in main loop
+[2025-06-17 13:57:04.755] ERROR: module 'db_manager' has no attribute 'get_user_shared_dictionaries' | Context: Critical error in main loop
+[2025-06-17 13:58:50.221] ERROR: 'code' | Context: Critical error in main loop

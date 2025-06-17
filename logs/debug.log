@@ -7823,3 +7823,340 @@ insert <b>2</b> missing_letters'
 📚 Текущий словарь: A1 німецька (👥 Общий словарь)'
 [2025-06-09 20:48:15.944] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 5989
 [2025-06-11 00:07:20.340] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-11 00:07:20.340", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-17 13:43:44.673] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-17 13:43:44.673", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-17 13:53:29.875] Response to User 476376623: 'Главное меню:
+
+📚 Текущий словарь: 👤 Персональный словарь'
+[2025-06-17 13:53:29.876] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6197
+[2025-06-17 13:54:03.237] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-17 13:54:03.237", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-17 13:55:01.270] Response to User 476376623: 'Главное меню:
+
+📚 Текущий словарь: 👤 Персональный словарь'
+[2025-06-17 13:55:01.271] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6199
+[2025-06-17 13:56:41.768] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-17 13:56:41.768", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-17 13:56:48.485] Response to User 476376623: 'Главное меню:
+
+📚 Текущий словарь: 👤 Персональный словарь'
+[2025-06-17 13:56:48.486] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6201
+[2025-06-17 13:56:54.146] Response to User 476376623: 'Please select your language / Оберіть мову / Выберите язык:'
+[2025-06-17 13:56:58.037] Response to User 476376623: 'Türkçe dil seçildi'
+[2025-06-17 13:56:58.210] Response to User 476376623: 'Ana menü:'
+[2025-06-17 13:56:58.211] SECTION: User 476376623 entered section 'State update: main_menu' | Added message ID: 6206
+[2025-06-17 13:57:01.284] Response to User 476376623: '📚 Seçilen paylaşılan sözlük: <b>A1 німецька</b>
+
+Aşağıdaki menüden bir eylem seçin:'
+[2025-06-17 13:57:01.285] SECTION: User 476376623 entered section 'State update: main_menu' | Added message ID: 6208
+[2025-06-17 13:57:04.755] ERROR: module 'db_manager' has no attribute 'get_user_shared_dictionaries' | Context: Critical error in main loop
+[2025-06-17 13:58:45.327] Response to User 476376623: 'Ana menü:
+
+📚 Geçerli sözlük: 👤 Kişisel sözlük'
+[2025-06-17 13:58:45.329] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6211
+[2025-06-17 13:58:47.896] Response to User 476376623: '📚 Seçilen paylaşılan sözlük: <b>A1 німецька</b>
+
+Aşağıdaki menüden bir eylem seçin:'
+[2025-06-17 13:58:47.897] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6213
+[2025-06-17 13:58:50.221] ERROR: 'code' | Context: Critical error in main loop
+[2025-06-17 14:03:16.798] Response to User 476376623: 'Ana menü:
+
+📚 Geçerli sözlük: 👤 Kişisel sözlük'
+[2025-06-17 14:03:16.800] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6216
+[2025-06-17 14:03:19.105] Response to User 476376623: '📚 Seçilen paylaşılan sözlük: <b>A1 німецька</b>
+
+Aşağıdaki menüden bir eylem seçin:'
+[2025-06-17 14:03:19.106] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6218
+[2025-06-17 14:03:20.387] Response to User 476376623: '📋 Ortak sözlükleriniz: 
+
+• <b>A1 німецька</b> (👑 Yönetici)
+🔑 Access code: <code>XANOEF</code>
+
+• <b>...'
+[2025-06-17 14:03:20.389] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6220
+[2025-06-17 14:03:25.684] Response to User 476376623: '📚 Seçilen paylaşılan sözlük: <b>A1 німецька</b> (siz yöneticisiniz)
+Artık tüm işlemler bu sözlükte g...'
+[2025-06-17 14:03:25.685] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6221
+[2025-06-17 14:03:40.199] Response to User 476376623: 'Please select your language / Оберіть мову / Выберите язык:'
+[2025-06-17 14:03:42.381] Response to User 476376623: 'Обрана українська мова'
+[2025-06-17 14:03:42.433] Response to User 476376623: 'Головне меню'
+[2025-06-17 14:03:42.434] SECTION: User 476376623 entered section 'State update: main_menu' | Added message ID: 6232
+[2025-06-17 14:03:43.665] Response to User 476376623: '📚 Обрано спільний словник: <b>A1 німецька</b>
+
+Оберіть дію з меню нижче:'
+[2025-06-17 14:03:43.666] SECTION: User 476376623 entered section 'State update: main_menu' | Added message ID: 6234
+[2025-06-17 14:03:44.906] Response to User 476376623: '📋 Ваші спільні словники: 
+
+• <b>A1 німецька</b> (👑 Адміністратор)
+🔑 Код доступу: <code>XANOEF</code>...'
+[2025-06-17 14:03:44.907] SECTION: User 476376623 entered section 'State update: main_menu' | Added message ID: 6236
+[2025-06-17 14:03:46.327] Response to User 476376623: '📚 Обрано спільний словник: <b>A1 німецька</b> (ви адміністратор)
+Тепер всі дії будуть виконуватись у...'
+[2025-06-17 14:03:46.329] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6237
+[2025-06-17 14:03:47.644] Response to User 476376623: '❌ Сталася помилка. Спробуйте ще раз.'
+[2025-06-17 14:03:47.815] Response to User 476376623: 'Головне меню'
+[2025-06-17 14:06:16.169] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-17 14:06:16.169", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-17 14:06:23.627] Response to User 476376623: '📚 Обрано спільний словник: <b>A1 німецька</b>
+
+Оберіть дію з меню нижче:'
+[2025-06-17 14:06:23.628] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6242
+[2025-06-17 14:06:26.040] Response to User 476376623: '📋 Ваші спільні словники: 
+
+• <b>A1 німецька</b> (👑 Адміністратор)
+🔑 Код доступу: <code>XANOEF</code>...'
+[2025-06-17 14:06:26.042] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6244
+[2025-06-17 14:06:27.862] Response to User 476376623: '📚 Обрано спільний словник: <b>Test</b> (ви адміністратор)
+Тепер всі дії будуть виконуватись у цьому ...'
+[2025-06-17 14:06:27.864] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6245
+[2025-06-17 14:06:30] [ACTION] add_word_started: {"chat_id": 476376623}
+[2025-06-17 14:06:30.316] Response to User 476376623: 'Введіть слово, яке хочете додати:'
+[2025-06-17 14:09:54.883] Response to User 476376623: '🚫 Дію скасовано'
+[2025-06-17 14:09:54.884] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6250
+[2025-06-17 14:12:45] [ACTION] add_word_started: {"chat_id": 476376623}
+[2025-06-17 14:12:45.949] Response to User 476376623: 'Введіть слово, яке хочете додати:'
+[2025-06-17 14:12:49.204] Response to User 476376623: '🟢 Легкий рівень - оберіть активність:'
+[2025-06-17 14:13:11.578] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: 👤 Персональний словник'
+[2025-06-17 14:13:11.579] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6256
+[2025-06-17 14:14:39] [ACTION] add_word_started: {"chat_id": 476376623}
+[2025-06-17 14:14:39.595] Response to User 476376623: 'Введіть слово, яке хочете додати:'
+[2025-06-17 14:18:32.056] Response to User 476376623: '🟢 Легкий рівень - оберіть активність:'
+[2025-06-17 14:20:05.875] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: 👤 Персональний словник'
+[2025-06-17 14:20:05.876] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6262
+[2025-06-17 14:20:17] [ACTION] add_word_started: {"chat_id": 476376623}
+[2025-06-17 14:20:18.042] Response to User 476376623: 'Введіть слово, яке хочете додати:'
+[2025-06-17 14:20:19.143] Response to User 476376623: '🟢 Легкий рівень - оберіть активність:'
+[2025-06-17 14:23:27.562] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: 👤 Персональний словник'
+[2025-06-17 14:23:27.564] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6268
+[2025-06-17 14:23:51.576] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: 👤 Персональний словник'
+[2025-06-17 14:23:51.577] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6270
+[2025-06-17 14:37:03.737] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-17 14:37:03.737", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-17 14:37:23.946] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: 👤 Персональний словник'
+[2025-06-17 14:37:23.947] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6272
+[2025-06-17 14:37:36.625] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: 👤 Персональний словник'
+[2025-06-17 14:37:36.626] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6274
+[2025-06-17 14:38:22.688] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: 👤 Персональний словник'
+[2025-06-17 14:38:22.689] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6276
+[2025-06-17 14:38:30.792] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: 👤 Персональний словник'
+[2025-06-17 14:38:30.793] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6278
+[2025-06-17 14:41:21.472] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-17 14:41:21.472", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-17 14:43:26.279] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: 👤 Персональний словник'
+[2025-06-17 14:43:26.280] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6280
+[2025-06-17 14:43:44] [ACTION] add_word_started: {"chat_id": 476376623}
+[2025-06-17 14:43:44.616] Response to User 476376623: 'Введіть слово, яке хочете додати:'
+[2025-06-17 14:48:14.030] Response to User 476376623: '🚫 Дію скасовано'
+[2025-06-17 14:48:14.031] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6288
+[2025-06-17 14:57:42.063] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-17 14:57:42.063", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-17 14:57:52] [ACTION] add_word_started: {"chat_id": 476376623}
+[2025-06-17 14:57:52.520] Response to User 476376623: 'Введіть слово, яке хочете додати:'
+[2025-06-17 14:58:01.055] Response to User 476376623: 'Не вдалося перекласти слово. Спробуйте ще раз.'
+[2025-06-17 14:58:01.119] Response to User 476376623: 'Введіть правильний переклад вручну:'
+[2025-06-17 14:58:32.710] Response to User 476376623: '🟢 Легкий рівень - оберіть активність:'
+[2025-06-17 14:58:36.077] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: 👤 Персональний словник'
+[2025-06-17 14:58:36.079] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6297
+[2025-06-17 15:04:00.318] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-17 15:04:00.318", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-17 15:04:10.188] Response to User 476376623: '📚 Обрано спільний словник: <b>Test</b>
+
+Оберіть дію з меню нижче:'
+[2025-06-17 15:04:10.190] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6299
+[2025-06-17 15:04:12.591] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: Test (👥 Спільний словник)'
+[2025-06-17 15:04:12.592] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6301
+[2025-06-17 15:04:16] [ACTION] add_word_started: {"chat_id": 476376623}
+[2025-06-17 15:04:17.242] Response to User 476376623: 'Введіть слово, яке хочете додати:'
+[2025-06-17 15:04:24.535] Response to User 476376623: 'Знайдено переклад:  розливати. Це правильно?'
+[2025-06-17 15:05:02.127] Response to User 476376623: '🚫 Дію скасовано'
+[2025-06-17 15:05:02.128] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6310
+[2025-06-17 15:06:39.587] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-17 15:06:39.587", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-17 15:06:47] [ACTION] add_word_started: {"chat_id": 476376623}
+[2025-06-17 15:06:47.886] Response to User 476376623: 'Введіть слово, яке хочете додати:'
+[2025-06-17 15:06:55.840] Response to User 476376623: 'Знайдено переклад:  розливати. Це правильно?'
+[2025-06-17 15:06:57.265] Response to User 476376623: '✅ Word successfully added to your personal dictionary!'
+[2025-06-17 15:07:03.418] Response to User 476376623: '📚 Обрано спільний словник: <b>Test</b>
+
+Оберіть дію з меню нижче:'
+[2025-06-17 15:07:03.419] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6318
+[2025-06-17 15:07:05.537] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: Test (👥 Спільний словник)'
+[2025-06-17 15:07:05.539] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6320
+[2025-06-17 15:07:07] [ACTION] add_word_started: {"chat_id": 476376623}
+[2025-06-17 15:07:07.591] Response to User 476376623: 'Введіть слово, яке хочете додати:'
+[2025-06-17 15:07:11.141] Response to User 476376623: 'Не вдалося перекласти слово. Спробуйте ще раз.'
+[2025-06-17 15:07:11.471] Response to User 476376623: 'Введіть правильний переклад вручну:'
+[2025-06-17 15:07:26.394] Response to User 476376623: '🟢 Легкий рівень - оберіть активність:'
+[2025-06-17 15:07:28.374] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: Test (👥 Спільний словник)'
+[2025-06-17 15:07:28.375] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6329
+[2025-06-17 15:07:29.333] Response to User 476376623: '📚 Обрано спільний словник: <b>Test</b>
+
+Оберіть дію з меню нижче:'
+[2025-06-17 15:07:29.335] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6331
+[2025-06-17 15:07:30.961] Response to User 476376623: '📋 Ваші спільні словники: 
+
+• <b>A1 німецька</b> (👑 Адміністратор)
+🔑 Код доступу: <code>XANOEF</code>...'
+[2025-06-17 15:07:30.962] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6333
+[2025-06-17 15:07:32.517] Response to User 476376623: '📚 Обрано спільний словник: <b>Test</b> (ви адміністратор)
+Тепер всі дії будуть виконуватись у цьому ...'
+[2025-06-17 15:07:32.518] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6334
+[2025-06-17 15:07:36] [ACTION] add_word_started: {"chat_id": 476376623}
+[2025-06-17 15:07:36.089] Response to User 476376623: 'Введіть слово, яке хочете додати:'
+[2025-06-17 15:07:43.676] Response to User 476376623: 'Знайдено переклад:  розливати. Це правильно?'
+[2025-06-17 15:07:52.438] Response to User 476376623: '🟢 Легкий рівень - оберіть активність:'
+[2025-06-17 15:07:54.662] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: Test (👥 Спільний словник)'
+[2025-06-17 15:07:54.663] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6342
+[2025-06-17 15:07:56.062] Response to User 476376623: '📚 Обрано персональний словник.'
+[2025-06-17 15:07:57.487] Response to User 476376623: '👥 Спільні словники - оберіть опцію:'
+[2025-06-17 15:07:57.488] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6346
+[2025-06-17 15:08:01.142] Response to User 476376623: '📋 Ваші спільні словники: 
+
+• <b>A1 німецька</b> (👑 Адміністратор)
+🔑 Код доступу: <code>XANOEF</code>...'
+[2025-06-17 15:08:01.144] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6348
+[2025-06-17 15:08:03.418] Response to User 476376623: '📚 Обрано спільний словник: <b>Test</b> (ви адміністратор)
+Тепер всі дії будуть виконуватись у цьому ...'
+[2025-06-17 15:08:03.420] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6349
+[2025-06-17 15:08:13.004] Response to User 476376623: 'Word Management Menu:'
+[2025-06-17 15:08:13.005] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6351
+[2025-06-17 15:08:20.757] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: 👤 Персональний словник'
+[2025-06-17 15:08:20.759] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6353
+[2025-06-17 15:08:22] [ACTION] add_word_started: {"chat_id": 476376623}
+[2025-06-17 15:08:22.231] Response to User 476376623: 'Введіть слово, яке хочете додати:'
+[2025-06-17 15:08:26.950] Response to User 476376623: '🟢 Легкий рівень - оберіть активність:'
+[2025-06-17 15:12:24.235] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: 👤 Персональний словник'
+[2025-06-17 15:12:24.237] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6359
+[2025-06-17 15:19:59.201] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-17 15:19:59.201", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-17 15:20:14.653] Response to User 476376623: '📚 Обрано загальний словник.'
+[2025-06-17 15:20:20.956] Response to User 476376623: '📚 Обрано персональний словник.'
+[2025-06-17 15:20:22.827] Response to User 476376623: '👥 Спільні словники - оберіть опцію:'
+[2025-06-17 15:20:22.829] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6365
+[2025-06-17 15:22:12.763] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: 👥 Спільний словник'
+[2025-06-17 15:22:12.765] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6367
+[2025-06-17 15:22:53.157] Response to User 476376623: '👥 Спільні словники - оберіть опцію:'
+[2025-06-17 15:22:53.158] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6369
+[2025-06-17 15:22:55.599] Response to User 476376623: '📋 Ваші спільні словники: 
+
+• <b>A1 німецька</b> (👑 Адміністратор)
+🔑 Код доступу: <code>XANOEF</code>...'
+[2025-06-17 15:22:55.600] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6371
+[2025-06-17 15:22:57.247] Response to User 476376623: '📚 Обрано спільний словник: <b>A1 німецька</b> (ви адміністратор)
+Тепер всі дії будуть виконуватись у...'
+[2025-06-17 15:22:57.249] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6372
+[2025-06-17 15:26:26.452] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-17 15:26:26.452", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-17 15:26:38.031] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: 👤 Персональний словник'
+[2025-06-17 15:26:38.033] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6374
+[2025-06-17 15:26:41.964] Response to User 476376623: '📚 Обрано спільний словник: <b>A1 німецька</b>
+
+Оберіть дію з меню нижче:'
+[2025-06-17 15:26:41.966] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6376
+[2025-06-17 15:26:47.661] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: A1 німецька (👥 Спільний словник)'
+[2025-06-17 15:26:47.662] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6378
+[2025-06-17 15:26:50] [ACTION] add_word_started: {"chat_id": 476376623}
+[2025-06-17 15:26:51.414] Response to User 476376623: 'Введіть слово, яке хочете додати:'
+[2025-06-17 15:26:53.355] Response to User 476376623: '🟢 Легкий рівень - оберіть активність:'
+[2025-06-17 15:26:55.009] Response to User 476376623: '🔍 Оберіть пару слів:'
+[2025-06-17 15:26:55.997] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: 👤 Персональний словник'
+[2025-06-17 15:26:55.999] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6386
+[2025-06-17 15:45:27.990] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-17 15:45:27.990", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-17 15:45:40.074] Response to User 476376623: 'Word Management Menu:'
+[2025-06-17 15:45:40.076] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6388
+[2025-06-17 15:45:45.630] Response to User 476376623: 'Оберіть слово для редагування:'
+[2025-06-17 15:45:45.631] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6390
+[2025-06-17 15:46:08.153] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: 👤 Персональний словник'
+[2025-06-17 15:46:08.154] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6392
+[2025-06-17 15:46:11.940] Response to User 476376623: '📚 Обрано спільний словник: <b>A1 німецька</b>
+
+Оберіть дію з меню нижче:'
+[2025-06-17 15:46:11.941] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6394
+[2025-06-17 15:46:14.566] Response to User 476376623: '📋 Ваші спільні словники: 
+
+• <b>A1 німецька</b> (👑 Адміністратор)
+🔑 Код доступу: <code>XANOEF</code>...'
+[2025-06-17 15:46:14.567] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6396
+[2025-06-17 15:46:16.253] Response to User 476376623: '📚 Обрано спільний словник: <b>A1 німецька</b> (ви адміністратор)
+Тепер всі дії будуть виконуватись у...'
+[2025-06-17 15:46:16.254] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6397
+[2025-06-17 15:46:18.585] Response to User 476376623: 'Word Management Menu:'
+[2025-06-17 15:46:18.586] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6399
+[2025-06-17 15:46:20.229] Response to User 476376623: 'Оберіть слово для редагування:'
+[2025-06-17 15:46:20.230] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6401
+[2025-06-17 15:47:40.608] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: A1 німецька (👥 Спільний словник)'
+[2025-06-17 15:47:40.609] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6405
+[2025-06-17 15:47:41.985] Response to User 476376623: 'Word Management Menu:'
+[2025-06-17 15:47:41.986] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6407
+[2025-06-17 15:47:43.912] Response to User 476376623: 'Оберіть слова для видалення (натисніть для позначки):'
+[2025-06-17 15:47:43.915] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6409
+[2025-06-17 15:47:59.353] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: A1 німецька (👥 Спільний словник)'
+[2025-06-17 15:47:59.355] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6411
+[2025-06-17 15:48:01.379] Response to User 476376623: 'Word Management Menu:'
+[2025-06-17 15:48:01.380] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6413
+[2025-06-17 15:48:09.262] Response to User 476376623: 'Оберіть слова для видалення (натисніть для позначки):'
+[2025-06-17 15:48:09.263] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6415
+[2025-06-17 15:48:15.561] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: A1 німецька (👥 Спільний словник)'
+[2025-06-17 15:48:15.563] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6417
+[2025-06-17 15:48:16.702] Response to User 476376623: 'Word Management Menu:'
+[2025-06-17 15:48:16.704] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6419
+[2025-06-17 15:48:18.004] Response to User 476376623: 'Оберіть слова для видалення (натисніть для позначки):'
+[2025-06-17 15:48:18.006] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6421
+[2025-06-17 15:48:27.842] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: A1 німецька (👥 Спільний словник)'
+[2025-06-17 15:48:27.843] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6426
+[2025-06-17 15:48:35.942] Response to User 476376623: 'Word Management Menu:'
+[2025-06-17 15:48:35.943] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6428
+[2025-06-17 15:48:37.104] Response to User 476376623: 'Оберіть слова для видалення (натисніть для позначки):'
+[2025-06-17 15:48:37.104] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6430
+[2025-06-17 15:48:43.110] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: A1 німецька (👥 Спільний словник)'
+[2025-06-17 15:48:43.112] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6432
+[2025-06-17 15:48:51.658] Response to User 476376623: 'Word Management Menu:'
+[2025-06-17 15:48:51.660] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6434
+[2025-06-17 15:48:55.564] Response to User 476376623: 'Введіть слова для додавання (кожне з нового рядка, максимум 20 слів).
+Коли закінчите, натисніть кноп...'
+[2025-06-17 15:54:58.450] Response to User 476376623: 'Масове додавання завершено.
+Додано: {added_count}
+Пропущено: {skipped_count}
+Помилки: {error_count}'
+[2025-06-17 15:54:58.665] Response to User 476376623: 'Word Management Menu:'

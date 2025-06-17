@@ -260,6 +260,11 @@ def log_action(action, data=None, user=None, level=LOG_LEVEL_INFO):
     
     return log_data
 
+def log_activity(message, level=LOG_LEVEL_INFO):
+    """Logs user activity messages."""
+    log_entry = _format_log_entry(level, message)
+    _write_to_log(log_entry)
+
 # Створюємо декоратор для логування обробників
 def log_handler(func):
     """Декоратор для логування вхідних повідомлень та відповідей для обробників"""

@@ -618,6 +618,13 @@ def create_shared_dictionary_tables():
     if "shared_dict_id" not in columns:
         cursor.execute('ALTER TABLE users ADD COLUMN shared_dict_id INTEGER DEFAULT NULL')
     
+    # Add dict_type column to users table if it doesn't exist
+    cursor.execute("PRAGMA table_info(users)")
+    columns = [col[1] for col in cursor.fetchall()]
+
+    if "dict_type" not in columns:
+        cursor.execute('ALTER TABLE users ADD COLUMN dict_type TEXT DEFAULT "personal"')
+
     conn.commit()
     conn.close()
 
@@ -1007,12 +1014,16 @@ def get_user_dictionary_info(chat_id):
     return dict_type, shared_dict_id, is_admin
 
 
-def init_db():
+def init_db(chat_id=None):
     """Initialize the database - creates tables and migrates data if needed"""
     try:
         create_database()  # Ensures DB file and basic tables exist
-        create_user_table() # Ensures users table exists with all columns
-        create_shared_dictionary_tables() # Ensures shared dictionary tables exist
+        # Ensure users table exists with all columns
+        if chat_id:
+            create_user_table(chat_id)
+        else:
+            print("Skipping create_user_table as chat_id is not provided.")
+        create_shared_dictionary_tables()  # Ensures shared dictionary tables exist
         # migrate_from_csv() # This should be run once or conditionally
         print("Database initialization check complete.")
     except sqlite3.Error as e:
@@ -1173,3 +1184,33 @@ def get_shared_dictionary_words_with_articles(chat_id, shared_dict_id=None):
     
   
     return df
+
+def get_user_shared_dictionaries(chat_id):
+    """Retrieve shared dictionaries for a user."""
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        # Query to get shared dictionaries for the user
+        cursor.execute('''
+        SELECT sd.id, sd.name, sd.code, sdu.is_admin
+        FROM shared_dictionaries sd
+        JOIN shared_dict_users sdu ON sd.id = sdu.dict_id
+        WHERE sdu.user_id = ?
+        ''', (chat_id,))
+
+        shared_dicts = [
+            {"id": row[0], "name": row[1], "code": row[2], "is_admin": bool(row[3])}
+            for row in cursor.fetchall()
+        ]
+
+        conn.close()
+        return shared_dicts
+    except sqlite3.Error as e:
+        print(f"Database error retrieving shared dictionaries for user {chat_id}: {e}")
+        traceback.print_exc()
+        return []
+    except Exception as e:
+        print(f"Unexpected error retrieving shared dictionaries for user {chat_id}: {e}")
+        traceback.print_exc()
+        return []

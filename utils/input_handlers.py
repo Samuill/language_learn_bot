@@ -92,11 +92,15 @@ def sanitize_user_input(text, max_length=100):
 def handle_exit_from_activity(message, preserve_level=None):
     """Unified handler for exiting from any activity back to a menu"""
     from config import bot, user_state
-    
+
     chat_id = message.chat.id
+    # Recognize localized cancel as return-to-main
+    localized_cancel = get_text("cancel", chat_id)
     
     # Determine which menu to go back to based on message text
-    if message.text == "↩️ Повернутися до головного меню" or message.text == get_text("back_to_main_menu", chat_id):
+    if message.text == "↩️ Повернутися до головного меню" \
+       or message.text == get_text("back_to_main_menu", chat_id) \
+       or message.text == localized_cancel:
         # Log transition to main menu
         log_menu_transition(chat_id, user_state.get(chat_id, {}).get("current_menu", "UNKNOWN"), MENU_MAIN, "Action: Return to main menu")
         

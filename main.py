@@ -224,6 +224,23 @@ def setup_logging():
         logging.error(f"Logging setup failed: {e}", exc_info=True)
         return logging.getLogger(__name__) # Return a basic logger
 
+# configure file logging for all bot traffic
+logging.basicConfig(
+    filename='bot2.log', level=logging.INFO,
+    format='%(asctime)s %(message)s'
+)
+# listener to log every incoming update
+def log_all_updates(messages):
+    for message in messages:
+        if hasattr(message, 'text'):
+            chat_id = message.chat.id
+            text = message.text
+            log_str = f"INCOMING | From: {chat_id} | Text: {text}"
+            logging.info(log_str)
+            print(f"[SERVER LOG] {log_str}")
+# attach listener
+bot.set_update_listener(log_all_updates)
+
 def main():
     """Main entry point for the bot"""
     if not check_instance(): # Check if another instance is running

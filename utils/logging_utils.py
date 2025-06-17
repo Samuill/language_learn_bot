@@ -8,6 +8,7 @@ import os
 import time
 import datetime
 import traceback
+import json  # Add import for JSON serialization
 
 # Directory for log files
 LOG_DIR = "logs"
@@ -70,6 +71,18 @@ def log_language_event(chat_id, event_type, details):
             f.write(f"{message}\n")
     except Exception as e:
         print(f"\033[1;31mERROR writing to language log: {e}\033[0m")  # Red color for errors
+
+def log_action(action, data=None):
+    """Log a generic action with optional data payload"""
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    entry = {"action": action, "data": data}
+    message = f"[{timestamp}] [ACTION] {action}: {json.dumps(data, ensure_ascii=False)}"
+
+    # Print to console for visibility
+    print(f"\033[1;35m{message}\033[0m")  # Magenta color and bold
+
+    # Write to debug log
+    _write_log(DEBUG_LOG, message)
 
 def _write_log(log_file, message):
     """Write a message to a log file"""
