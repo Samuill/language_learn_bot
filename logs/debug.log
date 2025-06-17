@@ -8160,3 +8160,87 @@ Artık tüm işlemler bu sözlükte g...'
 Пропущено: {skipped_count}
 Помилки: {error_count}'
 [2025-06-17 15:54:58.665] Response to User 476376623: 'Word Management Menu:'
+[2025-06-17 16:45:35.665] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: 👤 Персональний словник'
+[2025-06-17 16:45:35.666] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6441
+[2025-06-17 16:45:36.985] Response to User 476376623: 'Word Management Menu:'
+[2025-06-17 16:45:36.985] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6443
+[2025-06-17 16:46:18.066] Response to User 476376623: 'Невідома опція, будь ласка, оберіть з клавіатури.'
+[2025-06-17 16:46:22.954] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: 👤 Персональний словник'
+[2025-06-17 16:46:22.956] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6447
+[2025-06-17 16:46:25.567] Response to User 476376623: 'Please select your language / Оберіть мову / Выберите язык:'
+[2025-06-17 16:46:27.455] Response to User 476376623: 'Выбран русский язык'
+[2025-06-17 16:46:27.578] Response to User 476376623: 'Главное меню:'
+[2025-06-17 16:46:27.580] SECTION: User 476376623 entered section 'State update: main_menu' | Added message ID: 6452
+[2025-06-17 16:46:29.136] Response to User 476376623: 'Word Management Menu:'
+[2025-06-17 16:46:29.137] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6454
+[2025-06-17 16:48:21.794] Response to User 476376623: 'Главное меню:
+
+📚 Текущий словарь: 👤 Персональный словарь'
+[2025-06-17 16:48:21.796] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6456
+[2025-06-17 16:48:23.745] Response to User 476376623: 'Главное меню:
+
+📚 Текущий словарь: 👤 Персональный словарь'
+[2025-06-17 16:48:23.746] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6458
+[2025-06-17 16:48:28.381] Response to User 476376623: 'Please select your language / Оберіть мову / Выберите язык:'
+[2025-06-17 16:48:31.638] Response to User 476376623: 'تم اختيار اللغة العربية'
+[2025-06-17 16:48:31.799] Response to User 476376623: 'القائمة الرئيسية:'
+[2025-06-17 16:48:31.814] SECTION: User 476376623 entered section 'State update: main_menu' | Added message ID: 6463
+[2025-06-17 16:48:33.084] Response to User 476376623: 'قائمة إدارة الكلمات:'
+[2025-06-17 16:48:33.085] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6465
+[2025-06-17 16:48:35.961] Response to User 476376623: 'القائمة الرئيسية:
+
+📚 القاموس الحالي: 👤 القاموس الشخصي'
+[2025-06-17 16:48:35.963] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6467
+[2025-06-17 16:48:38.693] Response to User 476376623: 'القائمة الرئيسية:
+
+📚 القاموس الحالي: 👤 القاموس الشخصي'
+[2025-06-17 16:48:38.694] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6469
+[2025-06-17 16:48:40.760] Response to User 476376623: 'Please select your language / Оберіть мову / Выберите язык:'
+[2025-06-17 16:48:42.682] Response to User 476376623: 'Обрана українська мова'
+[2025-06-17 16:48:42.922] Response to User 476376623: 'Головне меню'
+[2025-06-17 16:48:42.923] SECTION: User 476376623 entered section 'State update: main_menu' | Added message ID: 6474
+[2025-06-17 16:49:15.504] Response to User 476376623: 'Please select your language / Оберіть мову / Выберите язык:'
+[2025-06-17 16:49:17.516] Response to User 476376623: 'Выбран русский язык'
+[2025-06-17 16:49:17.665] Response to User 476376623: 'Главное меню:'
+[2025-06-17 16:49:17.666] SECTION: User 476376623 entered section 'State update: main_menu' | Added message ID: 6479
+[2025-06-17 16:49:18.808] Response to User 476376623: 'Word Management Menu:'
+[2025-06-17 16:49:18.810] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6481
+[2025-06-17 16:49:23.915] Response to User 476376623: 'Выберите слово для редактирования:'
+[2025-06-17 16:49:23.917] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6483
+[2025-06-17 16:49:27.808] Response to User 476376623: 'Главное меню:
+
+📚 Текущий словарь: 👤 Персональный словарь'
+[2025-06-17 16:49:27.810] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6485
+[2025-06-17 16:49:28.917] Response to User 476376623: 'Word Management Menu:'
+[2025-06-17 16:49:28.918] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6487
+[2025-06-17 16:49:30.059] Response to User 476376623: 'Выберите слова для удаления (нажмите для отметки):'
+[2025-06-17 16:49:30.060] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6489
+[2025-06-17 16:49:31.948] Response to User 476376623: 'Главное меню:
+
+📚 Текущий словарь: 👤 Персональный словарь'
+[2025-06-17 16:49:31.950] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6491
+[2025-06-17 16:49:33.028] Response to User 476376623: 'Word Management Menu:'
+[2025-06-17 16:49:33.029] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6493
+[2025-06-17 16:49:34.196] Response to User 476376623: 'Введите слова для добавления (каждое с новой строки, максимум 20 слов).
+Когда закончите, нажмите кно...'
+[2025-06-17 16:49:38.465] Response to User 476376623: 'Массовое добавление завершено.
+Добавлено: {added_count}
+Пропущено: {skipped_count}
+Ошибки: {error_co...'
+[2025-06-17 16:49:38.755] Response to User 476376623: 'Word Management Menu:'
+[2025-06-17 16:49:41.630] Response to User 476376623: 'Главное меню:
+
+📚 Текущий словарь: 👤 Персональный словарь'
+[2025-06-17 16:49:41.632] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6500
+[2025-06-17 16:50:57.865] Response to User 476376623: '📚 Выбран общий словарь: '
+[2025-06-17 16:50:57.867] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6502
+[2025-06-17 16:50:59.905] Response to User 476376623: 'Word Management Menu:'
+[2025-06-17 16:50:59.907] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6504
+[2025-06-17 16:51:01.797] Response to User 476376623: 'Выберите слово для редактирования:'
+[2025-06-17 16:51:01.798] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6506
+[2025-06-17 17:02:43.082] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-17 17:02:43.082", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-17 17:03:40.540] Response to User 476376623: 'Please select your language / Оберіть мову / Выберите язык:'

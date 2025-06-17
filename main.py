@@ -307,4 +307,9 @@ def main():
         log_error(e, "Critical error in main loop")
 
 if __name__ == "__main__":
-    main()
+    while True:
+        try:
+            bot.polling(none_stop=True, interval=1, timeout=60)
+        except Exception:
+            logging.exception('Unexpected error in polling, restarting after 5 seconds')
+            time.sleep(5)

@@ -203,5 +203,7 @@
   "try_again_enter_translation": "Пожалуйста, введите перевод еще раз или нажмите 'Отмена' в предыдущем сообщении.",
   "bulk_add_error_adding_short": "ошибка добавления",
   "bulk_add_error_updating_short": "ошибка обновления",
-  "translation_unavailable_short": "Н/Д"
+  "translation_unavailable_short": "Н/Д",
+  "word_management_menu_prompt": "Меню управления словами:"
+
 }
