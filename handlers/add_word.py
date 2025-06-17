@@ -16,7 +16,7 @@ import asyncio
 # Import the functions that were previously undefined
 from utils.input_handlers import is_menu_navigation_command, handle_exit_from_activity
 
-@bot.message_handler(func=lambda message: message.text.strip() == "➕ Додати нове слово")
+@bot.message_handler(func=lambda message: message.text.strip() == "➕ Додати нове слово" or message.text == get_text("add_new_word", message.chat.id))
 def add_word_started(message):
     try:
         chat_id = message.chat.id

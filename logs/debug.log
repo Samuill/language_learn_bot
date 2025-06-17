@@ -8307,3 +8307,42 @@ Artık tüm işlemler bu sözlükte g...'
 [2025-06-17 17:37:15.464] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6579
 [2025-06-17 17:37:16.512] Response to User 476376623: 'Выберите слово для редактирования:'
 [2025-06-17 17:37:16.513] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6581
+[2025-06-17 17:43:20.971] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-17 17:43:20.971", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-17 17:43:35.765] Response to User 476376623: 'Главное меню:
+
+📚 Текущий словарь: 👤 Персональный словарь'
+[2025-06-17 17:43:35.767] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6583
+[2025-06-17 17:44:13.988] Response to User 476376623: 'Меню управления словами:'
+[2025-06-17 17:44:13.989] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6585
+[2025-06-17 17:44:15.613] Response to User 476376623: 'Главное меню:
+
+📚 Текущий словарь: 👤 Персональный словарь'
+[2025-06-17 17:44:15.614] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6587
+[2025-06-17 17:46:01.382] Response to User 476376623: 'Главное меню:
+
+📚 Текущий словарь: 👤 Персональный словарь'
+[2025-06-17 17:46:01.384] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6616
+[2025-06-17 17:46:06.972] Response to User 476376623: 'Please select your language / Оберіть мову / Выберите язык:'
+[2025-06-17 17:46:08.584] Response to User 476376623: 'Обрана українська мова'
+[2025-06-17 17:46:08.632] Response to User 476376623: 'Головне меню'
+[2025-06-17 17:46:08.634] SECTION: User 476376623 entered section 'State update: main_menu' | Added message ID: 6621
+[2025-06-17 17:46:09] [ACTION] add_word_started: {"chat_id": 476376623}
+[2025-06-17 17:46:09.860] Response to User 476376623: 'Введіть слово, яке хочете додати:'
+[2025-06-17 17:46:12.050] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: 👤 Персональний словник'
+[2025-06-17 17:46:12.051] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6625
+[2025-06-17 17:46:23.642] Response to User 476376623: 'Please select your language / Оберіть мову / Выберите язык:'
+[2025-06-17 17:46:26.298] Response to User 476376623: 'Türkçe dil seçildi'
+[2025-06-17 17:46:26.414] Response to User 476376623: 'Ana menü:'
+[2025-06-17 17:46:26.415] SECTION: User 476376623 entered section 'State update: main_menu' | Added message ID: 6630
+[2025-06-17 17:47:05.590] Response to User 476376623: '🟢 Kolay seviye - aktivite seçin:'
+[2025-06-17 17:47:05.593] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6633
+[2025-06-17 17:52:30.948] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-17 17:52:30.948", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-17 17:52:35.152] Response to User 476376623: 'Ana menü:
+
+📚 Geçerli sözlük: 👤 Kişisel sözlük'
+[2025-06-17 17:52:35.154] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 6635
+[2025-06-17 17:52:36] [ACTION] add_word_started: {"chat_id": 476376623}
+[2025-06-17 17:52:36.673] Response to User 476376623: 'Eklemek istediğiniz kelimeyi girin:'
+[2025-06-17 17:52:38.427] Response to User 476376623: '🟢 Kolay seviye - aktivite seçin:'
