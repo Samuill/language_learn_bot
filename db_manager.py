@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 import os
 import re
@@ -1215,3 +1214,37 @@ def get_user_shared_dictionaries(chat_id):
         print(f"Unexpected error retrieving shared dictionaries for user {chat_id}: {e}")
         traceback.print_exc()
         return []
+
+def delete_word_from_personal_dict(chat_id, word_id):
+    """Remove a word from a user's personal dictionary table"""
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute(f"DELETE FROM user_{chat_id} WHERE word_id = ?", (word_id,))
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        print(f"Error deleting word_id {word_id} from personal dict for user {chat_id}: {e}")
+        return False
+
+
+def delete_word_from_shared_dict(chat_id, word_id, shared_dict_id=None):
+    """Remove a word from a shared dictionary table"""
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        if not shared_dict_id:
+            cursor.execute('SELECT shared_dict_id FROM users WHERE chat_id = ?', (chat_id,))
+            res = cursor.fetchone()
+            if not res or not res[0]:
+                conn.close()
+                return False
+            shared_dict_id = res[0]
+        cursor.execute(f"DELETE FROM shared_dict_{shared_dict_id} WHERE word_id = ?", (word_id,))
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        print(f"Error deleting word_id {word_id} from shared dict {shared_dict_id} by user {chat_id}: {e}")
+        return False

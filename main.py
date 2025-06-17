@@ -288,28 +288,23 @@ def main():
     setup_scheduler()
     
     print("Bot is starting to poll...")
-    try:
-        # Start bot polling - increase interval to reduce API requests
-        bot.polling(none_stop=True, interval=1, timeout=60)
-    except requests.exceptions.ReadTimeout:
-        print("Bot polling ReadTimeout. Restarting polling...")
-        time.sleep(10) # Wait a bit before restarting
-        main() # Be careful with recursion here, might need a loop
-    except requests.exceptions.ConnectionError:
-        print("Bot polling ConnectionError. Retrying in 60 seconds...")
-        time.sleep(60)
-        main() # Be careful with recursion here
-    except Exception as e:
-        print(f"Critical error in bot polling loop: {e}")
-        import traceback
-        traceback.print_exc()
-        from debug_logger import log_error
-        log_error(e, "Critical error in main loop")
-
-if __name__ == "__main__":
+    # Resilient polling loop to avoid breaking handler registration
     while True:
         try:
+            # Start bot polling - increase interval to reduce API requests
             bot.polling(none_stop=True, interval=1, timeout=60)
+        except requests.exceptions.ReadTimeout:
+            print("Bot polling ReadTimeout. Restarting polling...")
+            time.sleep(10)
+            continue
+        except requests.exceptions.ConnectionError:
+            print("Bot polling ConnectionError. Retrying in 60 seconds...")
+            time.sleep(60)
+            continue
         except Exception:
             logging.exception('Unexpected error in polling, restarting after 5 seconds')
             time.sleep(5)
+            continue
+
+if __name__ == "__main__":
+    main()
