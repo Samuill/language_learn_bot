@@ -7,25 +7,10 @@
 from config import bot, user_state, ADMIN_ID
 from utils import main_menu_keyboard, clear_state, easy_level_keyboard, medium_level_keyboard, hard_level_keyboard
 from utils.state_helpers import save_message_id
-from dictionary import toggle_dictionary, set_dictionary_type
 import db_manager
 from utils.language_utils import get_text
 from utils.input_handlers import safe_next_step_handler, sanitize_user_input
 from utils.console_logger import log_menu_transition, log_displayed_buttons, MENU_MAIN, MENU_EASY, MENU_MEDIUM, MENU_HARD, MENU_SHARED
-
-# Make sure switch_dictionary function exists for backward compatibility
-def switch_dictionary(message):
-    """Toggle between personal and common dictionaries - compatibility function"""
-    if hasattr(message, 'chat'):
-        toggle_dictionary(message.chat.id)
-    elif isinstance(message, int):
-        toggle_dictionary(message)
-
-# Додаємо функцію switch_dictionary, яка відсутня
-@bot.message_handler(func=lambda message: message.text in ["🌐 Загальний словник", "👤 Персональний словник"])
-def switch_dictionary_handler(message):
-    """Handler for dictionary switching button"""
-    toggle_dictionary(message.chat.id)
 
 # Універсальний обробник для встановлення рівня складності
 @bot.message_handler(func=lambda message: message.text in [
@@ -115,10 +100,10 @@ def personal_dictionary_button(message):
     # Log transition
     log_menu_transition(chat_id, user_state.get(chat_id, {}).get("current_menu", "UNKNOWN"), MENU_MAIN, "Switched to personal dictionary")
     
-    # Оновлюємо БД для очищення shared_dict_id
+    # Оновлюємо БД для очищення shared_dict_id та встановлення персонального словника
     conn = db_manager.get_connection()
     cursor = conn.cursor()
-    cursor.execute("UPDATE users SET shared_dict_id = NULL WHERE chat_id = ?", (chat_id,))
+    cursor.execute("UPDATE users SET dict_type = 'personal', shared_dict_id = NULL WHERE chat_id = ?", (chat_id,))
     conn.commit()
     conn.close()
     
@@ -158,7 +143,66 @@ def personal_dictionary_button(message):
     
     sent_message = bot.send_message(
         chat_id, 
-        get_text("selected_dict", chat_id),
+        f"📚 {get_text('current_dictionary', chat_id, 'Поточний словник')}: {get_text('personal_dictionary', chat_id)}",
+        reply_markup=keyboard
+    )
+    save_message_id(chat_id, sent_message.message_id)
+
+@bot.message_handler(func=lambda message: message.text == get_text("edit_word", message.chat.id) or message.text == "✏️ Редаггувати слово")
+def edit_word_menu(message):
+    """Show word management menu - same logic as level buttons"""
+    chat_id = message.chat.id
+    
+    # Зберігаємо тип словника, але видаляємо повідомлення активності  
+    clear_state(chat_id, preserve_dict_type=True, preserve_messages=False)
+    
+    # Імпортуємо word_management_menu_keyboard
+    from handlers.edit_word import word_management_menu_keyboard
+    
+    # Створюємо клавіатуру для меню редагування
+    keyboard = word_management_menu_keyboard(chat_id)
+    message_text = get_text("word_management_menu_prompt", chat_id, "Меню керування словами:")
+    
+    # Оновлюємо стан користувача
+    dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
+    shared_dict_id = user_state.get(chat_id, {}).get("shared_dict_id", None)
+    
+    if chat_id in user_state:
+        user_state[chat_id].update({
+            "current_menu": "EDIT_WORD_MENU"
+        })
+    else:
+        user_state[chat_id] = {
+            "dict_type": dict_type,
+            "current_menu": "EDIT_WORD_MENU"
+        }
+        
+    if shared_dict_id:
+        user_state[chat_id]["shared_dict_id"] = shared_dict_id
+        
+    # Логирование кнопок
+    try:
+        button_texts = []
+        if hasattr(keyboard, 'keyboard'):
+            for row in keyboard.keyboard:
+                for button in row:
+                    if hasattr(button, 'text'):
+                        button_texts.append(button.text)
+                    elif isinstance(button, dict) and 'text' in button:
+                        button_texts.append(button['text'])
+    except Exception as e:
+        print(f"Error extracting button texts: {e}")
+    
+    # Log displayed buttons only if we successfully extracted texts
+    if button_texts:
+        log_displayed_buttons(chat_id, button_texts, "EDIT_WORD_MENU")
+    else:
+        print(f"Warning: Could not extract button texts for user {chat_id} in EDIT_WORD_MENU menu")
+    
+    # Відправляємо меню редагування
+    sent_message = bot.send_message(
+        chat_id, 
+        message_text, 
         reply_markup=keyboard
     )
     save_message_id(chat_id, sent_message.message_id)

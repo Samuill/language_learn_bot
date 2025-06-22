@@ -5,14 +5,15 @@
 """
 
 import telebot  # Add explicit import for telebot
-from config import bot, user_state
+from googletrans import Translator
+import asyncio
+from config import bot, user_state, translator
 from utils import clear_state, main_menu_keyboard, main_menu_cancel
 from utils.state_helpers import save_message_id
 from utils.language_utils import get_text
 from utils.input_handlers import safe_next_step_handler, sanitize_user_input, is_system_command, is_menu_navigation_command, handle_exit_from_activity
 import db_manager
 import pandas as pd
-from config import translator
 from concurrent.futures import ThreadPoolExecutor
 
 # Створюємо пул потоків для асинхронної обробки запитів до БД
@@ -37,66 +38,30 @@ def word_management_menu_keyboard(chat_id):
     )
     return keyboard
 
-@bot.message_handler(func=lambda message: message.text == get_text("edit_word", message.chat.id) or message.text == "✏️ Редагувати слово")
-def edit_word_start(message):
-    """Show word management menu."""
-    try:
-        chat_id = message.chat.id
-        
-        if chat_id not in user_state:
-            user_state[chat_id] = {}
-        
-        clear_state(chat_id, preserve_dict_type=True, preserve_messages=False) # Preserve dict type
-        user_state[chat_id]["step"] = "word_management_menu"
-        
-        sent_message = bot.send_message(
-            chat_id,
-            get_text("word_management_menu_prompt", chat_id, "Меню керування словами:"),
-            reply_markup=word_management_menu_keyboard(chat_id)
-        )
-        save_message_id(chat_id, sent_message.message_id)
-        # Register next step handler for the word management menu choices
-        safe_next_step_handler(sent_message, handle_word_management_choice)
+# Удален старый обработчик edit_word_start - теперь обрабатывается в dictionaries.py
 
-    except Exception as e:
-        print(f"Error in edit_word_start (word management menu) for chat_id {message.chat.id if message else 'N/A'}: {e}")
-        if message and message.chat:
-            bot.send_message(
-                message.chat.id,
-                get_text("error_occurred", message.chat.id),
-                reply_markup=main_menu_keyboard(message.chat.id)
-            )
-            clear_state(message.chat.id)
+# Обработчики кнопок меню редактирования - работают как кнопки активностей в уровнях
+@bot.message_handler(func=lambda message: message.text == get_text("edit_delete_single_word_button", message.chat.id))
+def handle_edit_delete_single_word(message):
+    """Handle single word edit/delete button"""
+    initiate_single_word_edit_or_delete(message)
+
+@bot.message_handler(func=lambda message: message.text == get_text("bulk_delete_words_button", message.chat.id))
+def handle_bulk_delete_words(message):
+    """Handle bulk delete words button"""
+    initiate_bulk_delete(message)
+
+@bot.message_handler(func=lambda message: message.text == get_text("bulk_add_words_button", message.chat.id))
+def handle_bulk_add_words(message):
+    """Handle bulk add words button"""
+    initiate_bulk_add_words(message)
+
+# Удален старый handle_word_management_choice - теперь каждая кнопка имеет свой обработчик
 
 def handle_word_management_choice(message):
-    """Handle user's choice from the word management menu."""
-    try:
-        chat_id = message.chat.id
-        user_text = message.text
-
-        if user_text == get_text("edit_delete_single_word_button", chat_id):
-            initiate_single_word_edit_or_delete(message)
-        elif user_text == get_text("bulk_delete_words_button", chat_id):
-            initiate_bulk_delete(message) 
-        elif user_text == get_text("bulk_add_words_button", chat_id):
-            initiate_bulk_add_words(message) # Call new function for bulk add
-        elif user_text == get_text("back_to_main_menu", chat_id):
-            from handlers.main_menu import return_to_main_menu # Import here to avoid circular dependency
-            return_to_main_menu(message)
-        else:
-            # Invalid choice, re-prompt
-            bot.send_message(chat_id, get_text("invalid_choice_try_again", chat_id, "Невідома опція, будь ласка, оберіть з клавіатури."), reply_markup=word_management_menu_keyboard(chat_id))
-            safe_next_step_handler(message, handle_word_management_choice)
-
-    except Exception as e:
-        print(f"Error in handle_word_management_choice for chat_id {message.chat.id if message else 'N/A'}: {e}")
-        if message and message.chat:
-            bot.send_message(
-                message.chat.id,
-                get_text("error_occurred", message.chat.id),
-                reply_markup=main_menu_keyboard(message.chat.id)
-            )
-            clear_state(message.chat.id)
+    """Заглушка для обратной совместимости - перенаправляет в меню"""
+    from handlers.main_menu import return_to_main_menu
+    return_to_main_menu(message)
 
 def initiate_single_word_edit_or_delete(message):
     """Start the process for editing or deleting a single word."""
@@ -118,8 +83,7 @@ def _async_load_words_for_edit(chat_id, state, message):
         # Перевіряємо стан і втановлюємо його
         if chat_id not in user_state:
             user_state[chat_id] = {}
-        
-        # Завантажуємо слова з БД
+          # Завантажуємо слова з БД
         df = None
         if dict_type == "shared" and shared_dict_id:
             df = db_manager.get_shared_dictionary_words(chat_id, shared_dict_id)
@@ -135,7 +99,6 @@ def _async_load_words_for_edit(chat_id, state, message):
                 f"{get_text('in', chat_id)} {dict_name_text} {get_text('no_words_to_edit', chat_id, 'немає слів для редагування.')}",
                 reply_markup=word_management_menu_keyboard(chat_id) # Back to word management menu
             )
-            safe_next_step_handler(message, handle_word_management_choice)
             return
         
         # Update user state for selecting a single word to edit
@@ -919,17 +882,16 @@ def _start_bulk_add_process(chat_id, message):
     sent_msg = bot.send_message(chat_id, prompt_text, reply_markup=bulk_add_reply_keyboard(chat_id))
     safe_next_step_handler(sent_msg, handle_bulk_words_input)
 
+
 def handle_bulk_words_input(message):
     chat_id = message.chat.id
     user_text = message.text.strip()
 
-    # Перевірка кнопки "Готово"
+    # Check for "Done" button
     if user_text == get_text("bulk_add_done_button_reply", chat_id):
         finalize_bulk_add(chat_id, "done_button_on_input")
         return
     
-    # Тут можна додати обробку інших команд з reply_keyboard, якщо вони є
-
     words_input_list = [w.strip() for w in user_text.split('\n') if w.strip()]
 
     if not words_input_list:
@@ -941,97 +903,93 @@ def handle_bulk_words_input(message):
         words_input_list = words_input_list[:BULK_ADD_MAX_WORDS]
         bot.send_message(chat_id, get_text("bulk_add_word_limit_exceeded", chat_id, f"Прийнято перші {BULK_ADD_MAX_WORDS} слів. Інші проігноровано."))
 
-    processing_msg_text = get_text("bulk_add_processing", chat_id, "Обробка слів...")
-    processing_msg = bot.send_message(chat_id, processing_msg_text)
-    # save_message_id(chat_id, processing_msg.message_id) # Цей ID не потрібен, бо повідомлення видаляється одразу
+    processing_msg = bot.send_message(chat_id, get_text("bulk_add_processing", chat_id, "Обробка слів..."))
 
-    bulk_add_data_list = []
     current_language = db_manager.get_user_language(chat_id)
     if not current_language:
         bot.send_message(chat_id, get_text("language_not_selected", chat_id, "Мова не вибрана. Будь ласка, почніть з /start"))
-        if processing_msg: # Check if processing_msg was created
-            try:
-                bot.delete_message(chat_id, processing_msg.message_id)
-            except Exception: pass
+        try:
+            bot.delete_message(chat_id, processing_msg.message_id)
+        except Exception: pass
         finalize_bulk_add(chat_id, "language_error_on_input")
         return
 
-    dict_type_for_state = user_state[chat_id].get("dict_type", "personal")
-    shared_dict_id_for_state = user_state[chat_id].get("shared_dict_id")
-
-    for word_text_original in words_input_list:
+    # Prepare data and batch translate
+    words_to_translate = []
+    words_data_pre_translation = []
+    for word_text in words_input_list:
         article = None
-        word_to_process = word_text_original
-        parts = word_text_original.split(" ", 1)
+        word_to_process = word_text
+        parts = word_text.split(" ", 1)
         if len(parts) > 1 and parts[0].lower() in ["der", "die", "das"]:
             article = parts[0].lower()
             word_to_process = parts[1]
+        words_to_translate.append(word_to_process)
+        words_data_pre_translation.append({"original": word_text, "to_process": word_to_process, "article": article, "translation": ""})
 
-        translation_text = None
-        try:
-            translation_text = translator.translate(word_to_process, src='de', dest=current_language).text
-        except Exception as e:
-            print(f"Bulk add translation error for '{word_to_process}': {e}")
-            translation_text = get_text("translation_failed_short", chat_id, "Помилка перекладу")
+    try:
+        translated_objects = asyncio.run(translator.translate(words_to_translate, src='de', dest=current_language))
+        for i, translated in enumerate(translated_objects):
+            words_data_pre_translation[i]["translation"] = translated.text
+    except Exception as e:
+        print(f"Bulk add translation error: {e}")
+        for info in words_data_pre_translation:
+            info["translation"] = get_text("translation_failed_short", chat_id, "Помилка перекладу")
 
-        # Immediately add word to DB
-        item_status = "error_adding"
-        item_id_in_db = None
+    # Process words one-by-one to get IDs for interactive editing
+    bulk_add_data_list = []
+    dict_type = user_state[chat_id].get("dict_type", "personal")
+    shared_dict_id = user_state[chat_id].get("shared_dict_id")
 
-        # Determine dict_type param for db_manager.add_word
-        db_add_word_dict_param = "personal" if dict_type_for_state == "personal" else "common"
+    for info in words_data_pre_translation:
+        status = "error_adding"
+        word_id = None
         
-        # Check admin rights again before adding, especially for shared/common
-        can_add_this_word = True
-        if dict_type_for_state == "shared":
-            if not shared_dict_id_for_state or not db_manager.is_user_admin_of_shared_dict(chat_id, shared_dict_id_for_state):
-                can_add_this_word = False
-        elif dict_type_for_state == "common" and str(chat_id) != str(db_manager.ADMIN_ID):
-            can_add_this_word = False
-        
-        if not can_add_this_word:
-            # This case should ideally be caught by initiate_bulk_add_words, but as a safeguard
-            print(f"Permissions issue for word '{word_to_process}' in bulk add for chat_id {chat_id}")
-            # item_status remains "error_adding" or a more specific error
-        else:
-            word_id = db_manager.add_word(chat_id, word_to_process, translation_text,
-                                          dict_type=db_add_word_dict_param,
-                                          article=article)
-            if word_id:
-                item_status = "processed"
-                item_id_in_db = word_id
-                if dict_type_for_state == "shared" and shared_dict_id_for_state:
-                    shared_add_success, _ = db_manager.add_word_to_shared_dictionary(
-                        chat_id, word_id, shared_dict_id_for_state
-                    )
-                    if not shared_add_success:
-                        item_status = "error_adding" # Or "error_linking_shared"
-                        # Consider if word should be deleted from global if linking fails
-            else: # word_id is None
-                item_status = "error_adding"
+        # For shared dicts, we add to the main `words` table but don't link to a personal dict.
+        add_word_dict_type = "personal" if dict_type == "personal" else "common"
+
+        word_id = db_manager.add_word(
+            chat_id, 
+            info['to_process'], 
+            info['translation'],
+            dict_type=add_word_dict_type,
+            article=info['article']
+        )
+
+        if word_id:
+            if dict_type == "shared":
+                if shared_dict_id:
+                    # Link the word to the shared dictionary
+                    success, _ = db_manager.add_word_to_shared_dictionary(chat_id, word_id, shared_dict_id)
+                    if success:
+                        status = "processed"
+                # If it fails, status remains "error_adding"
+            else:  # For personal or common dicts
+                status = "processed"
         
         bulk_add_data_list.append({
-            "original_word_text": word_text_original,
-            "word_for_db": word_to_process, # This is the German word without article
-            "article_for_db": article,
-            "translation": translation_text,
-            "status": item_status, 
-            "id_in_db": item_id_in_db # This is the ID from the table it was added to
+            "original_word_text": info["original"],
+            "word_for_db": info["to_process"],
+            "article_for_db": info["article"],
+            "translation": info["translation"],
+            "status": status, 
+            "id_in_db": word_id
         })
-    
+
     user_state[chat_id]["bulk_add_words_data"] = bulk_add_data_list
-    if processing_msg: # Check if processing_msg was created
-        try:
-            bot.delete_message(chat_id, processing_msg.message_id)
-        except Exception:
-            pass 
+    
+    try:
+        bot.delete_message(chat_id, processing_msg.message_id)
+    except Exception:
+        pass 
         
     user_state[chat_id]["step"] = "bulk_add_displaying_list"
     display_bulk_add_interactive_list(chat_id)
 
+
 def display_bulk_add_interactive_list(chat_id, message_to_edit_id=None):
     if chat_id not in user_state or not user_state[chat_id].get("bulk_add_words_data"):
-        # This might happen if input was empty and then "Done" was pressed.
+        # This might happen if input was empty and then "Готово" was pressed.
         # Or if an error occurred before data list was populated.
         finalize_bulk_add(chat_id, "no_data_to_display_in_list")
         return
@@ -1137,94 +1095,81 @@ def handle_bulk_cancel_edit_translation(call):
     display_bulk_add_interactive_list(chat_id) # Refresh the main list
     bot.answer_callback_query(call.id, get_text("cancelled", chat_id))
 
+
 def handle_bulk_manual_edit_translation_input(message):
     chat_id = message.chat.id
-    
-    if message.text.strip() == get_text("bulk_add_done_button_reply", chat_id):
-        active_confirm_msg_id = user_state[chat_id].get("bulk_add_confirm_message_id")
+    try:
+        # Check for "Done" button or other commands
+        if handle_exit_from_activity(message):
+             # Clean up any pending confirmation messages
+            active_confirm_msg_id = user_state.get(chat_id, {}).get("bulk_add_confirm_message_id")
+            if active_confirm_msg_id:
+                try:
+                    bot.delete_message(chat_id, active_confirm_msg_id)
+                except Exception:
+                    pass
+            finalize_bulk_add(chat_id, "exit_command_during_manual_edit")
+            return
+
+        # Validate state
+        if chat_id not in user_state or user_state[chat_id].get("step") != "bulk_add_awaiting_manual_edit_translation":
+            return
+
+        idx = user_state[chat_id].get("bulk_add_active_word_index")
+        if idx is None:
+            finalize_bulk_add(chat_id, "error_no_active_idx_manual_edit")
+            return
+
+        new_translation = sanitize_user_input(message.text)
+        if not new_translation:
+            bot.send_message(chat_id, get_text("empty_translation_error", chat_id))
+            # Re-register handler for the next message to allow user to try again
+            safe_next_step_handler(message, handle_bulk_manual_edit_translation_input)
+            return
+
+        # Get the specific word data from state
+        word_data = user_state[chat_id]["bulk_add_words_data"][idx]
+        word_id = word_data.get("id_in_db")
+
+        if not word_id:
+            bot.send_message(chat_id, get_text("bulk_add_error_cannot_update_not_added", chat_id))
+        else:
+            # Update in DB
+            dict_type = user_state[chat_id].get("dict_type", "personal")
+            shared_dict_id = user_state[chat_id].get("shared_dict_id")
+            success = False
+
+            if dict_type == "shared":
+                success = db_manager.update_word_translation_shared_dict(chat_id, word_id, new_translation, shared_dict_id)
+            else:  # Handles "personal" and "common" (for admin)
+                success = db_manager.update_word_translation_personal_dict(chat_id, word_id, new_translation)
+
+            if success:
+                # Update state and notify user
+                user_state[chat_id]["bulk_add_words_data"][idx]["translation"] = new_translation
+                user_state[chat_id]["bulk_add_words_data"][idx]["status"] = "processed"
+                bot.send_message(chat_id, get_text("bulk_add_translation_updated", chat_id, "Переклад оновлено для <b>{word}</b>.").format(word=word_data["original_word_text"]), parse_mode="HTML")
+            else:
+                user_state[chat_id]["bulk_add_words_data"][idx]["status"] = "error_updating"
+                bot.send_message(chat_id, get_text("bulk_add_error_updating_translation", chat_id, "Помилка оновлення перекладу для <b>{word}</b>.").format(word=word_data["original_word_text"]), parse_mode="HTML")
+
+        # Clean up the prompt message for this specific edit
+        active_confirm_msg_id = user_state.get(chat_id, {}).get("bulk_add_confirm_message_id")
         if active_confirm_msg_id:
             try:
                 bot.delete_message(chat_id, active_confirm_msg_id)
                 user_state[chat_id]["bulk_add_confirm_message_id"] = None
-            except Exception: pass
-        finalize_bulk_add(chat_id, "done_button_during_manual_edit_input")
-        return
-
-    if chat_id not in user_state or user_state[chat_id].get("step") != "bulk_add_awaiting_manual_edit_translation":
-        # If state is wrong, could be due to "Готово" press or other navigation.
-        # Silently return or redirect to finalize/menu. For now, return.
-        return 
-
-    idx = user_state[chat_id].get("bulk_add_active_word_index")
-    if idx is None: # Should not happen if step is correct
-        finalize_bulk_add(chat_id, "error_no_active_idx_manual_edit_input")
-        return
-
-    new_translation_text = sanitize_user_input(message.text)
-    if not new_translation_text:
-        bot.send_message(chat_id, get_text("empty_translation_error", chat_id))
-        # Re-prompt for this specific word's translation
-        # The prompt message (bulk_add_confirm_message_id) is still there.
-        # We need to re-register for the *next* message.
-        active_confirm_msg = bot.send_message(chat_id, get_text("try_again_enter_translation", chat_id, "Будь ласка, введіть переклад ще раз або натисніть 'Скасувати' на попередньому повідомленні."))
-        # This is a bit awkward. The cancel is on the *previous* inline.
-        # Better to just re-register on the current message.
-        safe_next_step_handler(message, handle_bulk_manual_edit_translation_input)
-        return
-
-    word_item_data = user_state[chat_id]["bulk_add_words_data"][idx]
-    word_id_to_update = word_item_data.get("id_in_db")
-
-    if word_id_to_update is None:
-        bot.send_message(chat_id, get_text("bulk_add_error_cannot_update_not_added", chat_id, "Помилка: неможливо оновити переклад, слово не було додано."), reply_markup=bulk_add_reply_keyboard(chat_id))
-        # Clean up confirm message
-        active_confirm_msg_id = user_state[chat_id].get("bulk_add_confirm_message_id")
-        if active_confirm_msg_id:
-            try: bot.delete_message(chat_id, active_confirm_msg_id)
-            except: pass
-            user_state[chat_id]["bulk_add_confirm_message_id"] = None
+            except Exception:
+                pass
+        
+        # Return to the interactive list view
         user_state[chat_id]["step"] = "bulk_add_displaying_list"
         display_bulk_add_interactive_list(chat_id)
-        return
 
-    dict_type_for_state = user_state[chat_id].get("dict_type", "personal")
-    shared_dict_id_for_state = user_state[chat_id].get("shared_dict_id")
-    success = False
-
-    try:
-        if dict_type_for_state == "personal":
-            success = db_manager.update_word_translation_personal_dict(chat_id, word_id_to_update, new_translation_text)
-        elif dict_type_for_state == "shared" and shared_dict_id_for_state:
-            success = db_manager.update_word_translation_shared_dict(chat_id, word_id_to_update, new_translation_text, shared_dict_id_for_state)
-        elif dict_type_for_state == "common":
-            # This assumes update_word_translation_personal_dict can handle common words by updating the global table,
-            # based on the logic in single word edit. This might need a dedicated db_manager function.
-            success = db_manager.update_word_translation_personal_dict(chat_id, word_id_to_update, new_translation_text) # Potentially problematic if word_id is global
-                                                                                                                        # and function expects user-specific table.
-                                                                                                                        # A better approach would be db_manager.update_global_word_translation(word_id, new_translation)
-                                                                                                                        # For now, following single edit pattern.
-        if success:
-            word_item_data["translation"] = new_translation_text
-            word_item_data["status"] = "processed" # Mark as processed after successful update
-            bot.send_message(chat_id, get_text("bulk_add_translation_updated", chat_id, "Переклад оновлено для <b>{word}</b>.").format(word=word_item_data["original_word_text"]), parse_mode="HTML")
-        else:
-            word_item_data["status"] = "error_updating"
-            bot.send_message(chat_id, get_text("bulk_add_error_updating_translation", chat_id, "Помилка оновлення перекладу для <b>{word}</b>.").format(word=word_item_data["original_word_text"]), parse_mode="HTML")
     except Exception as e:
-        print(f"Error updating bulk translation in DB for word_id {word_id_to_update}: {e}")
-        word_item_data["status"] = "error_updating"
-        bot.send_message(chat_id, get_text("bulk_add_error_updating_translation", chat_id, "Помилка оновлення перекладу для <b>{word}</b>.").format(word=word_item_data["original_word_text"]), parse_mode="HTML")
-
-
-    active_confirm_msg_id = user_state[chat_id].get("bulk_add_confirm_message_id")
-    if active_confirm_msg_id:
-        try:
-            bot.delete_message(chat_id, active_confirm_msg_id)
-            user_state[chat_id]["bulk_add_confirm_message_id"] = None
-        except Exception: pass
-    
-    user_state[chat_id]["step"] = "bulk_add_displaying_list"
-    display_bulk_add_interactive_list(chat_id)
+        print(f"Error in handle_bulk_manual_edit_translation_input for chat_id {chat_id}: {e}")
+        bot.send_message(chat_id, get_text("error_occurred", chat_id))
+        finalize_bulk_add(chat_id, "exception_in_manual_edit")
 
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("bulk_add_start_confirm_"))

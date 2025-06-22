@@ -5,6 +5,7 @@
 """
 
 import db_manager
+import telebot
 from config import bot, user_state
 from utils import clear_state, track_activity, main_menu_keyboard
 from utils.language_utils import get_text
@@ -197,6 +198,50 @@ def return_to_main_menu(message):
     sent_message = bot.send_message(
         chat_id, 
         menu_message,
+        reply_markup=keyboard
+    )
+    save_message_id(chat_id, sent_message.message_id)
+
+@bot.message_handler(commands=["refresh_keyboard", "refresh"])
+def refresh_keyboard_command(message):
+    """Force refresh the main menu keyboard"""
+    chat_id = message.chat.id
+    
+    # Clear the keyboard first
+    bot.send_message(
+        chat_id,
+        "🔄 Оновлюю клавіатуру...",
+        reply_markup=telebot.types.ReplyKeyboardRemove()
+    )
+    
+    # Wait a moment and send new keyboard
+    import time
+    time.sleep(0.5)
+    
+    # Get dictionary info
+    dict_type, shared_dict_id, _ = db_manager.get_user_dictionary_info(chat_id)
+    
+    # Prepare menu message with dictionary info
+    menu_message = get_text("main_menu", chat_id)
+    
+    if dict_type == "shared" and shared_dict_id:
+        # Get shared dictionary name
+        conn = db_manager.get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM shared_dictionaries WHERE id = ?", (shared_dict_id,))
+        result = cursor.fetchone()
+        if result:
+            dict_name = result[0]
+            menu_message += f"\n\n📚 {get_text('current_dictionary', chat_id, 'Поточний словник')}: {dict_name} ({get_text('shared_dictionary', chat_id)})"
+        conn.close()
+    else:
+        menu_message += f"\n\n📚 {get_text('current_dictionary', chat_id, 'Поточний словник')}: {get_text(f'{dict_type}_dictionary', chat_id)}"
+    
+    keyboard = main_menu_keyboard(chat_id)
+    
+    sent_message = bot.send_message(
+        chat_id, 
+        f"✅ Клавіатуру оновлено!\n\n{menu_message}",
         reply_markup=keyboard
     )
     save_message_id(chat_id, sent_message.message_id)

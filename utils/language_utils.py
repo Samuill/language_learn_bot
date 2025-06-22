@@ -187,8 +187,7 @@ def get_text(key, chat_id=None, default=None, **kwargs):
         language = get_user_language(chat_id)
     
     localization = load_localization(language)
-    
-    # Пошук ключа в локалізації
+      # Пошук ключа в локалізації
     if key in localization:
         text = localization[key]
     else:

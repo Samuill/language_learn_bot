@@ -8,7 +8,8 @@ import random
 import telebot
 import sqlite3
 from config import bot, user_state
-from utils import clear_state, easy_level_keyboard, main_menu_keyboard, medium_level_keyboard, hard_level_keyboard
+from utils import clear_state, main_menu_keyboard
+from utils.keyboards import easy_level_keyboard, medium_level_keyboard, hard_level_keyboard
 from utils.input_handlers import handle_exit_from_activity
 import db_manager
 from utils.language_utils import get_text
@@ -96,7 +97,7 @@ def generate_possessive_exercise(chat_id):
             bot.send_message(
                 chat_id, 
                 get_text("no_words_in_dictionary", chat_id),
-                reply_markup=easy_level_keyboard()
+                reply_markup=easy_level_keyboard(chat_id)
             )
             clear_state(chat_id)
             conn.close()
@@ -110,15 +111,14 @@ def generate_possessive_exercise(chat_id):
             SELECT name FROM sqlite_master 
             WHERE type='table' AND name='shared_dict_{shared_dict_id}'
             """)
-            if not cursor.fetchone():
-                bot.send_message(
+            if not cursor.fetchone():                bot.send_message(
                     chat_id, 
                     "❌ Помилка: спільний словник не знайдено.",
-                    reply_markup=easy_level_keyboard()
+                    reply_markup=easy_level_keyboard(chat_id)
                 )
-                clear_state(chat_id)
-                conn.close()
-                return
+            clear_state(chat_id)
+            conn.close()
+            return
                 
             cursor.execute(f'''
             SELECT w.id, w.word, a.article, w.{language}_tran 

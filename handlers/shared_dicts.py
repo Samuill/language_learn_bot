@@ -328,24 +328,24 @@ def use_shared_dictionary(call):
         admin_result = cursor.fetchone()
         is_admin = bool(admin_result and admin_result[0])
     
-    # Оновлюємо записи в БД
+    # Оновлюємо записи в БД - встановлюємо і тип, і ID
     if is_admin:
-        cursor.execute('UPDATE users SET shared_dict_id = ?, shared_dict_admin = 1 WHERE chat_id = ?', 
+        cursor.execute('UPDATE users SET dict_type = \'shared\', shared_dict_id = ?, shared_dict_admin = 1 WHERE chat_id = ?', 
                      (shared_dict_id, chat_id))
         
         # Переконаємося, що є відповідний запис у shared_dict_users
         cursor.execute('''
         INSERT OR REPLACE INTO shared_dict_users (user_id, dict_id, is_admin, joined_at)
-        VALUES (?, ?, 1, datetime('now'))
+        VALUES (?, ?, 1, datetime(\'now\'))
         ''', (chat_id, shared_dict_id))
     else:
-        cursor.execute('UPDATE users SET shared_dict_id = ?, shared_dict_admin = 0 WHERE chat_id = ?', 
+        cursor.execute('UPDATE users SET dict_type = \'shared\', shared_dict_id = ?, shared_dict_admin = 0 WHERE chat_id = ?', 
                      (shared_dict_id, chat_id))
         
         # Переконаємося, що є запис у shared_dict_users
         cursor.execute('''
         INSERT OR IGNORE INTO shared_dict_users (user_id, dict_id, is_admin, joined_at)
-        VALUES (?, ?, 0, datetime('now'))
+        VALUES (?, ?, 0, datetime(\'now\'))
         ''', (chat_id, shared_dict_id))
     
     conn.commit()
