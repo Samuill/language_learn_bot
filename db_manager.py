@@ -940,11 +940,12 @@ def update_word_rating_shared_dict(chat_id, word_id, change, shared_dict_id=None
         return False
 
 def ensure_user_table_exists(chat_id):
-    """Check if user's table exists, and create it if it doesn't"""
+    """Check if user's table exists, create it if it doesn't, and check if it has words."""
     try:
         conn = get_connection()
         cursor = conn.cursor()
         
+        created = False
         # Check if user table exists
         cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='user_{chat_id}'")
         
@@ -962,21 +963,26 @@ def ensure_user_table_exists(chat_id):
             ''')
             conn.commit()
             print(f"User table user_{chat_id} created.")
-        
-        # Check if the table has any words (optional, for info)
-        # cursor.execute(f"SELECT COUNT(*) FROM user_{chat_id}")
-        # count = cursor.fetchone()[0]
+            created = True
+            # If we just created the table, it has no words.
+            conn.close()
+            return created, False
+
+        # If table exists, check for words
+        cursor.execute(f"SELECT COUNT(*) FROM user_{chat_id}")
+        count = cursor.fetchone()[0]
+        has_words = count > 0
         
         conn.close()
-        return True # Table exists or was created
+        return created, has_words
     except sqlite3.Error as e:
         print(f"Database error ensuring user table for {chat_id} exists: {e}")
         traceback.print_exc()
-        return False
+        return False, False
     except Exception as e:
         print(f"Unexpected error ensuring user table for {chat_id} exists: {e}")
         traceback.print_exc()
-        return False
+        return False, False
 
 def get_user_dictionary_info(chat_id):
     """Get user's dictionary type and shared dictionary ID from the database"""
