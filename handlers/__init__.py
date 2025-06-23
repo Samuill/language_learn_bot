@@ -17,9 +17,10 @@ from .hard_level import hard_game, word_typing_game, article_typing_game
 
 # Імпорт обробників для роботи зі словником
 from .add_word import add_word
-from .dictionaries import set_difficulty_level, personal_dictionary_button
+from .dictionaries import set_difficulty_level, switch_dictionary, personal_dictionary_button
 from .shared_dicts import shared_dictionary_menu, create_shared_dictionary, join_shared_dictionary
 from .shared_dicts import my_shared_dictionaries, use_shared_dictionary
+from .edit_word import edit_word_start, word_management_menu_keyboard  # Explicitly import edit_word handlers
 
 # Імпорт функцій для активностей
 from .easy_level import start_learning, start_repetition, start_article_activity

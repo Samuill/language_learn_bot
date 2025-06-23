@@ -264,19 +264,8 @@ def main():
     # Setup logging
     setup_logging()
     
-    # Set up message handlers
-    import handlers.main_menu
-    import handlers.dictionaries
-    import handlers.start
-    import handlers.add_word
-    import handlers.easy_level
-    import handlers.medium_level
-    import handlers.hard_level
-    import handlers.shared_dicts
-    import handlers.possessive_articles
-    
-    # Admin handlers
-    import handlers.admin
+  
+  
     
     # Try to add optional/experimental handlers
     try:

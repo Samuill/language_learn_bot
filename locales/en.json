@@ -197,5 +197,6 @@
   "try_again_enter_translation": "Please enter the translation again or press 'Cancel' on the previous message.",
   "bulk_add_error_adding_short": "adding error",
   "bulk_add_error_updating_short": "updating error",
-  "translation_unavailable_short": "N/A"
+  "translation_unavailable_short": "N/A",
+  "current_personal_dict_display": "📋 Current personal dictionary: "
 }

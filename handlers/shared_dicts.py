@@ -13,113 +13,65 @@ import db_manager
 from utils.language_utils import get_text
 from utils.input_handlers import safe_next_step_handler, sanitize_user_input
 from utils.console_logger import log_menu_transition, log_displayed_buttons, MENU_MAIN, MENU_SHARED
+from datetime import datetime
 
 # Updated handler to work with all localized button texts
-@bot.message_handler(func=lambda message: message.text.startswith("👥 ") or 
-                    message.text == get_text("shared_dictionary", message.chat.id))
+@bot.message_handler(func=lambda message: message.text == get_text("shared_dictionary", message.chat.id))
 def shared_dictionary_menu(message):
     """Show shared dictionary menu"""
     chat_id = message.chat.id
-    
+
+    # Debugging log to check redundant calls
+    print(f"[DEBUG] shared_dictionary_menu triggered for chat_id: {chat_id} at {datetime.now()}")
+
     # Логируем переход в меню общих словарей
     from_menu = user_state.get(chat_id, {}).get("current_menu", "UNKNOWN")
     log_menu_transition(chat_id, from_menu, MENU_SHARED, f"Button: {message.text}")
-    
+
     # Ініціалізуємо таблиці для спільних словників, якщо вони не існують
     db_manager.create_shared_dictionary_tables()
-    
-    # Перевіряємо, чи є вже активний словник
-    conn = db_manager.get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT shared_dict_id FROM users WHERE chat_id = ?", (chat_id,))
-    result = cursor.fetchone()
-    
-    # Оновлюємо тип словника у стані користувача
+
+    # Оновлюємо поточне меню у стані користувача, не змінюючи тип словника
     if chat_id in user_state:
         user_state[chat_id].update({
-            "dict_type": "shared", 
             "current_menu": MENU_SHARED
         })
     else:
         user_state[chat_id] = {
-            "dict_type": "shared", 
             "current_menu": MENU_SHARED
         }
-    
-    # Показуємо інформацію про поточний словник, якщо є
-    if result and result[0]:
-        shared_dict_id = result[0]
-        user_state[chat_id]["shared_dict_id"] = shared_dict_id
-        
-        # Отримуємо інформацію про словник
-        cursor.execute("SELECT name FROM shared_dictionaries WHERE id = ?", (shared_dict_id,))
-        dict_info = cursor.fetchone()
-        dict_name = dict_info[0] if dict_info else get_text("unknown_dict", chat_id)
-        
-        # Повідомляємо про поточний активний словник
-        menu_message = get_text("selected_dict", chat_id) + f"<b>{dict_name}</b>\n\n" + get_text("select_activity", chat_id)
-        
-        keyboard = shared_dictionary_keyboard(chat_id)
-        
-        # Safely extract button texts for logging
-        try:
-            button_texts = []
-            if hasattr(keyboard, 'keyboard'):
-                for row in keyboard.keyboard:
-                    for button in row:
-                        if hasattr(button, 'text'):
-                            button_texts.append(button.text)
-                        elif isinstance(button, dict) and 'text' in button:
-                            button_texts.append(button['text'])
-            
-            # Log displayed buttons only if we successfully extracted texts
-            if button_texts:
-                log_displayed_buttons(chat_id, button_texts, MENU_SHARED)
-            else:
-                print(f"Warning: Could not extract button texts for user {chat_id} in {MENU_SHARED} menu")
-        except Exception as e:
-            print(f"Error extracting button texts: {e}")
-        
-        sent_message = bot.send_message(
-            chat_id,
-            menu_message,
-            parse_mode="HTML",
-            reply_markup=keyboard
-        )
-    else:
-        # Просто показуємо меню спільних словників
-        menu_message = get_text("select_option", chat_id)
-        
-        keyboard = shared_dictionary_keyboard(chat_id)
-        
-        # Safely extract button texts for logging
-        try:
-            button_texts = []
-            if hasattr(keyboard, 'keyboard'):
-                for row in keyboard.keyboard:
-                    for button in row:
-                        if hasattr(button, 'text'):
-                            button_texts.append(button.text)
-                        elif isinstance(button, dict) and 'text' in button:
-                            button_texts.append(button['text'])
-            
-            # Log displayed buttons only if we successfully extracted texts
-            if button_texts:
-                log_displayed_buttons(chat_id, button_texts, MENU_SHARED)
-            else:
-                print(f"Warning: Could not extract button texts for user {chat_id} in {MENU_SHARED} menu")
-        except Exception as e:
-            print(f"Error extracting button texts: {e}")
-        
-        sent_message = bot.send_message(
-            chat_id, 
-            menu_message,
-            parse_mode="HTML", 
-            reply_markup=keyboard
-        )
-    
+
+    # Просто показуємо меню спільних словників
+    menu_message = get_text("select_option", chat_id)
+
+    keyboard = shared_dictionary_keyboard(chat_id)
+
+    # Safely extract button texts for logging
+    try:
+        button_texts = []
+        if hasattr(keyboard, 'keyboard'):
+            for row in keyboard.keyboard:
+                for button in row:
+                    if hasattr(button, 'text'):
+                        button_texts.append(button.text)
+                    elif isinstance(button, dict) and 'text' in button:
+                        button_texts.append(button['text'])
+
+        if button_texts:
+            log_displayed_buttons(chat_id, button_texts, MENU_SHARED)
+        else:
+            print(f"Warning: Could not extract button texts for user {chat_id} in {MENU_SHARED} menu")
+    except Exception as e:
+        print(f"Error extracting button texts: {e}")
+
+    sent_message = bot.send_message(
+        chat_id, 
+        menu_message,
+        parse_mode="HTML", 
+        reply_markup=keyboard
+    )
+
     save_message_id(chat_id, sent_message.message_id)
-    conn.close()
 
 @bot.message_handler(func=lambda message: message.text == "🆕 Створити спільний словник" or
                     message.text == get_text("create_shared_dict", message.chat.id))

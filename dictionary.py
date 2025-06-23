@@ -262,6 +262,9 @@ def get_current_dictionary_display(chat_id):
     from utils.language_utils import get_text
     import db_manager
     
+    # First sync state with database to ensure consistency
+    db_manager.sync_user_state_with_db(chat_id)
+    
     dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
     shared_dict_id = user_state.get(chat_id, {}).get("shared_dict_id")
     

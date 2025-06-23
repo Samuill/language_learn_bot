@@ -15,6 +15,7 @@ from utils.input_handlers import safe_next_step_handler, sanitize_user_input, is
 import db_manager
 import pandas as pd
 from concurrent.futures import ThreadPoolExecutor
+from german_article_finder import find_german_article
 
 # Створюємо пул потоків для асинхронної обробки запитів до БД
 executor = ThreadPoolExecutor()
@@ -903,8 +904,7 @@ def handle_bulk_words_input(message):
         words_input_list = words_input_list[:BULK_ADD_MAX_WORDS]
         bot.send_message(chat_id, get_text("bulk_add_word_limit_exceeded", chat_id, f"Прийнято перші {BULK_ADD_MAX_WORDS} слів. Інші проігноровано."))
 
-    processing_msg = bot.send_message(chat_id, get_text("bulk_add_processing", chat_id, "Обробка слів..."))
-
+    processing_msg = bot.send_message(chat_id, get_text("bulk_add_processing", chat_id, "Обробка слів..."))    
     current_language = db_manager.get_user_language(chat_id)
     if not current_language:
         bot.send_message(chat_id, get_text("language_not_selected", chat_id, "Мова не вибрана. Будь ласка, почніть з /start"))
@@ -913,33 +913,65 @@ def handle_bulk_words_input(message):
         except Exception: pass
         finalize_bulk_add(chat_id, "language_error_on_input")
         return
-
-    # Prepare data and batch translate
+      # Prepare data and batch translate
     words_to_translate = []
     words_data_pre_translation = []
     for word_text in words_input_list:
         article = None
         word_to_process = word_text
+          # Check if article is already in the text (e.g., "der Haus")
         parts = word_text.split(" ", 1)
         if len(parts) > 1 and parts[0].lower() in ["der", "die", "das"]:
             article = parts[0].lower()
             word_to_process = parts[1]
+        else:
+            # Try to find article from the external database
+            try:
+                print(f"DEBUG: Looking up article for word: '{word_text}'")
+                found_article, clean_word = find_german_article(word_text)
+                if found_article:
+                    article = found_article.lower()
+                    word_to_process = clean_word
+                    print(f"DEBUG: Found article for '{word_text}': {article} {clean_word}")
+                else:
+                    print(f"DEBUG: No article found for '{word_text}'")
+                    word_to_process = word_text
+            except Exception as e:
+                print(f"DEBUG: Error finding article for '{word_text}': {e}")
+                import traceback
+                print(f"DEBUG: Traceback: {traceback.format_exc()}")
+                word_to_process = word_text
         words_to_translate.append(word_to_process)
-        words_data_pre_translation.append({"original": word_text, "to_process": word_to_process, "article": article, "translation": ""})
+        words_data_pre_translation.append({
+            "original": word_text, 
+            "to_process": word_to_process, 
+            "article": article, 
+            "translation": ""
+        })
 
     try:
-        translated_objects = asyncio.run(translator.translate(words_to_translate, src='de', dest=current_language))
-        for i, translated in enumerate(translated_objects):
-            words_data_pre_translation[i]["translation"] = translated.text
+        # Use sync translation to avoid event loop issues
+        for i, word_to_translate in enumerate(words_to_translate):
+            try:
+                # Create a new translator instance to avoid async issues
+                sync_translator = Translator()
+                translated = sync_translator.translate(word_to_translate, src='de', dest=current_language)
+                words_data_pre_translation[i]["translation"] = translated.text
+            except Exception as e:
+                print(f"Translation error for word '{word_to_translate}': {e}")
+                words_data_pre_translation[i]["translation"] = get_text("translation_failed_short", chat_id, "Помилка перекладу")
     except Exception as e:
         print(f"Bulk add translation error: {e}")
         for info in words_data_pre_translation:
             info["translation"] = get_text("translation_failed_short", chat_id, "Помилка перекладу")
-
+    
     # Process words one-by-one to get IDs for interactive editing
     bulk_add_data_list = []
     dict_type = user_state[chat_id].get("dict_type", "personal")
     shared_dict_id = user_state[chat_id].get("shared_dict_id")
+    
+    print(f"DEBUG: Processing words with dict_type='{dict_type}', shared_dict_id='{shared_dict_id}'")
+    print(f"DEBUG: Full user_state for {chat_id}: {user_state.get(chat_id, {})}")
 
     for info in words_data_pre_translation:
         status = "error_adding"

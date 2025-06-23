@@ -185,5 +185,6 @@
   "try_again_enter_translation": "الرجاء إدخال الترجمة مرة أخرى أو الضغط على 'إلغاء' في الرسالة السابقة.",
   "bulk_add_error_adding_short": "خطأ في الإضافة",
   "bulk_add_error_updating_short": "خطأ في التحديث",
-  "translation_unavailable_short": "غير متوفر"
+  "translation_unavailable_short": "غير متوفر",
+  "current_personal_dict_display": "📖 قاموسك الشخصي الحالي"
 }

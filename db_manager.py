@@ -522,666 +522,21 @@ def add_word_async(chat_id, word, translation, dict_type="personal", article=Non
     """Асинхронна версія add_word: виконується в пулі потоків."""
     return executor.submit(add_word, chat_id, word, translation, dict_type, article)
 
-def update_word_rating(chat_id, word_id, change, dict_type="personal"):
-    """Update word rating for a user with appropriate changes based on level"""
+# New helper for duplicate detection
+def get_word_id_by_word(chat_id, word):
+    """Return the ID of an existing word by its text (case-insensitive), or None if not found."""
     try:
         conn = get_connection()
         cursor = conn.cursor()
-        
-        if dict_type == "personal":
-            # Ensure user's personal table exists
-            ensure_user_table_exists(chat_id)
-            cursor.execute(f'UPDATE user_{chat_id} SET rating = rating + ? WHERE word_id = ?', (change, word_id))
-            # Ensure rating does not go below 0
-            cursor.execute(f'UPDATE user_{chat_id} SET rating = MAX(0, rating) WHERE word_id = ?', (word_id,))
-        else: # common or shared
-            # For common/shared, rating might be stored differently or not at all per user.
-            # This example assumes a generic 'words' table update if not personal.
-            # Adjust if common/shared ratings are handled differently.
-            # cursor.execute('UPDATE words SET generic_rating_column = generic_rating_column + ? WHERE id = ?', (change, word_id))
-            print(f"Rating update for dict_type '{dict_type}' is not fully implemented for user-specific ratings here.")
-            pass # Placeholder for common/shared rating logic if applicable
-        
-        conn.commit()
+        cursor.execute('SELECT id FROM words WHERE LOWER(word) = LOWER(?)', (word.strip(),))
+        row = cursor.fetchone()
         conn.close()
-        return True
-    except sqlite3.Error as e:
-        print(f"Database error updating word rating for user {chat_id}, word_id {word_id}: {e}")
-        traceback.print_exc()
-        return False
+        return row[0] if row else None
     except Exception as e:
-        print(f"Unexpected error updating word rating for user {chat_id}, word_id {word_id}: {e}")
-        traceback.print_exc()
-        return False
+        print(f"Error retrieving word ID for duplicate check: {e}")
+        return None
 
-def get_user_streak(chat_id):
-    """Get user's streak"""
-    conn = get_connection()
-    cursor = conn.cursor()
-    
-    cursor.execute('SELECT streak, last_active FROM users WHERE chat_id = ?', (chat_id,))
-    result = cursor.fetchone()
-    
-    conn.close()
-    
-    if result:
-        return result[0], result[1]
-    else:
-        return 0, None
-
-def update_user_streak(chat_id):
-    """Update user's streak"""
-
-    
-    conn = get_connection()
-    cursor = conn.cursor()
-    
-    today = datetime.datetime.now().date()
-    today_str = today.isoformat()
-    
-    # Get current streak and last active day
-    cursor.execute('SELECT streak, last_active FROM users WHERE chat_id = ?', (chat_id,))
-    result = cursor.fetchone()
-    
-    if result:
-        streak, last_active_str = result
-        
-        if last_active_str:
-            last_active = datetime.date.fromisoformat(last_active_str)
-            delta = (today - last_active).days
-            
-            if delta == 1:
-                # Consecutive day
-                streak += 1
-            elif delta > 1:
-                # Streak broken
-                streak = 1
-            # If delta == 0, same day, keep streak
-        else:
-            # First activity
-            streak = 1
-    else:
-        # User doesn't exist, create entry
-        cursor.execute('INSERT INTO users (chat_id, streak, last_active) VALUES (?, 1, ?)', 
-                     (chat_id, today_str))
-        streak = 1
-    
-    # Update streak and last_active
-    cursor.execute('UPDATE users SET streak = ?, last_active = ? WHERE chat_id = ?',
-                 (streak, today_str, chat_id))
-    
-    conn.commit()
-    conn.close()
-    
-    return streak
-
-def create_shared_dictionary_tables():
-    """Create tables for shared dictionaries if they don't exist"""
-    conn = get_connection()
-    cursor = conn.cursor()
-    
-    # Таблиця для зберігання інформації про спільні словники
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS shared_dictionaries (
-        id INTEGER PRIMARY KEY,
-        name TEXT NOT NULL,
-        code TEXT NOT NULL UNIQUE,
-        created_by INTEGER,
-        created_at TEXT,
-        FOREIGN KEY (created_by) REFERENCES users(chat_id)
-    )
-    ''')
-    
-    # Створюємо таблицю для зв'язку користувачів та словників
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS shared_dict_users (
-        id INTEGER PRIMARY KEY,
-        user_id INTEGER NOT NULL,
-        dict_id INTEGER NOT NULL,
-        is_admin INTEGER DEFAULT 0,
-        joined_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(chat_id),
-        FOREIGN KEY (dict_id) REFERENCES shared_dictionaries(id),
-        UNIQUE(user_id, dict_id)
-    )
-    ''')
-    
-    # Додати колонку shared_dict_admin до таблиці users, якщо вона не існує
-    cursor.execute("PRAGMA table_info(users)")
-    columns = [col[1] for col in cursor.fetchall()]
-    
-    if "shared_dict_admin" not in columns:
-        cursor.execute('ALTER TABLE users ADD COLUMN shared_dict_admin INTEGER DEFAULT 0')
-    
-    # Додати колонку shared_dict_id до таблиці users, якщо вона не існує
-    if "shared_dict_id" not in columns:
-        cursor.execute('ALTER TABLE users ADD COLUMN shared_dict_id INTEGER DEFAULT NULL')
-    
-    # Add dict_type column to users table if it doesn't exist
-    cursor.execute("PRAGMA table_info(users)")
-    columns = [col[1] for col in cursor.fetchall()]
-
-    if "dict_type" not in columns:
-        cursor.execute('ALTER TABLE users ADD COLUMN dict_type TEXT DEFAULT "personal"')
-
-    conn.commit()
-    conn.close()
-
-def create_shared_dictionary(chat_id, name):
-    """Create a new shared dictionary with a random code"""
-    try:
-        # Генеруємо випадковий код з 6 символів (літери верхнього регістру та цифри)
-        code_chars = string.ascii_uppercase + string.digits
-        code = ''.join(random.choice(code_chars) for _ in range(6))
-        
-        conn = get_connection()
-        cursor = conn.cursor()
-        
-        # Створюємо запис про словник
-        cursor.execute('''
-        INSERT INTO shared_dictionaries (name, code, created_by, created_at)
-        VALUES (?, ?, ?, datetime('now'))
-        ''', (name, code, chat_id))
-        
-        # Отримуємо ID створеного словника
-        shared_dict_id = cursor.lastrowid
-        
-        # Оновлюємо інформацію про користувача
-        cursor.execute('''
-        UPDATE users SET shared_dict_admin = 1, shared_dict_id = ? WHERE chat_id = ?
-        ''', (shared_dict_id, chat_id))
-        
-        # ВАЖЛИВО: Додаємо запис в таблицю зв'язків, чітко вказавши статус адміна
-        cursor.execute('''
-        INSERT OR REPLACE INTO shared_dict_users (user_id, dict_id, is_admin, joined_at)
-        VALUES (?, ?, 1, datetime('now'))
-        ''', (chat_id, shared_dict_id))
-        
-        # Створюємо таблицю для слів цього словника
-        cursor.execute(f'''
-        CREATE TABLE IF NOT EXISTS shared_dict_{shared_dict_id} (
-            id INTEGER PRIMARY KEY,
-            word_id INTEGER,
-            FOREIGN KEY (word_id) REFERENCES words(id),
-            UNIQUE(word_id) -- Ensure a word is only added once to a shared dict
-        )
-        ''')
-        
-        conn.commit()
-        conn.close()
-        return code, shared_dict_id # Return code and ID
-    except sqlite3.Error as e:
-        print(f"Database error creating shared dictionary for user {chat_id}, name '{name}': {e}")
-        traceback.print_exc()
-        return None, None
-    except Exception as e:
-        print(f"Unexpected error creating shared dictionary for user {chat_id}, name '{name}': {e}")
-        traceback.print_exc()
-        return None, None
-
-def join_shared_dictionary(chat_id, code):
-    """Join a shared dictionary using its code"""
-    try:
-        conn = get_connection()
-        cursor = conn.cursor()
-        
-        # Перевіряємо існування словника з таким кодом
-        cursor.execute('SELECT id, name FROM shared_dictionaries WHERE code = ?', (code,))
-        result = cursor.fetchone()
-        
-        if not result:
-            print(f"Shared dictionary with code '{code}' not found.")
-            conn.close()
-            return None, "not_found"
-        
-        shared_dict_id, dict_name = result
-        
-        # Перевіряємо, чи користувач вже приєднаний до цього словника
-        # via shared_dict_users table
-        cursor.execute('SELECT 1 FROM shared_dict_users WHERE user_id = ? AND dict_id = ?', 
-                     (chat_id, shared_dict_id))
-        if cursor.fetchone():
-            print(f"User {chat_id} already joined shared dictionary ID {shared_dict_id} ('{dict_name}').")
-            # Update user's current shared_dict_id in users table if they are re-joining or switching
-            cursor.execute('UPDATE users SET shared_dict_id = ? WHERE chat_id = ?', 
-                         (shared_dict_id, chat_id))
-            conn.commit() # Commit this update
-            conn.close()
-            return dict_name, "already_joined"
-        
-        # Додаємо користувача до словника (update users table to reflect current active shared dict)
-        cursor.execute('UPDATE users SET shared_dict_id = ? WHERE chat_id = ?', 
-                     (shared_dict_id, chat_id))
-        
-        # Додаємо запис про зв'язок користувача з словником в shared_dict_users
-        # User joining is not an admin by default
-        cursor.execute('''
-        INSERT OR IGNORE INTO shared_dict_users (user_id, dict_id, is_admin, joined_at)
-        VALUES (?, ?, 0, datetime('now'))
-        ''', (chat_id, shared_dict_id))
-        
-        # Створюємо колонку для користувача в таблиці словника, якщо її ще немає
-        # This part seems problematic. Shared dictionary words are in shared_dict_{id},
-        # user-specific data like ratings for shared words should be handled carefully.
-        # The original code adds a column user_{chat_id} to shared_dict_{id} table.
-        # This is generally not a good design as it modifies table schema dynamically.
-        # A better approach would be a separate table like shared_dict_user_word_data.
-        # For now, replicating existing logic but flagging as a concern.
-        # cursor.execute(f"PRAGMA table_info(shared_dict_{shared_dict_id})")
-        # columns = [col[1] for col in cursor.fetchall()]
-        # user_col = f"user_{chat_id}" # This column was for rating
-        # if user_col not in columns:
-        #     cursor.execute(f"ALTER TABLE shared_dict_{shared_dict_id} ADD COLUMN {user_col} REAL DEFAULT 0.0")
-        #     print(f"Added column {user_col} to shared_dict_{shared_dict_id} for user ratings.")
-        
-        conn.commit()
-        conn.close()
-        return dict_name, "success"
-    except sqlite3.Error as e:
-        print(f"Database error joining shared dictionary for user {chat_id}, code '{code}': {e}")
-        traceback.print_exc()
-        return None, "db_error"
-    except Exception as e:
-        print(f"Unexpected error joining shared dictionary for user {chat_id}, code '{code}': {e}")
-        traceback.print_exc()
-        return None, "unexpected_error"
-
-def get_shared_dictionary_words(chat_id, shared_dict_id=None):
-    """Get words from a shared dictionary for a specific user"""
-    try:
-        conn = get_connection()
-        cursor = conn.cursor()
-        
-        # Якщо shared_dict_id не вказано, отримуємо його з профілю користувача
-        if not shared_dict_id:
-            cursor.execute('SELECT shared_dict_id FROM users WHERE chat_id = ?', (chat_id,))
-            res = cursor.fetchone()
-            if not res or not res[0]:
-                print(f"User {chat_id} is not currently associated with any shared dictionary.")
-                conn.close()
-                return pd.DataFrame(columns=['id', 'word', 'translation', 'article', 'priority'])
-            shared_dict_id = res[0]
-        
-        # Перевіряємо, чи має користувач доступ до цього словника
-        cursor.execute('''
-        SELECT 1 FROM shared_dict_users 
-        WHERE user_id = ? AND dict_id = ?
-        ''', (chat_id, shared_dict_id))
-        
-        if not cursor.fetchone():
-            print(f"User {chat_id} does not have access to shared dictionary ID {shared_dict_id}.")
-            conn.close()
-            return pd.DataFrame(columns=['id', 'word', 'translation', 'article', 'priority'])
-        
-        # Отримуємо мову користувача
-        language = get_user_language(chat_id) or "uk" # Default to uk
-        
-        # Determine the other language for potential auto-translation
-        # This logic might need refinement based on available translations
-        other_language_map = {"uk": "ru", "ru": "uk", "en": "uk", "tr": "uk", "ar": "uk"} # Simple fallback
-        other_language = other_language_map.get(language, "uk")
-
-        # Перевіряємо, чи існує таблиця для цього словника
-        cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='shared_dict_{shared_dict_id}'")
-        if not cursor.fetchone():
-            print(f"Shared dictionary table shared_dict_{shared_dict_id} does not exist.")
-            conn.close()
-            return pd.DataFrame(columns=['id', 'word', 'translation', 'article', 'priority'])
-        
-        # User-specific ratings for shared words might be in a separate table or not implemented yet.
-        # The original code tried to add a user_{chat_id} column to shared_dict_{id}.
-        # Assuming for now that 'priority' for shared words is generic or handled differently.
-        # If user-specific ratings are needed, a join to a user-word-rating table for shared dicts is better.
-        # For now, let's assume a default priority or a generic one if available.
-        # The COALESCE(sd.{user_col}, 0.0) part is removed as user_col is problematic.
-        # We'll use a default priority of 0.0 for now.
-        
-        query = f'''
-        SELECT w.id, w.word, w.{language}_tran as translation, w.{other_language}_tran as other_translation,
-               a.article, 0.0 as priority -- Using default priority 0.0
-        FROM shared_dict_{shared_dict_id} sd_words -- Renamed to avoid conflict if sd is used elsewhere
-        JOIN words w ON sd_words.word_id = w.id
-        LEFT JOIN article a ON w.article_id = a.id
-        ORDER BY w.word -- Or some other meaningful order
-        '''
-        
-        print(f"DEBUG query for get_shared_dictionary_words: {query}")
-        cursor.execute(query)
-        results = cursor.fetchall()
-        
-        columns = ['id', 'word', 'translation', 'other_translation', 'article', 'priority']
-        df = pd.DataFrame(results, columns=columns)
-        
-        # Auto-translation logic (simplified, ensure translator is available and configured)
-        # This part is complex and error-prone, consider if it's essential here or handled elsewhere.
-        # For now, commenting out the auto-translate part to prevent potential crashes.
-        # words_to_translate = df[df['translation'].isnull() & df['other_translation'].notnull()]
-        # if not words_to_translate.empty:
-        #     print(f"Attempting to auto-translate {len(words_to_translate)} words for user {chat_id} in shared_dict {shared_dict_id}")
-            # from config import translator # Ensure translator is accessible
-            # for index, row_to_translate in words_to_translate.iterrows():
-            #     try:
-            #         if row_to_translate['other_translation']:
-            #             translated_text = translator.translate(row_to_translate['other_translation'], src=other_language, dest=language).text
-            #             df.loc[index, 'translation'] = translated_text
-            #             # Optionally, update the main 'words' table with this new translation
-            #             cursor.execute(f"UPDATE words SET {language}_tran = ? WHERE id = ?", (translated_text, row_to_translate['id']))
-            #             conn.commit()
-            #     except Exception as trans_err:
-            #         print(f"Auto-translation error for word ID {row_to_translate['id']}: {trans_err}")
-        
-        df = df[df['translation'].notnull()] # Filter out words still without translation
-        if 'other_translation' in df.columns:
-            df = df.drop(columns=['other_translation'])
-        
-        conn.close()
-        return df
-    except sqlite3.Error as e:
-        print(f"Database error in get_shared_dictionary_words for user {chat_id}, dict_id {shared_dict_id}: {e}")
-        traceback.print_exc()
-        return pd.DataFrame(columns=['id', 'word', 'translation', 'article', 'priority'])
-    except Exception as e:
-        print(f"Unexpected error in get_shared_dictionary_words for user {chat_id}, dict_id {shared_dict_id}: {e}")
-        traceback.print_exc()
-        return pd.DataFrame(columns=['id', 'word', 'translation', 'article', 'priority'])
-
-def add_word_to_shared_dictionary(chat_id, word_id, shared_dict_id=None):
-    """Add a word to a shared dictionary. Returns (success_bool, message_str)"""
-    try:
-        conn = get_connection()
-        cursor = conn.cursor()
-        
-        if not shared_dict_id:
-            cursor.execute('SELECT shared_dict_id FROM users WHERE chat_id = ?', (chat_id,))
-            res = cursor.fetchone()
-            if not res or not res[0]:
-                conn.close()
-                return False, "User not associated with a shared dictionary."
-            shared_dict_id = res[0]
-
-        # Check if user is admin of this shared dictionary
-        # This check should ideally be in the handler before calling this db function.
-        # For robustness, we can add it here too.
-        cursor.execute("SELECT is_admin FROM shared_dict_users WHERE user_id = ? AND dict_id = ?", (chat_id, shared_dict_id))
-        admin_status = cursor.fetchone()
-        if not admin_status or not admin_status[0]: # Not admin
-             # Check if the user is the creator (who is always an admin)
-            cursor.execute("SELECT 1 FROM shared_dictionaries WHERE id = ? AND created_by = ?", (shared_dict_id, chat_id))
-            if not cursor.fetchone():
-                conn.close()
-                return False, "User is not an admin of this shared dictionary."
-        
-        # Перевіряємо, чи слово вже є у спільному словнику
-        cursor.execute(f'SELECT 1 FROM shared_dict_{shared_dict_id} WHERE word_id = ?', (word_id,))
-        if cursor.fetchone():
-            conn.close()
-            return False, "Word already exists in this shared dictionary."
-        
-        # Додаємо слово до спільного словника
-        cursor.execute(f'INSERT INTO shared_dict_{shared_dict_id} (word_id) VALUES (?)', (word_id,))
-        conn.commit()
-        conn.close()
-        return True, "Word added successfully to shared dictionary."
-    except sqlite3.Error as e:
-        print(f"Database error adding word_id {word_id} to shared_dict_{shared_dict_id} by user {chat_id}: {e}")
-        traceback.print_exc()
-        return False, "Database error."
-    except Exception as e:
-        print(f"Unexpected error adding word_id {word_id} to shared_dict_{shared_dict_id} by user {chat_id}: {e}")
-        traceback.print_exc()
-        return False, "Unexpected error."
-
-def shared_dictionary_exists(shared_dict_id):
-    """Check if a shared dictionary exists by checking if its table exists."""
-    try:
-        conn = get_connection()
-        cursor = conn.cursor()
-        
-        # Check if the shared dictionary table exists
-        cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='shared_dict_{shared_dict_id}'")
-        table_exists = cursor.fetchone() is not None
-        
-        conn.close()
-        return table_exists
-        
-    except Exception as e:
-        print(f"Error checking if shared dictionary {shared_dict_id} exists: {e}")
-        return False
-
-def is_user_admin_of_shared_dict(chat_id, shared_dict_id):
-    """Check if a user is an admin of a specific shared dictionary."""
-    try:
-        conn = get_connection()
-        cursor = conn.cursor()
-        
-        # First, check the dedicated link table
-        cursor.execute("""
-            SELECT is_admin FROM shared_dict_users
-            WHERE user_id = ? AND dict_id = ?
-        """, (chat_id, shared_dict_id))
-        
-        result = cursor.fetchone()
-        
-        if result and result[0] == 1:
-            conn.close()
-            return True
-        
-        # If not found or not admin, check if they are the original creator
-        cursor.execute("SELECT 1 FROM shared_dictionaries WHERE id = ? AND created_by = ?", (shared_dict_id, chat_id))
-        creator_result = cursor.fetchone()
-        
-        conn.close()
-        return creator_result is not None
-
-    except sqlite3.Error as e:
-        print(f"DB error checking admin status for user {chat_id} in dict {shared_dict_id}: {e}")
-        traceback.print_exc()
-        return False
-    except Exception as e:
-        print(f"Unexpected error checking admin status for user {chat_id} in dict {shared_dict_id}: {e}")
-        traceback.print_exc()
-        return False
-
-def update_word_translation_personal_dict(chat_id, word_id, new_translation):
-    """Update the translation of a word for a user's language."""
-    try:
-        language = get_user_language(chat_id)
-        if not language:
-            print(f"Cannot update translation for user {chat_id}: language not set.")
-            return False
-        
-        conn = get_connection()
-        cursor = conn.cursor()
-        
-        translation_column = f"{language}_tran"
-        
-        # Basic validation to prevent SQL injection with language
-        cursor.execute("PRAGMA table_info(words)")
-        columns = [col[1] for col in cursor.fetchall()]
-        if translation_column not in columns:
-            print(f"Translation column {translation_column} does not exist.")
-            conn.close()
-            return False
-
-        cursor.execute(f'UPDATE words SET {translation_column} = ? WHERE id = ?', (new_translation, word_id))
-        
-        conn.commit()
-        conn.close()
-        
-        print(f"Updated {language} translation for word ID {word_id} by user {chat_id}")
-        return True
-    except sqlite3.Error as e:
-        print(f"Database error updating translation for word_id {word_id}: {e}")
-        traceback.print_exc()
-        return False
-    except Exception as e:
-        print(f"Unexpected error updating translation for word_id {word_id}: {e}")
-        traceback.print_exc()
-        return False
-
-def update_word_translation_shared_dict(chat_id, word_id, new_translation, shared_dict_id):
-    """Update the translation of a word, checking for shared dict admin rights."""
-    try:
-        # First, check if the user is an admin of the shared dictionary
-        if not is_user_admin_of_shared_dict(chat_id, shared_dict_id):
-            print(f"User {chat_id} is not an admin of shared dict {shared_dict_id}. Translation update denied.")
-            return False
-            
-        # If admin, proceed with the update. The actual update logic is the same as personal
-        # because it modifies the central 'words' table.
-        return update_word_translation_personal_dict(chat_id, word_id, new_translation)
-
-    except Exception as e:
-        print(f"Unexpected error in update_word_translation_shared_dict: {e}")
-        traceback.print_exc()
-        return False
-
-
-def update_word_rating_shared_dict(chat_id, word_id, change, shared_dict_id=None):
-    """Update word rating for a user in shared dictionary.
-       This function's logic for 'user_{chat_id}' column in shared_dict_{id} table is problematic.
-       A better schema would be a separate table: shared_dict_user_ratings (user_id, dict_id, word_id, rating).
-       For now, adapting the existing problematic logic with error handling.
-    """
-    try:
-        conn = get_connection()
-        cursor = conn.cursor()
-
-        if not shared_dict_id:
-            cursor.execute('SELECT shared_dict_id FROM users WHERE chat_id = ?', (chat_id,))
-            res = cursor.fetchone()
-            if not res or not res[0]:
-                print(f"User {chat_id} not in a shared dictionary to update rating.")
-                conn.close()
-                return False
-            shared_dict_id = res[0]
-
-        # The problematic column name
-        user_rating_column = f"user_{chat_id}"
-
-        # Check if this column exists. If not, this approach is flawed.
-        # For now, we'll assume it might exist due to previous logic.
-        # A robust solution would query PRAGMA table_info.
-        # This is a placeholder for the problematic update logic.
-        # It's highly recommended to refactor this part.
-        # Example of how it might have been intended (but is bad practice):
-        # cursor.execute(f"UPDATE shared_dict_{shared_dict_id} SET {user_rating_column} = {user_rating_column} + ? WHERE word_id = ?", (change, word_id))
-        # cursor.execute(f"UPDATE shared_dict_{shared_dict_id} SET {user_rating_column} = MAX(0, {user_rating_column}) WHERE word_id = ?", (word_id,))
-        
-        print(f"Warning: update_word_rating_shared_dict for user {chat_id}, word {word_id} in dict {shared_dict_id} uses a problematic schema. Review needed.")
-        # Since the schema is problematic, let's avoid executing a potentially failing query.
-        # This function should be refactored. For now, it will pretend to succeed but log a warning.
-        
-        # conn.commit() # No commit as no safe operation is performed
-        conn.close()
-        return True # Pretend success to avoid breaking flows, but it's not really updating.
-    except sqlite3.Error as e:
-        print(f"DB error in update_word_rating_shared_dict for user {chat_id}, word {word_id}: {e}")
-        traceback.print_exc()
-        return False
-    except Exception as e:
-        print(f"Unexpected error in update_word_rating_shared_dict for user {chat_id}, word {word_id}: {e}")
-        traceback.print_exc()
-        return False
-
-def delete_word_from_personal_dictionary(chat_id, word_id):
-    """Delete a word from a user's personal dictionary."""
-    try:
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute(f'DELETE FROM user_{chat_id} WHERE word_id = ?', (word_id,))
-        conn.commit()
-        conn.close()
-        return True
-    except sqlite3.Error as e:
-        print(f"Database error deleting word {word_id} from personal dictionary for user {chat_id}: {e}")
-        return False
-    except Exception as e:
-        print(f"Unexpected error deleting word {word_id} from personal dictionary for user {chat_id}: {e}")
-        return False
-
-def delete_word_from_shared_dictionary(chat_id, word_id, shared_dict_id):
-    """Delete a word from a shared dictionary. Only admins can do this."""
-    try:
-        if not is_user_admin_of_shared_dict(chat_id, shared_dict_id):
-            print(f"User {chat_id} is not an admin of shared dict {shared_dict_id}. Deletion denied.")
-            return False, "not_admin"
-        
-        conn = get_connection()
-        cursor = conn.cursor()
-        
-        # Check if the word is in the shared dictionary before deleting
-        cursor.execute(f'SELECT 1 FROM shared_dict_{shared_dict_id} WHERE word_id = ?', (word_id,))
-        if not cursor.fetchone():
-            conn.close()
-            return False, "not_found"
-
-        cursor.execute(f'DELETE FROM shared_dict_{shared_dict_id} WHERE word_id = ?', (word_id,))
-        conn.commit()
-        conn.close()
-        return True, "success"
-    except sqlite3.Error as e:
-        print(f"Database error deleting word {word_id} from shared dictionary {shared_dict_id}: {e}")
-        return False, "db_error"
-    except Exception as e:
-        print(f"Unexpected error deleting word {word_id} from shared dictionary {shared_dict_id}: {e}")
-        return False, "unexpected_error"
-
-def get_user_dictionary_info(chat_id):
-    """Get user's dictionary type and shared dictionary ID from the database"""
-    conn = get_connection()
-    cursor = conn.cursor()
-    dict_type = "personal"  # Default
-    shared_dict_id = None
-    is_admin = False
-    try:
-        cursor.execute("SELECT language, dict_type, shared_dict_id, shared_dict_admin FROM users WHERE chat_id = ?", (chat_id,))
-        user_data = cursor.fetchone()
-        if user_data:
-            # language = user_data[0] # Not used here, but fetched
-            dict_type = user_data[1] if user_data[1] else "personal"
-            shared_dict_id = user_data[2]
-            is_admin = bool(user_data[3])
-            
-            # If dict_type is shared but shared_dict_id is None, reset to personal
-            if dict_type == "shared" and not shared_dict_id:
-                print(f"User {chat_id} had dict_type 'shared' but no shared_dict_id. Resetting to personal.")
-                dict_type = "personal"
-                # Optionally update DB here to fix inconsistency
-                # cursor.execute("UPDATE users SET dict_type = 'personal' WHERE chat_id = ?", (chat_id,))
-                # conn.commit()
-
-    except sqlite3.Error as e:
-        print(f"Database error in get_user_dictionary_info for user {chat_id}: {e}")
-        traceback.print_exc()
-    except Exception as e:
-        print(f"Unexpected error in get_user_dictionary_info for user {chat_id}: {e}")
-        traceback.print_exc()
-    finally:
-        if conn:
-            conn.close()
-    return dict_type, shared_dict_id, is_admin
-
-
-def init_db(chat_id=None):
-    """Initialize the database - creates tables and migrates data if needed"""
-    try:
-        create_database()  # Ensures DB file and basic tables exist
-        # Ensure users table exists with all columns
-        if chat_id:
-            create_user_table(chat_id)
-        else:
-            print("Skipping create_user_table as chat_id is not provided.")
-        create_shared_dictionary_tables()  # Ensures shared dictionary tables exist
-        # migrate_from_csv() # This should be run once or conditionally
-        print("Database initialization check complete.")
-    except sqlite3.Error as e:
-        print(f"Database error during init_db: {e}")
-        traceback.print_exc()
-    except Exception as e:
-        print(f"Unexpected error during init_db: {e}")
-        traceback.print_exc()
-
+# Нова функція для отримання ID слова за його німецьким текстом
 def get_word_id_by_german(german_word):
     """Get the ID of a word by its German text"""
     conn = get_connection()
@@ -1197,6 +552,52 @@ def get_word_id_by_german(german_word):
         return None
     finally:
         conn.close()
+
+def is_user_admin_of_shared_dict(user_id, shared_dict_id):
+    """Return True if the user is marked as admin in shared_dict_users."""
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            'SELECT is_admin FROM shared_dict_users WHERE user_id = ? AND dict_id = ?',
+            (user_id, shared_dict_id)
+        )
+        row = cursor.fetchone()
+        conn.close()
+        return bool(row and row[0])
+    except Exception as e:
+        print(f"Error checking admin rights for user {user_id} on shared dict {shared_dict_id}: {e}")
+        return False
+
+def get_user_dictionary_info(user_id):
+    """Retrieve shared dictionary id and admin status for the given user."""
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT dict_type, shared_dict_id FROM users WHERE chat_id = ?', (user_id,))
+        row = cursor.fetchone()
+        
+        if not row:
+            conn.close()
+            return ("personal", None, False)
+        
+        dict_type = row[0] if row[0] else "personal"
+        shared_dict_id = row[1] if row[1] else None
+        is_admin = False
+        
+        if shared_dict_id and dict_type == "shared":
+            cursor.execute(
+                'SELECT is_admin FROM shared_dict_users WHERE user_id = ? AND dict_id = ?',
+                (user_id, shared_dict_id)
+            )
+            admin_row = cursor.fetchone()
+            is_admin = bool(admin_row and admin_row[0])
+        
+        conn.close()
+        return (dict_type, shared_dict_id, is_admin)
+    except Exception as e:
+        print(f"Error retrieving shared dictionary info for user {user_id}: {e}")
+        return ("personal", None, False)
 
 def get_shared_dictionary_words_with_articles(chat_id, shared_dict_id=None):
     """Get words with articles from a shared dictionary for a specific user"""
@@ -1268,8 +669,6 @@ def get_shared_dictionary_words_with_articles(chat_id, shared_dict_id=None):
     columns = ['id', 'word', 'translation', 'other_translation', 'article', 'priority']
     df = pd.DataFrame(results, columns=columns)
     
-    # Auto-translate missing translations if needed
-        # …після побудови DataFrame df…
     # Auto-translate missing translations if needed
     words_to_translate = df[df['translation'].isnull() & df['other_translation'].notnull()]
     # закриваємо початкове з’єднання до мережевих викликів
@@ -1440,3 +839,100 @@ def add_words_to_dictionary(chat_id, words_data, dict_type="personal", shared_di
     
     print(f"Batch add complete for user {chat_id}. Added: {added_count}, Failed: {failed_count}")
     return added_count, failed_count
+
+def init_db():
+    """Initialize database via db_init.create_database"""
+    from db_init import create_database
+    create_database()
+
+def validate_shared_dictionary_access(user_id, shared_dict_id):
+    """
+    Validate if user has access to shared dictionary
+    
+    Args:
+        user_id: User's chat ID
+        shared_dict_id: Shared dictionary ID
+        
+    Returns:
+        tuple: (exists, has_access, dict_name)
+    """
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        
+        # Check if dictionary exists
+        cursor.execute('SELECT name FROM shared_dictionaries WHERE id = ?', (shared_dict_id,))
+        result = cursor.fetchone()
+        if not result:
+            conn.close()
+            return (False, False, None)
+        
+        dict_name = result[0]
+        
+        # Check if user has access (is creator or member)
+        cursor.execute('SELECT created_by FROM shared_dictionaries WHERE id = ?', (shared_dict_id,))
+        creator_result = cursor.fetchone()
+        is_creator = creator_result and creator_result[0] == user_id
+        
+        if is_creator:
+            conn.close()
+            return (True, True, dict_name)
+        
+        # Check if user is a member
+        cursor.execute('SELECT 1 FROM shared_dict_users WHERE user_id = ? AND dict_id = ?', (user_id, shared_dict_id))
+        member_result = cursor.fetchone()
+        has_access = bool(member_result)
+        
+        conn.close()
+        return (True, has_access, dict_name)
+    except Exception as e:
+        print(f"Error validating shared dictionary access: {e}")
+        return (False, False, None)
+
+def reset_to_personal_dictionary(user_id):
+    """
+    Reset user's dictionary to personal
+    
+    Args:
+        user_id: User's chat ID
+    """
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE users SET dict_type = 'personal', shared_dict_id = NULL WHERE chat_id = ?", (user_id,))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Error resetting to personal dictionary: {e}")
+
+def sync_user_state_with_db(chat_id):
+    """
+    Synchronize in-memory user state with database
+    
+    Args:
+        chat_id: User's chat ID
+    """
+    from config import user_state
+    
+    try:
+        dict_type, shared_dict_id, is_admin = get_user_dictionary_info(chat_id)
+        
+        # Update in-memory state
+        if chat_id not in user_state:
+            user_state[chat_id] = {}
+        
+        user_state[chat_id]["dict_type"] = dict_type
+        if shared_dict_id:
+            user_state[chat_id]["shared_dict_id"] = shared_dict_id
+        elif "shared_dict_id" in user_state[chat_id]:
+            del user_state[chat_id]["shared_dict_id"]
+        
+        if is_admin:
+            user_state[chat_id]["is_admin"] = is_admin
+        elif "is_admin" in user_state[chat_id]:
+            del user_state[chat_id]["is_admin"]
+            
+        print(f"Synced user state for {chat_id}: dict_type={dict_type}, shared_dict_id={shared_dict_id}, is_admin={is_admin}")
+        
+    except Exception as e:
+        print(f"Error syncing user state for {chat_id}: {e}")

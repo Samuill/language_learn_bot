@@ -9163,3 +9163,271 @@ Aşağıdaki menüden bir eylem seçin:'
 [2025-06-23 01:02:24.748] Response to User 476376623: 'Введіть слово, яке хочете додати:'
 [2025-06-23 01:03:06.988] Response to User 476376623: 'Знайдено переклад:  Європейський. Це правильно?'
 [2025-06-23 01:03:10.606] Response to User 476376623: '✅ Word successfully added to shared dictionary!'
+[2025-06-23 01:26:20.017] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-23 01:26:20.017", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-23 01:26:54] [ACTION] add_word_started: {"chat_id": 476376623}
+[2025-06-23 01:26:55.312] Response to User 476376623: 'Введіть слово, яке хочете додати:'
+[2025-06-23 01:27:08.369] Response to User 476376623: 'Знайдено переклад:  допис. Це правильно?'
+[2025-06-23 01:27:13.623] Response to User 476376623: '✅ Word successfully added to your personal dictionary!'
+[2025-06-23 01:31:06.617] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-23 01:31:06.617", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-23 01:33:16] [ACTION] add_word_started: {"chat_id": 476376623}
+[2025-06-23 01:33:16.736] Response to User 476376623: 'Введіть слово, яке хочете додати:'
+[2025-06-23 01:33:26.279] Response to User 476376623: 'Знайдено переклад:  замовник. Це правильно?'
+[2025-06-23 01:33:28.274] Response to User 476376623: 'Слово успішно додано '
+[2025-06-23 01:39:02.345] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-23 01:39:02.345", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-23 01:43:30] [ACTION] add_word_started: {"chat_id": 476376623}
+[2025-06-23 01:43:31.354] Response to User 476376623: 'Введіть слово, яке хочете додати:'
+[2025-06-23 01:43:44.694] Response to User 476376623: 'Знайдено переклад:  тест. Це правильно?'
+[2025-06-23 01:43:47.168] Response to User 476376623: 'Слово успішно додано '
+[2025-06-23 01:45:37.171] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-23 01:45:37.171", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-23 01:45:53] [ACTION] add_word_started: {"chat_id": 476376623}
+[2025-06-23 01:45:54.197] Response to User 476376623: 'Введіть слово, яке хочете додати:'
+[2025-06-23 01:46:01.094] Response to User 476376623: 'Знайдено переклад:  Квартира. Це правильно?'
+[2025-06-23 01:46:03.809] Response to User 476376623: 'Слово успішно додано '
+[2025-06-23 02:06:53.679] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-23 02:06:53.679", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-23 02:07:25] [ACTION] add_word_started: {"chat_id": 476376623}
+[2025-06-23 02:07:25.623] Response to User 476376623: 'Введіть слово, яке хочете додати:'
+[2025-06-23 02:07:38.415] Response to User 476376623: 'Знайдено переклад:  держави. Це правильно?'
+[2025-06-23 02:07:43.520] Response to User 476376623: 'Введіть правильний переклад вручну:'
+[2025-06-23 02:07:52.464] Response to User 476376623: 'Знайдено переклад: держава. Це правильно?'
+[2025-06-23 02:07:54.176] Response to User 476376623: 'Слово успішно додано '
+[2025-06-23 02:08:44] [ACTION] add_word_started: {"chat_id": 476376623}
+[2025-06-23 02:08:44.552] Response to User 476376623: 'Введіть слово, яке хочете додати:'
+[2025-06-23 02:08:49.804] Response to User 476376623: 'Не вдалося перекласти слово. Спробуйте ще раз.'
+[2025-06-23 02:08:49.975] Response to User 476376623: 'Введіть правильний переклад вручну:'
+[2025-06-23 02:09:05.085] Response to User 476376623: 'Знайдено переклад: держава. Це правильно?'
+[2025-06-23 02:09:09.046] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: 10 neu hier? (👥 Спільний словник)'
+[2025-06-23 02:09:09.047] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7301
+[2025-06-23 02:26:23.254] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-23 02:26:23.254", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-23 02:28:42.149] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-23 02:28:42.149", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-23 02:28:56] [ACTION] add_word_started: {"chat_id": 476376623}
+[2025-06-23 02:28:56.803] Response to User 476376623: 'Введіть слово, яке хочете додати:'
+[2025-06-23 02:30:09.304] Response to User 476376623: '🚫 Дію скасовано'
+[2025-06-23 02:30:09.305] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7308
+[2025-06-23 02:30:09.856] Response to User 476376623: 'Знайдено переклад:  держави. Це правильно?'
+[2025-06-23 02:30:25.946] Response to User 476376623: '❌ Будь ласка, виберіть '✅ Так', '❌ Ні' або '✖️ Відміна'.'
+[2025-06-23 02:31:29.781] Response to User 476376623: '🚫 Дію скасовано'
+[2025-06-23 02:31:29.782] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7315
+[2025-06-23 02:33:54.595] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-23 02:33:54.595", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-23 02:34:05] [ACTION] add_word_started: {"chat_id": 476376623}
+[2025-06-23 02:34:05.541] Response to User 476376623: 'Введіть слово, яке хочете додати:'
+[2025-06-23 02:35:34.596] Response to User 476376623: '🚫 Дію скасовано'
+[2025-06-23 02:35:34.598] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7320
+[2025-06-23 02:35:49] [ACTION] add_word_started: {"chat_id": 476376623}
+[2025-06-23 02:35:49.420] Response to User 476376623: 'Введіть слово, яке хочете додати:'
+[2025-06-23 02:39:19.559] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-23 02:39:19.559", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-23 02:53:06.217] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-23 02:53:06.217", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-23 02:53:29.162] Response to User 476376623: '🚫 Дію скасовано'
+[2025-06-23 02:53:29.164] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7329
+[2025-06-23 02:53:29.203] Response to User 476376623: 'Please select your language / Оберіть мову / Выберите язык:'
+[2025-06-23 02:53:29.267] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: None_dictionary'
+[2025-06-23 02:53:29.269] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7331
+[2025-06-23 02:53:34] [ACTION] add_word_started: {"chat_id": 476376623}
+[2025-06-23 02:53:35.202] Response to User 476376623: 'Введіть слово, яке хочете додати:'
+[2025-06-23 02:53:40.602] Response to User 476376623: 'Знайдено переклад:  держави. Це правильно?'
+[2025-06-23 02:53:53.129] Response to User 476376623: '🚫 Дію скасовано'
+[2025-06-23 02:53:53.131] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7338
+[2025-06-23 02:53:55.696] Response to User 476376623: '📚 Поточний словник: 👤 Персональний словник'
+[2025-06-23 02:53:55.697] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7340
+[2025-06-23 02:53:57] [ACTION] add_word_started: {"chat_id": 476376623}
+[2025-06-23 02:53:57.469] Response to User 476376623: 'Введіть слово, яке хочете додати:'
+[2025-06-23 02:54:01.777] Response to User 476376623: 'Не вдалося перекласти слово. Спробуйте ще раз.'
+[2025-06-23 02:54:01.955] Response to User 476376623: 'Введіть правильний переклад вручну:'
+[2025-06-23 02:54:10.738] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: None_dictionary'
+[2025-06-23 02:54:10.740] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7347
+[2025-06-23 03:05:49.842] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-23 03:05:49.842", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-23 03:06:02] [ACTION] add_word_started: {"chat_id": 476376623}
+[2025-06-23 03:06:02.740] Response to User 476376623: 'Введіть слово, яке хочете додати:'
+[2025-06-23 03:06:13.852] Response to User 476376623: 'Не вдалося перекласти слово. Спробуйте ще раз.'
+[2025-06-23 03:06:16.600] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: 👤 Персональний словник'
+[2025-06-23 03:06:16.601] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7356
+[2025-06-23 03:06:18] [ACTION] add_word_started: {"chat_id": 476376623}
+[2025-06-23 03:06:18.603] Response to User 476376623: 'Введіть слово, яке хочете додати:'
+[2025-06-23 03:06:22.498] Response to User 476376623: 'Не вдалося перекласти слово. Спробуйте ще раз.'
+[2025-06-23 03:06:28.484] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: 👤 Персональний словник'
+[2025-06-23 03:06:28.485] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7362
+[2025-06-23 03:09:41] [ACTION] add_word_started: {"chat_id": 476376623}
+[2025-06-23 03:09:41.696] Response to User 476376623: 'Введіть слово, яке хочете додати:'
+[2025-06-23 03:09:52.028] Response to User 476376623: 'Не вдалося перекласти слово. Спробуйте ще раз.'
+[2025-06-23 03:10:59.902] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: 👤 Персональний словник'
+[2025-06-23 03:10:59.904] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7369
+[2025-06-23 03:11:00.643] Response to User 476376623: '🚫 Дію скасовано'
+[2025-06-23 03:11:00.644] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7370
+[2025-06-23 03:20:28.043] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-23 03:20:28.043", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-23 03:21:49] [ACTION] add_word_started: {"chat_id": 476376623}
+[2025-06-23 03:21:50.161] Response to User 476376623: 'Введіть слово, яке хочете додати:'
+[2025-06-23 03:22:01.513] Response to User 476376623: 'Не вдалося перекласти слово. Спробуйте ще раз.'
+[2025-06-23 03:22:06.928] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: 👤 Персональний словник'
+[2025-06-23 03:22:06.930] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7378
+[2025-06-23 03:22:46] [ACTION] add_word_started: {"chat_id": 476376623}
+[2025-06-23 03:22:47.418] Response to User 476376623: 'Введіть слово, яке хочете додати:'
+[2025-06-23 03:22:53.956] Response to User 476376623: 'Не вдалося перекласти слово. Спробуйте ще раз.'
+[2025-06-23 03:25:50.109] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-23 03:25:50.109", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-23 03:26:03.863] Response to User 476376623: 'Please select your language / Оберіть мову / Выберите язык:'
+[2025-06-23 03:26:06.067] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: 👤 Персональний словник'
+[2025-06-23 03:26:06.069] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7388
+[2025-06-23 03:26:07] [ACTION] add_word_started: {"chat_id": 476376623}
+[2025-06-23 03:26:07.315] Response to User 476376623: 'Введіть слово, яке хочете додати:'
+[2025-06-23 03:26:13.550] Response to User 476376623: 'Знайдено переклад:  єдиний . Це правильно?'
+[2025-06-23 03:26:19.984] Response to User 476376623: 'Слово успішно додано '
+[2025-06-23 03:38:08.667] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-23 03:38:08.667", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-23 03:39:07.920] Response to User 476376623: 'Меню керування словами:'
+[2025-06-23 03:39:07.921] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7400
+[2025-06-23 03:39:09.556] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: 👤 Персональний словник'
+[2025-06-23 03:39:09.558] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7402
+[2025-06-23 03:45:15.775] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-23 03:45:15.775", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-23 03:46:02.930] Response to User 476376623: 'Please select your language / Оберіть мову / Выберите язык:'
+[2025-06-23 03:46:07.544] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: 👤 Персональний словник'
+[2025-06-23 03:46:07.545] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7407
+[2025-06-23 03:46:26.105] Response to User 476376623: '🟠 Середній рівень - оберіть активність:'
+[2025-06-23 03:46:26.106] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7410
+[2025-06-23 03:46:27.500] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: 👤 Персональний словник'
+[2025-06-23 03:46:27.501] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7412
+[2025-06-23 03:48:59.200] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-23 03:48:59.200", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-23 03:49:19] [ACTION] add_word_started: {"chat_id": 476376623}
+[2025-06-23 03:49:20.422] Response to User 476376623: '🟠 Середній рівень - оберіть активність:'
+[2025-06-23 03:49:20.423] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7426
+[2025-06-23 03:49:20.438] Response to User 476376623: '🟢 Легкий рівень - оберіть активність:'
+[2025-06-23 03:49:20.439] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7427
+[2025-06-23 03:49:20.464] Response to User 476376623: 'Введіть слово, яке хочете додати:'
+[2025-06-23 03:49:20.488] Response to User 476376623: 'Меню керування словами:'
+[2025-06-23 03:49:20.488] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7429
+[2025-06-23 03:49:20.584] Response to User 476376623: '🔴 Складний рівень - оберіть активність:'
+[2025-06-23 03:49:20.586] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7430
+[2025-06-23 03:49:26.229] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: 👤 Персональний словник'
+[2025-06-23 03:49:26.231] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7432
+[2025-06-23 03:54:05.168] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-23 03:54:05.168", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-23 03:54:12.418] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: 👤 Персональний словник'
+[2025-06-23 03:54:12.420] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7438
+[2025-06-23 03:54:18.129] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: 👤 Персональний словник'
+[2025-06-23 03:54:18.131] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7441
+[2025-06-23 04:04:37.103] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-23 04:04:37.103", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-23 04:17:19.925] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-23 04:17:19.925", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-23 04:18:05.510] Response to User 476376623: 'Please select your language / Оберіть мову / Выберите язык:'
+[2025-06-23 04:18:07.683] Response to User 476376623: 'Выбран русский язык'
+[2025-06-23 04:18:07.893] Response to User 476376623: 'Главное меню:'
+[2025-06-23 04:18:07.895] SECTION: User 476376623 entered section 'State update: main_menu' | Added message ID: 7458
+[2025-06-23 04:18:10.921] Response to User 476376623: 'Главное меню:
+
+📚 Текущий словарь: current_personal_dict_display'
+[2025-06-23 04:18:10.923] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7461
+[2025-06-23 04:18:16.780] Response to User 476376623: '🔴 Сложный уровень - выберите активность:'
+[2025-06-23 04:18:16.782] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7463
+[2025-06-23 04:18:17.909] Response to User 476376623: '🟢 Легкий уровень - выберите активность:'
+[2025-06-23 04:18:17.911] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7465
+[2025-06-23 04:18:20.021] Response to User 476376623: 'Главное меню:
+
+📚 Текущий словарь: current_personal_dict_display'
+[2025-06-23 04:18:20.022] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7467
+[2025-06-23 04:18:21.175] Response to User 476376623: '🟢 Легкий уровень - выберите активность:'
+[2025-06-23 04:18:21.176] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7469
+[2025-06-23 04:18:23.769] Response to User 476376623: 'Главное меню:
+
+📚 Текущий словарь: current_personal_dict_display'
+[2025-06-23 04:18:23.771] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7471
+[2025-06-23 04:18:25.215] Response to User 476376623: '🟠 Средний уровень - выберите активность:'
+[2025-06-23 04:18:25.216] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7473
+[2025-06-23 04:18:26.863] Response to User 476376623: 'Главное меню:
+
+📚 Текущий словарь: current_personal_dict_display'
+[2025-06-23 04:18:26.864] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7475
+[2025-06-23 04:18:28.002] Response to User 476376623: '🟢 Легкий уровень - выберите активность:'
+[2025-06-23 04:18:28.002] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7477
+[2025-06-23 04:18:29.255] Response to User 476376623: 'Главное меню:
+
+📚 Текущий словарь: current_personal_dict_display'
+[2025-06-23 04:18:29.257] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7479
+[2025-06-23 04:18:30.341] Response to User 476376623: '🔴 Сложный уровень - выберите активность:'
+[2025-06-23 04:18:30.342] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7481
+[2025-06-23 04:18:32.158] Response to User 476376623: 'Главное меню:
+
+📚 Текущий словарь: current_personal_dict_display'
+[2025-06-23 04:18:32.160] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7483
+[2025-06-23 04:18:38.247] Response to User 476376623: 'Please select your language / Оберіть мову / Выберите язык:'
+[2025-06-23 04:18:40.349] Response to User 476376623: 'Обрана українська мова'
+[2025-06-23 04:18:40.509] Response to User 476376623: 'Головне меню'
+[2025-06-23 04:18:40.510] SECTION: User 476376623 entered section 'State update: main_menu' | Added message ID: 7488
+[2025-06-23 04:18:47.659] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: 👤 Персональний словник'
+[2025-06-23 04:18:47.661] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7490
+[2025-06-23 04:23:44.493] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-23 04:23:44.493", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-23 04:23:53.972] Response to User 476376623: 'Please select your language / Оберіть мову / Выберите язык:'
+[2025-06-23 04:23:56.825] Response to User 476376623: 'Выбран русский язык'
+[2025-06-23 04:23:56.982] Response to User 476376623: 'Главное меню:'
+[2025-06-23 04:23:56.983] SECTION: User 476376623 entered section 'State update: main_menu' | Added message ID: 7495
+[2025-06-23 04:23:59.314] Response to User 476376623: 'Главное меню:
+
+📚 Текущий словарь: current_personal_dict_display'
+[2025-06-23 04:23:59.316] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7497
+[2025-06-23 04:27:07.551] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-23 04:27:07.551", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-23 04:27:21.185] Response to User 476376623: 'Please select your language / Оберіть мову / Выберите язык:'
+[2025-06-23 04:27:27.286] Response to User 476376623: 'Обрана українська мова'
+[2025-06-23 04:27:27.440] Response to User 476376623: 'Головне меню'
+[2025-06-23 04:27:27.441] SECTION: User 476376623 entered section 'State update: main_menu' | Added message ID: 7505
+[2025-06-23 04:27:37.201] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: 👤 Персональний словник'
+[2025-06-23 04:27:37.203] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7508
+[2025-06-23 04:49:03.483] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-23 04:49:03.483", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-23 04:49:21.307] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: 👤 Персональний словник'
+[2025-06-23 04:49:21.308] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7523
+[2025-06-23 04:50:24.954] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: 👤 Персональний словник'
+[2025-06-23 04:50:24.956] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7527
+[2025-06-23 04:51:24.876] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-23 04:51:24.876", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-23 04:55:15.147] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-23 04:55:15.147", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-23 04:56:00.664] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: 👤 Персональний словник'
+[2025-06-23 04:56:00.665] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7534
+[2025-06-23 04:57:59.181] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-23 04:57:59.181", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-23 05:03:34.973] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-23 05:03:34.973", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-23 05:03:44.581] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: 👤 Персональний словник'
+[2025-06-23 05:03:44.582] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7538
+[2025-06-23 05:03:49.162] Response to User 476376623: '🔴 Складний рівень - оберіть активність:'
+[2025-06-23 05:03:49.163] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7541
+[2025-06-23 05:03:51.412] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: 👤 Персональний словник'
+[2025-06-23 05:03:51.414] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7543
+[2025-06-23 05:17:44.370] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-23 05:17:44.370", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-23 05:20:02.548] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-23 05:20:02.548", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-23 05:22:41.433] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-23 05:22:41.433", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-23 05:22:47.455] Response to User 476376623: 'Please select your language / Оберіть мову / Выберите язык:'
+[2025-06-23 05:22:49.827] Response to User 476376623: 'Обрана українська мова'
+[2025-06-23 05:22:49.994] Response to User 476376623: 'Головне меню'
+[2025-06-23 05:22:49.995] SECTION: User 476376623 entered section 'State update: main_menu' | Added message ID: 7551
+[2025-06-23 05:26:08.154] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-23 05:26:08.154", "action": "Bot stopped", "reason": "shutdown_signal"}

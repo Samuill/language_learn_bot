@@ -29,12 +29,14 @@ def main_menu(message):
         # Якщо мови немає, пропонуємо обрати (тільки для нових користувачів)
         show_language_selection(chat_id)
         user_state[chat_id] = {"state": "language_selection"}
-    else:
-        # Мова вже встановлена - показуємо головне меню
+    else:        # Мова вже встановлена - показуємо головне меню
         clear_state(chat_id)
         
         # Get dictionary info
         dict_type, shared_dict_id, _ = db_manager.get_user_dictionary_info(chat_id)
+        
+        # Sync state with database
+        db_manager.sync_user_state_with_db(chat_id)
         
         user_state[chat_id] = {
             "language": language,
@@ -51,22 +53,12 @@ def main_menu(message):
             log_menu_transition(chat_id, "UNKNOWN", MENU_MAIN, "Command: /start")
         except Exception as e:
             print(f"Error logging menu transition: {e}")
-        
-        # Show current dictionary info in menu message
+          # Show current dictionary info in menu message
         menu_message = get_text("main_menu", chat_id)
         
-        if dict_type == "shared" and shared_dict_id:
-            # Get shared dictionary name
-            conn = db_manager.get_connection()
-            cursor = conn.cursor()
-            cursor.execute("SELECT name FROM shared_dictionaries WHERE id = ?", (shared_dict_id,))
-            result = cursor.fetchone()
-            if result:
-                dict_name = result[0]
-                menu_message += f"\n\n📚 {get_text('current_dictionary', chat_id, 'Поточний словник')}: {dict_name} ({get_text('shared_dictionary', chat_id)})"
-            conn.close()
-        else:
-            menu_message += f"\n\n📚 {get_text('current_dictionary', chat_id, 'Поточний словник')}: {get_text(f'{dict_type}_dictionary', chat_id)}"
+        from dictionary import get_current_dictionary_display
+        dictionary_display = get_current_dictionary_display(chat_id)
+        menu_message += f"\n\n📚 {get_text('current_dictionary', chat_id, 'Поточний словник')}: {dictionary_display}"
         
         keyboard = main_menu_keyboard(chat_id)
         
@@ -153,27 +145,19 @@ def return_to_main_menu(message):
     if chat_id in user_state:
         user_state[chat_id]["current_menu"] = "main"
     else:
-        user_state[chat_id] = {"current_menu": "main"}
-    
-    # Get dictionary info
+        user_state[chat_id] = {"current_menu": "main"}    # Get dictionary info
     dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
     shared_dict_id = user_state.get(chat_id, {}).get("shared_dict_id")
+    
+    # Sync state with database to ensure consistency
+    db_manager.sync_user_state_with_db(chat_id)
     
     # Prepare menu message with dictionary info
     menu_message = get_text("main_menu", chat_id)
     
-    if dict_type == "shared" and shared_dict_id:
-        # Get shared dictionary name
-        conn = db_manager.get_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT name FROM shared_dictionaries WHERE id = ?", (shared_dict_id,))
-        result = cursor.fetchone()
-        if result:
-            dict_name = result[0]
-            menu_message += f"\n\n📚 {get_text('current_dictionary', chat_id, 'Поточний словник')}: {dict_name} ({get_text('shared_dictionary', chat_id)})"
-        conn.close()
-    else:
-        menu_message += f"\n\n📚 {get_text('current_dictionary', chat_id, 'Поточний словник')}: {get_text(f'{dict_type}_dictionary', chat_id)}"
+    from dictionary import get_current_dictionary_display
+    dictionary_display = get_current_dictionary_display(chat_id)
+    menu_message += f"\n\n📚 {get_text('current_dictionary', chat_id, 'Поточний словник')}: {dictionary_display}"
     
     keyboard = main_menu_keyboard(chat_id)
     
@@ -213,29 +197,22 @@ def refresh_keyboard_command(message):
         "🔄 Оновлюю клавіатуру...",
         reply_markup=telebot.types.ReplyKeyboardRemove()
     )
-    
-    # Wait a moment and send new keyboard
+      # Wait a moment and send new keyboard
     import time
     time.sleep(0.5)
     
     # Get dictionary info
     dict_type, shared_dict_id, _ = db_manager.get_user_dictionary_info(chat_id)
     
+    # Sync state with database
+    db_manager.sync_user_state_with_db(chat_id)
+    
     # Prepare menu message with dictionary info
     menu_message = get_text("main_menu", chat_id)
     
-    if dict_type == "shared" and shared_dict_id:
-        # Get shared dictionary name
-        conn = db_manager.get_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT name FROM shared_dictionaries WHERE id = ?", (shared_dict_id,))
-        result = cursor.fetchone()
-        if result:
-            dict_name = result[0]
-            menu_message += f"\n\n📚 {get_text('current_dictionary', chat_id, 'Поточний словник')}: {dict_name} ({get_text('shared_dictionary', chat_id)})"
-        conn.close()
-    else:
-        menu_message += f"\n\n📚 {get_text('current_dictionary', chat_id, 'Поточний словник')}: {get_text(f'{dict_type}_dictionary', chat_id)}"
+    from dictionary import get_current_dictionary_display
+    dictionary_display = get_current_dictionary_display(chat_id)
+    menu_message += f"\n\n📚 {get_text('current_dictionary', chat_id, 'Поточний словник')}: {dictionary_display}"
     
     keyboard = main_menu_keyboard(chat_id)
     

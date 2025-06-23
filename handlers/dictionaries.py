@@ -6,6 +6,7 @@
 
 from config import bot, user_state, ADMIN_ID
 from utils import main_menu_keyboard, clear_state, easy_level_keyboard, medium_level_keyboard, hard_level_keyboard
+from utils.keyboards import shared_dictionary_keyboard
 from utils.state_helpers import save_message_id
 import db_manager
 from utils.language_utils import get_text
@@ -92,61 +93,24 @@ def set_difficulty_level(message):
     )
     save_message_id(chat_id, sent_message.message_id)
 
-@bot.message_handler(func=lambda message: message.text in ["👤 Персональний словник", get_text("personal_dictionary", message.chat.id)])
-def personal_dictionary_button(message):
-    """Switch to personal dictionary"""
+@bot.message_handler(func=lambda message: message.text.startswith("👤") or message.text == get_text("personal_dictionary", message.chat.id))
+def personal_dictionary_handler(message):
+    """Handle switching to the personal dictionary."""
     chat_id = message.chat.id
     
-    # Log transition
-    log_menu_transition(chat_id, user_state.get(chat_id, {}).get("current_menu", "UNKNOWN"), MENU_MAIN, "Switched to personal dictionary")
-    
-    # Оновлюємо БД для очищення shared_dict_id та встановлення персонального словника
+    # Switch to Personal Dictionary
     conn = db_manager.get_connection()
     cursor = conn.cursor()
-    cursor.execute("UPDATE users SET dict_type = 'personal', shared_dict_id = NULL WHERE chat_id = ?", (chat_id,))
+    cursor.execute("UPDATE users SET dict_type = ?, shared_dict_id = ? WHERE chat_id = ?", ('personal', None, chat_id))
     conn.commit()
     conn.close()
+
+    db_manager.sync_user_state_with_db(chat_id)
     
-    # Оновлюємо стан в пам'яті
-    if chat_id in user_state:
-        user_state[chat_id].update({"dict_type": "personal", "current_menu": "main"})
-        if "shared_dict_id" in user_state[chat_id]:
-            del user_state[chat_id]["shared_dict_id"]
-    else:
-        user_state[chat_id] = {"dict_type": "personal", "current_menu": "main"}
-    
-    # Зберігаємо важливі дані, такі як рівень складності
-    level = user_state.get(chat_id, {}).get("level", "easy")
-    if level:
-        user_state[chat_id]["level"] = level
-        
-    keyboard = main_menu_keyboard(chat_id)
-    
-    # Логируем отображаемые кнопки
-    try:
-        button_texts = []
-        if hasattr(keyboard, 'keyboard'):
-            for row in keyboard.keyboard:
-                for button in row:
-                    if hasattr(button, 'text'):
-                        button_texts.append(button.text)
-                    elif isinstance(button, dict) and 'text' in button:
-                        button_texts.append(button['text'])
-    except Exception as e:
-        print(f"Error extracting button texts: {e}")
-    
-    # Log displayed buttons only if we successfully extracted texts
-    if button_texts:
-        log_displayed_buttons(chat_id, button_texts, MENU_MAIN)
-    else:
-        print(f"Warning: Could not extract button texts for user {chat_id} in MENU_MAIN menu")
-    
-    sent_message = bot.send_message(
-        chat_id, 
-        f"📚 {get_text('current_dictionary', chat_id, 'Поточний словник')}: {get_text('personal_dictionary', chat_id)}",
-        reply_markup=keyboard
-    )
-    save_message_id(chat_id, sent_message.message_id)
+    log_menu_transition(chat_id, user_state.get(chat_id, {}).get("current_menu", "UNKNOWN"), MENU_MAIN, "Switched to personal dictionary")
+
+    from .main_menu import return_to_main_menu
+    return_to_main_menu(message)
 
 @bot.message_handler(func=lambda message: message.text == get_text("edit_word", message.chat.id) or message.text == "✏️ Редаггувати слово")
 def edit_word_menu(message):

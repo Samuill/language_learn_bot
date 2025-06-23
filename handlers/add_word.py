@@ -12,6 +12,8 @@ from utils import clear_state, main_menu_keyboard, main_menu_cancel
 from utils.input_handlers import safe_next_step_handler, sanitize_user_input
 from utils.state_helpers import save_message_id
 import asyncio
+from german_article_finder import find_german_article  # Added for German article lookup
+from googletrans import Translator  # Added for synchronous translation fallback
 
 # Import the functions that were previously undefined
 from utils.input_handlers import is_menu_navigation_command, handle_exit_from_activity
@@ -102,11 +104,17 @@ def process_word_input(message):
             language = db_manager.get_user_language(chat_id)
             if not language:
                 bot.send_message(chat_id, get_text("language_not_selected", chat_id, "❌ Translation language not selected. Try /start."))
+                return            # Translate from German to user's language
+            try:
+                # Create a new translator instance to avoid async issues
+                sync_translator = Translator()
+                translation_result = asyncio.run(sync_translator.translate(word_to_add, src='de', dest=language))
+                translation = translation_result.text
+            except Exception as e:
+                print(f"Translation error: {e}")
+                bot.send_message(chat_id, get_text("translation_failed", chat_id, "Не вдалося перекласти слово. Спробуйте ще раз."))
+                safe_next_step_handler(message, process_word_input)
                 return
-            
-            # Translate from German to user's language
-            translation_result = asyncio.run(translator.translate(word_to_add, src='de', dest=language))
-            translation = translation_result.text
             
             # Ask for confirmation
             markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
@@ -189,25 +197,44 @@ def process_translation_confirm(message, word_to_add, translation_to_add, articl
         if is_menu_navigation_command(message):
             handle_exit_from_activity(message)
             return
-    
+
         user_input = sanitize_user_input(message.text)
-        
+
         if user_input.lower() == get_text("yes", chat_id).lower():
             dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
             shared_dict_id = user_state.get(chat_id, {}).get("shared_dict_id")
-            
-            # Determine the dict_type to pass to db_manager.add_word.
-            # If current dict_type is "shared", we still add to global `words` table,
-            # so pass "common" (or any non-"personal") to prevent linking to user_X table by add_word itself.
-            # The linking to shared_dict_X will be handled separately.
+
+            # Determine add_word dict parameter
             add_word_dict_param = "personal" if dict_type == "personal" else "common"
-            
+
+            # Lookup German article and extract clean word
+            try:
+                found_article, clean_word = find_german_article(word_to_add)
+                if found_article:
+                    article_arg = found_article.lower()
+                    word_arg = clean_word
+                else:
+                    article_arg = article_to_add
+                    word_arg = word_to_add
+            except Exception:
+                article_arg = article_to_add
+                word_arg = word_to_add
+
+            # Silent duplicate handling: if word already exists, update and exit without messaging
+            existing_id = db_manager.get_word_id_by_word(chat_id, word_arg)
+            if existing_id:
+                # Update existing entry silently
+                db_manager.add_word(chat_id, word_arg, translation_to_add, dict_type=add_word_dict_param, article=article_arg)
+                clear_state(chat_id)
+                return
+
+            # Add new word or update if not duplicate
             word_id = db_manager.add_word(
                 chat_id,
-                word_to_add,
+                word_arg,
                 translation_to_add,
-                dict_type=add_word_dict_param, 
-                article=article_to_add
+                dict_type=add_word_dict_param,
+                article=article_arg
             )
             
             if word_id:

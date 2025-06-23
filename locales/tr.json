@@ -206,5 +206,6 @@
   "try_again_enter_translation": "Lütfen çeviriyi tekrar girin veya önceki mesajda 'İptal'e basın.",
   "bulk_add_error_adding_short": "ekleme hatası",
   "bulk_add_error_updating_short": "güncelleme hatası",
-  "translation_unavailable_short": "M/D"
+  "translation_unavailable_short": "M/D",
+  "current_personal_dict_display": "📖 Kişisel"
 }

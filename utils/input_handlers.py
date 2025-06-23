@@ -191,8 +191,7 @@ def is_menu_navigation_command(message):
         "🟠 Середній рівень", 
         "🔴 Складний рівень",
         "✖️ Відміна",
-        "👤 Персональний словник",
-        "👥 Спільний словник"
+        "👤 Персональний словник"
     ]
     
     # Check direct matches or localized versions
