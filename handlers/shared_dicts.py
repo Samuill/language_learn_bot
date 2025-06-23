@@ -16,20 +16,15 @@ from utils.console_logger import log_menu_transition, log_displayed_buttons, MEN
 from datetime import datetime
 
 # Updated handler to work with all localized button texts
-@bot.message_handler(func=lambda message: message.text == get_text("shared_dictionary", message.chat.id))
+@bot.message_handler(func=lambda message: message.text == get_text("shared_dictionary", message.chat.id) or message.text == "👥 Спільний словник")
 def shared_dictionary_menu(message):
     """Show shared dictionary menu"""
     chat_id = message.chat.id
 
     # Debugging log to check redundant calls
-    print(f"[DEBUG] shared_dictionary_menu triggered for chat_id: {chat_id} at {datetime.now()}")
-
-    # Логируем переход в меню общих словарей
+    print(f"[DEBUG] shared_dictionary_menu triggered for chat_id: {chat_id} at {datetime.now()}")    # Логируем переход в меню общих словарей
     from_menu = user_state.get(chat_id, {}).get("current_menu", "UNKNOWN")
     log_menu_transition(chat_id, from_menu, MENU_SHARED, f"Button: {message.text}")
-
-    # Ініціалізуємо таблиці для спільних словників, якщо вони не існують
-    db_manager.create_shared_dictionary_tables()
 
     # Оновлюємо поточне меню у стані користувача, не змінюючи тип словника
     if chat_id in user_state:
@@ -41,10 +36,14 @@ def shared_dictionary_menu(message):
             "current_menu": MENU_SHARED
         }
 
+    # Enhanced debugging for keyboard creation
+    print(f"[DEBUG] Creating shared dictionary keyboard for chat_id: {chat_id}")
+    keyboard = shared_dictionary_keyboard(chat_id)
+    print(f"[DEBUG] Keyboard created with {len(keyboard.keyboard) if hasattr(keyboard, 'keyboard') else 'unknown'} rows")
+
     # Просто показуємо меню спільних словників
     menu_message = get_text("select_option", chat_id)
-
-    keyboard = shared_dictionary_keyboard(chat_id)
+    print(f"[DEBUG] Menu message: '{menu_message}'")
 
     # Safely extract button texts for logging
     try:
@@ -58,20 +57,25 @@ def shared_dictionary_menu(message):
                         button_texts.append(button['text'])
 
         if button_texts:
+            print(f"[DEBUG] Button texts: {button_texts}")
             log_displayed_buttons(chat_id, button_texts, MENU_SHARED)
         else:
             print(f"Warning: Could not extract button texts for user {chat_id} in {MENU_SHARED} menu")
     except Exception as e:
         print(f"Error extracting button texts: {e}")
 
+    # Send menu message with keyboard
+    print(f"[DEBUG] Sending menu message to chat_id: {chat_id}")
     sent_message = bot.send_message(
         chat_id, 
         menu_message,
         parse_mode="HTML", 
         reply_markup=keyboard
     )
+    print(f"[DEBUG] Message sent, message_id: {sent_message.message_id}")
 
     save_message_id(chat_id, sent_message.message_id)
+    print(f"[DEBUG] Message ID saved for chat_id: {chat_id}")
 
 @bot.message_handler(func=lambda message: message.text == "🆕 Створити спільний словник" or
                     message.text == get_text("create_shared_dict", message.chat.id))
@@ -220,7 +224,7 @@ def my_shared_dictionaries(message):
         sent_message = bot.send_message(
             chat_id,
             get_text("no_shared_dicts", chat_id),
-            reply_markup=shared_dictionary_keyboard()
+            reply_markup=shared_dictionary_keyboard(chat_id)
         )
         save_message_id(chat_id, sent_message.message_id)
         return

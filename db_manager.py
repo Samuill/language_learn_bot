@@ -936,3 +936,155 @@ def sync_user_state_with_db(chat_id):
         
     except Exception as e:
         print(f"Error syncing user state for {chat_id}: {e}")
+
+def create_shared_dictionary_tables():
+    """Create tables for shared dictionaries functionality"""
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        
+        # Create shared_dictionaries table if it doesn't exist
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS shared_dictionaries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            code TEXT UNIQUE NOT NULL,
+            created_by INTEGER NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+        ''')
+        
+        # Create shared_dict_users table if it doesn't exist
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS shared_dict_users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            dict_id INTEGER NOT NULL,
+            is_admin INTEGER DEFAULT 0,
+            joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (dict_id) REFERENCES shared_dictionaries(id),
+            UNIQUE(user_id, dict_id)
+        )
+        ''')
+        
+        # Add shared dictionary columns to users table if they don't exist
+        cursor.execute("PRAGMA table_info(users)")
+        columns = [col[1] for col in cursor.fetchall()]
+        
+        if 'dict_type' not in columns:
+            cursor.execute("ALTER TABLE users ADD COLUMN dict_type TEXT DEFAULT 'personal'")
+        
+        if 'shared_dict_id' not in columns:
+            cursor.execute("ALTER TABLE users ADD COLUMN shared_dict_id INTEGER")
+            
+        if 'shared_dict_admin' not in columns:
+            cursor.execute("ALTER TABLE users ADD COLUMN shared_dict_admin INTEGER DEFAULT 0")
+        
+        conn.commit()
+        conn.close()
+        print("Shared dictionary tables created/updated successfully")
+        
+    except Exception as e:
+        print(f"Error creating shared dictionary tables: {e}")
+        import traceback
+        traceback.print_exc()
+
+def create_shared_dictionary(creator_id, name):
+    """Create a new shared dictionary and return access code and dictionary ID"""
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        
+        # Generate unique 6-character code
+        code = None
+        while True:
+            code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+            cursor.execute('SELECT id FROM shared_dictionaries WHERE code = ?', (code,))
+            if not cursor.fetchone():
+                break
+        
+        # Create shared dictionary record
+        cursor.execute('''
+        INSERT INTO shared_dictionaries (name, code, created_by)
+        VALUES (?, ?, ?)
+        ''', (name, code, creator_id))
+        
+        shared_dict_id = cursor.lastrowid
+        
+        # Create shared dictionary table for words
+        cursor.execute(f'''
+        CREATE TABLE IF NOT EXISTS shared_dict_{shared_dict_id} (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            word_id INTEGER NOT NULL,
+            FOREIGN KEY (word_id) REFERENCES words(id),
+            UNIQUE(word_id)
+        )
+        ''')
+        
+        # Add creator to shared_dict_users as admin
+        cursor.execute('''
+        INSERT INTO shared_dict_users (user_id, dict_id, is_admin)
+        VALUES (?, ?, 1)
+        ''', (creator_id, shared_dict_id))
+        
+        # Update creator's user record
+        cursor.execute('''
+        UPDATE users SET dict_type = 'shared', shared_dict_id = ?, shared_dict_admin = 1
+        WHERE chat_id = ?
+        ''', (shared_dict_id, creator_id))
+        
+        conn.commit()
+        conn.close()
+        
+        print(f"Created shared dictionary '{name}' with code {code} for user {creator_id}")
+        return code, shared_dict_id
+        
+    except Exception as e:
+        print(f"Error creating shared dictionary: {e}")
+        import traceback
+        traceback.print_exc()
+        return None, None
+
+def join_shared_dictionary(user_id, code):
+    """Join a shared dictionary using access code"""
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        
+        # Find dictionary by code
+        cursor.execute('SELECT id, name FROM shared_dictionaries WHERE code = ?', (code.upper(),))
+        result = cursor.fetchone()
+        
+        if not result:
+            return False, "Словник з таким кодом не знайдено"
+        
+        dict_id, dict_name = result
+        
+        # Check if user is already a member
+        cursor.execute('SELECT 1 FROM shared_dict_users WHERE user_id = ? AND dict_id = ?', (user_id, dict_id))
+        if cursor.fetchone():
+            return False, f"Ви вже є учасником словника '{dict_name}'"
+        
+        # Add user to shared dictionary
+        cursor.execute('''
+        INSERT INTO shared_dict_users (user_id, dict_id, is_admin)
+        VALUES (?, ?, 0)
+        ''', (user_id, dict_id))
+        
+        # Update user's dictionary settings
+        cursor.execute('''
+        UPDATE users SET dict_type = 'shared', shared_dict_id = ?, shared_dict_admin = 0
+        WHERE chat_id = ?
+        ''', (dict_id, user_id))
+        
+        conn.commit()
+        conn.close()
+        
+        print(f"User {user_id} joined shared dictionary '{dict_name}' (ID: {dict_id})")
+        return True, dict_name
+        
+    except Exception as e:
+        print(f"Error joining shared dictionary: {e}")
+        import traceback
+        traceback.print_exc()
+        return False, "Виникла помилка при приєднанні до словника"

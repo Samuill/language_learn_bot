@@ -117,3 +117,32 @@ def hard_level_keyboard(chat_id=None):
         keyboard.row("↩️ Повернутися до головного меню")
     
     return keyboard
+
+def shared_dictionary_keyboard(chat_id=None):
+    """Create keyboard for shared dictionary menu"""
+    try:
+        import telebot
+        keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
+        
+        # Add buttons for shared dictionary options with proper emoji
+        keyboard.add(
+            telebot.types.KeyboardButton("🆕 Створити спільний словник"),
+            telebot.types.KeyboardButton("🔑 Вступити до спільного словника"),
+            telebot.types.KeyboardButton("📋 Мої спільні словники")
+        )
+        
+        # Add return to main menu button
+        keyboard.add(telebot.types.KeyboardButton("↩️ Повернутися до головного меню"))
+        
+        print(f"[DEBUG] Created shared dictionary keyboard with {len(keyboard.keyboard)} rows")
+        return keyboard
+    except Exception as e:
+        print(f"[ERROR] Error creating shared dictionary keyboard: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        # Fallback to empty keyboard with only return button
+        import telebot
+        keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
+        keyboard.add(telebot.types.KeyboardButton("↩️ Повернутися до головного меню"))
+        return keyboard

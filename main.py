@@ -160,9 +160,11 @@ def setup_scheduler():
 # Initialize the database schema on startup if needed
 def setup_database():
     """Initialize the database with necessary tables"""
-    try:
-        # Initialize database
+    try:        # Initialize database
         db_manager.init_db()
+        
+        # Initialize shared dictionary tables
+        db_manager.create_shared_dictionary_tables()
         
         # Ensure the active_days column exists in users table
         conn = db_manager.get_connection()
@@ -264,8 +266,19 @@ def main():
     # Setup logging
     setup_logging()
     
-  
-  
+    # Set up message handlers
+    import handlers.main_menu
+    import handlers.dictionaries
+    import handlers.start
+    import handlers.add_word
+    import handlers.easy_level
+    import handlers.medium_level
+    import handlers.hard_level
+    import handlers.shared_dicts
+    import handlers.possessive_articles
+    
+    # Admin handlers
+    import handlers.admin
     
     # Try to add optional/experimental handlers
     try:

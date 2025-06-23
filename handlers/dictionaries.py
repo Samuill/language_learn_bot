@@ -170,3 +170,35 @@ def edit_word_menu(message):
         reply_markup=keyboard
     )
     save_message_id(chat_id, sent_message.message_id)
+
+def switch_dictionary(message):
+    """Switch between dictionaries (personal/shared)"""
+    chat_id = message.chat.id
+    
+    # Get current dictionary type
+    current_dict_type = user_state.get(chat_id, {}).get("dict_type", "personal")
+    
+    # Toggle between personal and shared
+    if current_dict_type == "personal":
+        # Show shared dictionaries menu
+        from handlers.shared_dicts import shared_dictionary_menu
+        shared_dictionary_menu(message)
+    else:
+        # Switch back to personal dictionary
+        user_state[chat_id] = {
+            "dict_type": "personal",
+            "level": user_state.get(chat_id, {}).get("level", "easy")
+        }
+        
+        if "shared_dict_id" in user_state[chat_id]:
+            del user_state[chat_id]["shared_dict_id"]
+            
+        # Update database
+        db_manager.update_user_dictionary_type(chat_id, "personal", None)
+        
+        # Send confirmation
+        bot.send_message(
+            chat_id, 
+            get_text("switched_to_personal", chat_id),
+            reply_markup=main_menu_keyboard(chat_id)
+        )
