@@ -12,8 +12,9 @@ from db_init import create_user_table, create_database, migrate_from_csv
 from utils.logging_utils import log_language, log_error, log_language_event
 from concurrent.futures import ThreadPoolExecutor
 
-# Шлях до бази даних
-DB_DIR = "database"
+# Шлях до бази даних - використовуємо абсолютний шлях відносно поточного файлу
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_DIR = os.path.join(SCRIPT_DIR, "database")
 DB_PATH = os.path.join(DB_DIR, "german_words.db")
 
 # глобальний пул потоків для I/O-завдань
@@ -23,12 +24,20 @@ def get_connection():
     """Get a connection to the database, creating it if needed"""
     # Убедимся, что директория для базы данных существует
     if not os.path.exists(DB_DIR):
+        print(f"Database directory {DB_DIR} does not exist. Creating...")
         os.makedirs(DB_DIR)
         
+    # Логируем полный путь к базе данных
+    full_db_path = os.path.abspath(DB_PATH)
+    print(f"Database path: {full_db_path}")
+    
     # Проверяем существование базы данных
     if not os.path.exists(DB_PATH):
+        print(f"Database file {DB_PATH} does not exist. Creating new database...")
         create_database()
         migrate_from_csv()
+    else:
+        print(f"Database file {DB_PATH} found. Size: {os.path.getsize(DB_PATH)} bytes")
     
     # відкриваємо з таймаутом та вмикаємо WAL
     conn = sqlite3.connect(DB_PATH, timeout=30)
@@ -704,6 +713,108 @@ def get_shared_dictionary_words_with_articles(chat_id, shared_dict_id=None):
   
     return df
 
+def get_shared_dictionary_words(chat_id, shared_dict_id=None):
+    """Get all words from a shared dictionary for a specific user"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # If shared_dict_id not provided, get it from user profile
+    if not shared_dict_id:
+        cursor.execute('SELECT shared_dict_id FROM users WHERE chat_id = ?', (chat_id,))
+        result = cursor.fetchone()
+        if not result or not result[0]:
+            conn.close()
+            return pd.DataFrame()
+        shared_dict_id = result[0]
+    
+    # Verify user has access to this dictionary
+    cursor.execute('''
+    SELECT 1 FROM shared_dict_users 
+    WHERE user_id = ? AND dict_id = ?
+    ''', (chat_id, shared_dict_id))
+    
+    if not cursor.fetchone():
+        print(f"User {chat_id} does not have access to shared dictionary {shared_dict_id}")
+        conn.close()
+        return pd.DataFrame()
+    
+    # Get user language
+    language = get_user_language(chat_id) or "uk"
+    other_language = "uk" if language == "ru" else "ru"
+    
+    # Verify shared dictionary table exists
+    cursor.execute(f"""
+    SELECT name FROM sqlite_master 
+    WHERE type='table' AND name='shared_dict_{shared_dict_id}'
+    """)
+    if not cursor.fetchone():
+        conn.close()
+        return pd.DataFrame()
+    
+    # Ensure user column exists in shared dictionary table
+    cursor.execute(f"PRAGMA table_info(shared_dict_{shared_dict_id})")
+    columns = [col[1] for col in cursor.fetchall()]
+    user_col = f"user_{chat_id}"
+    
+    if user_col not in columns:
+        # Add column if it doesn't exist
+        cursor.execute(f'''
+        ALTER TABLE shared_dict_{shared_dict_id} ADD COLUMN {user_col} REAL DEFAULT 0.0
+        ''')
+        conn.commit()
+    
+    # Get all words (including those without articles)
+    query = f'''
+    SELECT w.id, w.word, w.{language}_tran as translation, w.{other_language}_tran as other_translation,
+           a.article, COALESCE(sd.{user_col}, 0.0) as priority
+    FROM shared_dict_{shared_dict_id} sd
+    JOIN words w ON sd.word_id = w.id
+    LEFT JOIN article a ON w.article_id = a.id
+    ORDER BY priority DESC
+    '''
+    
+    cursor.execute(query)
+    
+    # Get results
+    results = cursor.fetchall()
+    
+    # Convert results to DataFrame
+    columns = ['id', 'word', 'translation', 'other_translation', 'article', 'priority']
+    df = pd.DataFrame(results, columns=columns)
+    
+    # Auto-translate missing translations if needed
+    words_to_translate = df[df['translation'].isnull() & df['other_translation'].notnull()]
+    # Close initial connection before network calls
+    conn.close()
+
+    if not words_to_translate.empty:
+        from config import translator
+        # New connection for updates
+        conn2 = get_connection()
+        cursor2 = conn2.cursor()
+        for idx, row in words_to_translate.iterrows():
+            try:
+                tr = translator.translate(
+                    row['other_translation'],
+                    src=other_language, dest=language
+                ).text
+                cursor2.execute(
+                    f"UPDATE words SET {language}_tran = ? WHERE id = ?",
+                    (tr, row['id'])
+                )
+                df.at[idx, 'translation'] = tr
+                conn2.commit()  # Commit immediately after UPDATE
+            except Exception as e:
+                print(f"Auto-translate error for word {row['id']}: {e}")
+        conn2.close()
+    df = df[df['translation'].notnull()]
+    
+    # Remove the now-unnecessary other_translation column
+    if 'other_translation' in df.columns:
+        df = df.drop(columns=['other_translation'])
+    
+    return df
+
 def get_user_shared_dictionaries(chat_id):
     """Retrieve shared dictionaries for a user."""
     try:
@@ -1088,3 +1199,104 @@ def join_shared_dictionary(user_id, code):
         import traceback
         traceback.print_exc()
         return False, "Виникла помилка при приєднанні до словника"
+
+def check_database_integrity():
+    """Check database integrity and basic tables"""
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        
+        # Check if basic tables exist
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        tables = [row[0] for row in cursor.fetchall()]
+        
+        required_tables = ['users', 'words', 'article']
+        missing_tables = [table for table in required_tables if table not in tables]
+        
+        if missing_tables:
+            print(f"WARNING: Missing required tables: {missing_tables}")
+            return False
+        
+        # Check if there's any data
+        cursor.execute("SELECT COUNT(*) FROM users")
+        user_count = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM words")
+        word_count = cursor.fetchone()[0]
+        
+        print(f"Database integrity check: {len(tables)} tables, {user_count} users, {word_count} words")
+        
+        conn.close()
+        return True
+        
+    except Exception as e:
+        print(f"Database integrity check failed: {e}")
+        return False
+
+def add_word_to_shared_dictionary(chat_id, word_id, shared_dict_id):
+    """
+    Add a word to a shared dictionary by creating a link in shared_dictionary_words table.
+    
+    Args:
+        chat_id: User's chat ID
+        word_id: ID of the word to add
+        shared_dict_id: ID of the shared dictionary
+        
+    Returns:
+        tuple: (success: bool, message: str)
+    """
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        
+        # Check if the shared dictionary exists and user has access
+        cursor.execute("""
+            SELECT name FROM shared_dictionaries 
+            WHERE id = ? AND (creator_id = ? OR id IN (
+                SELECT shared_dict_id FROM shared_dictionary_members 
+                WHERE user_id = ?
+            ))
+        """, (shared_dict_id, chat_id, chat_id))
+        
+        dict_info = cursor.fetchone()
+        if not dict_info:
+            conn.close()
+            return False, "Словник не знайдено або немає доступу"
+        
+        dict_name = dict_info[0]
+        
+        # Check if word exists
+        cursor.execute("SELECT word FROM words WHERE id = ?", (word_id,))
+        word_info = cursor.fetchone()
+        if not word_info:
+            conn.close()
+            return False, "Слово не знайдено"
+        
+        word = word_info[0]
+        
+        # Check if word is already in the shared dictionary
+        cursor.execute("""
+            SELECT id FROM shared_dictionary_words 
+            WHERE shared_dict_id = ? AND word_id = ?
+        """, (shared_dict_id, word_id))
+        
+        if cursor.fetchone():
+            conn.close()
+            return False, f"Слово '{word}' вже є в словнику '{dict_name}'"
+        
+        # Add word to shared dictionary
+        cursor.execute("""
+            INSERT INTO shared_dictionary_words (shared_dict_id, word_id, added_by, added_at)
+            VALUES (?, ?, ?, ?)
+        """, (shared_dict_id, word_id, chat_id, datetime.datetime.now()))
+        
+        conn.commit()
+        conn.close()
+        
+        return True, f"Слово '{word}' додано до словника '{dict_name}'"
+        
+    except Exception as e:
+        print(f"Error adding word to shared dictionary: {e}")
+        if 'conn' in locals():
+            conn.close()
+        return False, "Виникла помилка при додаванні слова до словника"

@@ -160,7 +160,12 @@ def setup_scheduler():
 # Initialize the database schema on startup if needed
 def setup_database():
     """Initialize the database with necessary tables"""
-    try:        # Initialize database
+    try:
+        # Check database integrity first
+        print("Checking database integrity...")
+        db_manager.check_database_integrity()
+        
+        # Initialize database
         db_manager.init_db()
         
         # Initialize shared dictionary tables

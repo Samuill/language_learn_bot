@@ -5,12 +5,36 @@ import pandas as pd
 import glob
 import re
 
-# Шлях до бази даних
-DB_DIR = "database"
+# Шлях до бази даних - використовуємо абсолютний шлях відносно поточного файлу
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_DIR = os.path.join(SCRIPT_DIR, "database")
 DB_PATH = os.path.join(DB_DIR, "german_words.db")
 
 def create_database():
     """Create the database schema if it doesn't exist"""
+    # Ensure database directory exists
+    if not os.path.exists(DB_DIR):
+        print(f"Creating database directory: {DB_DIR}")
+        os.makedirs(DB_DIR)
+    
+    # Check if database already exists and has data
+    if os.path.exists(DB_PATH):
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        try:
+            # Check if users table exists and has data
+            cursor.execute("SELECT COUNT(*) FROM users")
+            user_count = cursor.fetchone()[0]
+            if user_count > 0:
+                print(f"Database already exists with {user_count} users. Skipping database creation.")
+                conn.close()
+                return
+        except sqlite3.OperationalError:
+            # Table doesn't exist, continue with creation
+            pass
+        conn.close()
+    
+    print("Creating database schema...")
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
