@@ -171,11 +171,11 @@
   "no_words_to_edit_in_list": "No words to edit in the current list.",
   "bulk_delete_prompt": "Select words to delete (click to mark):",
   "delete_selected_words_button": "Delete selected",
-  "words_deleted_success_bulk_short": "{count} words deleted.",
+  "words_deleted_success_bulk_short": "{deleted_count} words deleted.",
   "no_words_selected_for_bulk_delete": "No words selected for deletion.",
-  "bulk_add_prompt_words": "Enter words to add (each on a new line, max 20 words).\nWhen finished, press 'Done' below.",
+  "bulk_add_prompt_words": "Enter words to add .\nWhen finished, press 'Done' below.",
   "bulk_add_processing": "Processing words...",
-  "bulk_add_word_limit_exceeded": "First 20 words accepted. Others ignored.",
+  "bulk_add_word_limit_exceeded": "Added",
   "bulk_add_confirm_translation_prompt": "Word: <b>{word}</b>\nTranslation: <b>{translation}</b>\n\nIs this correct?",
   "bulk_add_edit_button": "✏️ Edit",
   "bulk_add_skip_button": "⏭️ Skip",
@@ -198,5 +198,6 @@
   "bulk_add_error_adding_short": "adding error",
   "bulk_add_error_updating_short": "updating error",
   "translation_unavailable_short": "N/A",
-  "current_personal_dict_display": "📋 Current personal dictionary: "
+  "current_personal_dict_display": "👤 Personal dictionary",
+  "current_shared_dict_display": "👥 Shared dictionary"
 }

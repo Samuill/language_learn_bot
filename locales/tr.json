@@ -180,11 +180,11 @@
   "no_words_to_edit_in_list": "Mevcut listede düzenlenecek kelime yok.",
   "bulk_delete_prompt": "Silinecek kelimeleri seçin (işaretlemek için tıklayın):",
   "delete_selected_words_button": "Seçilenleri sil",
-  "words_deleted_success_bulk_short": "{count} kelime silindi.",
+  "words_deleted_success_bulk_short": "{deleted_count} kelime silindi.",
   "no_words_selected_for_bulk_delete": "Silmek için kelime seçilmedi.",
-  "bulk_add_prompt_words": "Eklenecek kelimeleri girin (her biri yeni satırda, en fazla 20 kelime).\nBitirdiğinizde aşağıdaki 'Bitti' düğmesine basın.",
+  "bulk_add_prompt_words": "Eklenecek kelimeleri girin.\nBitirdiğinizde aşağıdaki 'Bitti' düğmesine basın.",
   "bulk_add_processing": "Kelimeler işleniyor...",
-  "bulk_add_word_limit_exceeded": "İlk 20 kelime kabul edildi. Diğerleri yoksayıldı.",
+  "bulk_add_word_limit_exceeded": " Edildi",
   "bulk_add_confirm_translation_prompt": "Kelime: <b>{word}</b>\nÇeviri: <b>{translation}</b>\n\nBu doğru mu?",
   "bulk_add_edit_button": "✏️ Düzenle",
   "bulk_add_skip_button": "⏭️ Atla",
@@ -207,5 +207,6 @@
   "bulk_add_error_adding_short": "ekleme hatası",
   "bulk_add_error_updating_short": "güncelleme hatası",
   "translation_unavailable_short": "M/D",
-  "current_personal_dict_display": "📖 Kişisel"
+  "current_personal_dict_display": "👤 Katılımcı",
+  "current_shared_dict_display": "👥 Ortak sözlük"
 }

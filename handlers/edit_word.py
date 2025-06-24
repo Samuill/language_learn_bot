@@ -755,10 +755,10 @@ def handle_bulk_delete_and_paginate(call):
             return
 
         deleted_count = perform_bulk_delete(chat_id)
-        if deleted_count > 0:
-            bot.answer_callback_query(call.id, get_text("words_deleted_success_bulk_short", chat_id, f"{deleted_count} слів видалено."), show_alert=False)
-        else:
-            bot.answer_callback_query(call.id) # Acknowledge click even if no words were selected to delete
+        # if deleted_count > 0:
+        #     bot.answer_callback_query(call.id, get_text("words_deleted_success_bulk_short", chat_id, f"{deleted_count} слів видалено."), show_alert=False)
+        # else:
+        #     bot.answer_callback_query(call.id) # Acknowledge click even if no words were selected to delete
 
         refresh_bulk_delete_word_list(chat_id) # Refresh list from DB and adjust page
 
@@ -791,11 +791,11 @@ def handle_do_bulk_delete_selected(call):
 
         deleted_count = perform_bulk_delete(chat_id)
         
-        if deleted_count > 0:
-            bot.answer_callback_query(call.id, get_text("words_deleted_success_bulk_short", chat_id, f"{deleted_count} слів видалено."), show_alert=True) # show_alert might be good here
-        else:
-            # This case should be caught by the check above, but as a fallback:
-            bot.answer_callback_query(call.id, get_text("no_words_selected_for_bulk_delete", chat_id, "Не вибрано слів для видалення."), show_alert=False)
+        # if deleted_count > 0:
+        #     bot.answer_callback_query(call.id, get_text("words_deleted_success_bulk_short", chat_id, f"{deleted_count} слів видалено."), show_alert=True) # show_alert might be good here
+        # else:
+        #     # This case should be caught by the check above, but as a fallback:
+        #     bot.answer_callback_query(call.id, get_text("no_words_selected_for_bulk_delete", chat_id, "Не вибрано слів для видалення."), show_alert=False)
 
         refresh_bulk_delete_word_list(chat_id) # Refresh list from DB and adjust page
         show_bulk_delete_page(chat_id, message_to_edit=call.message)

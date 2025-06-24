@@ -159,11 +159,11 @@
   "no_words_to_edit_in_list": "لا توجد كلمات لتحريرها في القائمة الحالية.",
   "bulk_delete_prompt": "اختر الكلمات المراد حذفها (انقر للتحديد):",
   "delete_selected_words_button": "حذف المحدد",
-  "words_deleted_success_bulk_short": "تم حذف {count} كلمات.",
+  "words_deleted_success_bulk_short": "تم حذف {deleted_count} كلمات.",
   "no_words_selected_for_bulk_delete": "لم يتم تحديد كلمات للحذف.",
-  "bulk_add_prompt_words": "أدخل الكلمات المراد إضافتها (كل كلمة في سطر جديد، بحد أقصى 20 كلمة).\nعند الانتهاء، اضغط على زر 'تم' أدناه.",
+  "bulk_add_prompt_words": " كل كلمة في سطر جديد، بحد أقصى.\nعند الانتهاء، اضغط على زر 'تم' أدناه.",
   "bulk_add_processing": "جاري معالجة الكلمات...",
-  "bulk_add_word_limit_exceeded": "تم قبول أول 20 كلمة. تم تجاهل الكلمات الأخرى.",
+  "bulk_add_word_limit_exceeded": "تم.",
   "bulk_add_confirm_translation_prompt": "الكلمة: <b>{word}</b>\nالترجمة: <b>{translation}</b>\n\nهل هذا صحيح؟",
   "bulk_add_edit_button": "✏️ تعديل",
   "bulk_add_skip_button": "⏭️ تخطي",
@@ -186,5 +186,6 @@
   "bulk_add_error_adding_short": "خطأ في الإضافة",
   "bulk_add_error_updating_short": "خطأ في التحديث",
   "translation_unavailable_short": "غير متوفر",
-  "current_personal_dict_display": "📖 قاموسك الشخصي الحالي"
+  "current_personal_dict_display": "👤 مشارك",
+  "current_shared_dict_display": "👥  القاموس المشترك"
 }
