@@ -9544,3 +9544,49 @@ Aşağıdaki menüden bir eylem seçin:'
 [2025-06-23 08:48:07.694] Response to User 476376623: 'Обробка слів...'
 [2025-06-23 08:48:20.501] Response to User 476376623: '❌ Сталася помилка. Спробуйте ще раз.'
 [2025-06-23 08:48:49.590] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-23 08:48:49.590", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-23 14:53:37.630] Response to User 476376623: 'Please select your language / Оберіть мову / Выберите язык:'
+[2025-06-23 14:53:46.105] Response to User 476376623: 'Обрана українська мова'
+[2025-06-23 14:53:46.377] Response to User 476376623: 'Головне меню'
+[2025-06-23 14:53:46.380] SECTION: User 476376623 entered section 'State update: main_menu' | Added message ID: 7721
+[2025-06-23 14:53:52.148] Response to User 476376623: 'Меню керування словами:'
+[2025-06-23 14:53:52.152] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7723
+[2025-06-23 14:54:12.199] Response to User 476376623: 'Введіть слова для додавання (кожне з нового рядка, максимум 20 слів).
+Коли закінчите, натисніть кноп...'
+[2025-06-23 14:54:17.238] Response to User 476376623: 'Прийнято перші 20 слів. Інші проігноровано.'
+[2025-06-23 14:54:17.646] Response to User 476376623: 'Обробка слів...'
+[2025-06-23 14:54:35.586] Response to User 476376623: 'Слова додано. Натисніть на слово, щоб змінити переклад:'
+[2025-06-23 14:54:35.591] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7729
+[2025-06-24 09:02:25.649] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-24 09:02:25.649", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-24 09:03:24.943] Response to User 476376623: 'Please select your language / Оберіть мову / Выберите язык:'
+[2025-06-24 09:03:27.699] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: 👥 10 neu hier?'
+[2025-06-24 09:03:27.702] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7734
+[2025-06-24 09:03:29.658] Response to User 476376623: 'Меню керування словами:'
+[2025-06-24 09:03:29.660] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7736
+[2025-06-24 09:03:33.228] Response to User 476376623: 'Оберіть слова для видалення (натисніть для позначки):'
+[2025-06-24 09:03:33.230] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7738
+[2025-06-24 09:11:44.073] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-24 09:11:44.073", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-24 09:12:07.447] Response to User 476376623: 'Оберіть слово для редагування:'
+[2025-06-24 09:12:07.449] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7740
+[2025-06-24 09:12:11.310] Response to User 476376623: 'Оберіть слова для видалення (натисніть для позначки):'
+[2025-06-24 09:12:11.311] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7742
+[2025-06-24 09:12:25.695] Response to User 476376623: 'Головне меню
+
+📚 Поточний словник: 👥 10 neu hier?'
+[2025-06-24 09:12:25.697] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7744
+[2025-06-24 09:12:29.427] Response to User 476376623: '👥 Спільні словники - оберіть опцію:'
+[2025-06-24 09:12:29.429] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7746
+[2025-06-24 09:12:31.991] Response to User 476376623: '📋 Ваші спільні словники: 
+
+• <b>A1 німецька</b> (👑 Адміністратор)
+🔑 Код доступу: <code>XANOEF</code>...'
+[2025-06-24 09:12:31.993] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7748
+[2025-06-24 09:12:50.392] Response to User 476376623: '📚 Обрано спільний словник: <b>10 neu hier?</b> (ви адміністратор)
+Тепер всі дії будуть виконуватись ...'
+[2025-06-24 09:12:50.394] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7749
+[2025-06-24 09:12:54.090] Response to User 476376623: 'Меню керування словами:'
+[2025-06-24 09:12:54.092] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7751
+[2025-06-24 09:13:00.747] Response to User 476376623: 'Оберіть слова для видалення (натисніть для позначки):'
+[2025-06-24 09:13:00.749] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 7753
+[2025-06-24 13:15:46.900] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-24 13:15:46.900", "action": "Bot stopped", "reason": "shutdown_signal"}

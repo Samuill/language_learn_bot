@@ -942,30 +942,30 @@ def handle_bulk_words_input(message):
                 print(f"DEBUG: Traceback: {traceback.format_exc()}")
                 word_to_process = word_text
         words_to_translate.append(word_to_process)
-        words_data_pre_translation.append({        "original": word_text, 
+        words_data_pre_translation.append({
+            "original": word_text, 
             "to_process": word_to_process, 
             "article": article, 
             "translation": ""
         })
-    
+      # Translation with proper error handling for async issues
     try:
-        # Use sync translation to avoid event loop issues
+        # Use synchronous translation helper
+        from translation_sync import safe_translate
+        
         for i, word_to_translate in enumerate(words_to_translate):
             try:
-                # Create a new translator instance to avoid async issues
-                sync_translator = Translator()
-                # Use a synchronous approach by properly handling the translation
-                translated = sync_translator.translate(word_to_translate, src='de', dest=current_language)
-                # Check if the result is a coroutine and handle appropriately
-                if hasattr(translated, 'text'):
-                    words_data_pre_translation[i]["translation"] = translated.text
+                translation = safe_translate(word_to_translate, src='de', dest=current_language)
+                
+                if translation:
+                    words_data_pre_translation[i]["translation"] = translation
                 else:
-                    # If it's a coroutine, we need to handle it differently
-                    print(f"Warning: Translation returned unexpected type for '{word_to_translate}'")
                     words_data_pre_translation[i]["translation"] = get_text("translation_failed_short", chat_id, "Помилка перекладу")
+                    
             except Exception as e:
                 print(f"Translation error for word '{word_to_translate}': {e}")
                 words_data_pre_translation[i]["translation"] = get_text("translation_failed_short", chat_id, "Помилка перекладу")
+                
     except Exception as e:
         print(f"Bulk add translation error: {e}")
         for info in words_data_pre_translation:

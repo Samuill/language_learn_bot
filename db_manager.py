@@ -1248,8 +1248,7 @@ def add_word_to_shared_dictionary(chat_id, word_id, shared_dict_id):
     try:
         conn = get_connection()
         cursor = conn.cursor()
-        
-        # Check if the shared dictionary exists and user has access
+          # Check if the shared dictionary exists and user has access
         cursor.execute("""
             SELECT name FROM shared_dictionaries 
             WHERE id = ? AND (creator_id = ? OR id IN (
@@ -1276,7 +1275,7 @@ def add_word_to_shared_dictionary(chat_id, word_id, shared_dict_id):
         
         # Check if word is already in the shared dictionary
         cursor.execute("""
-            SELECT id FROM shared_dictionary_words 
+          SELECT id FROM shared_dictionary_words 
             WHERE shared_dict_id = ? AND word_id = ?
         """, (shared_dict_id, word_id))
         
@@ -1286,7 +1285,7 @@ def add_word_to_shared_dictionary(chat_id, word_id, shared_dict_id):
         
         # Add word to shared dictionary
         cursor.execute("""
-            INSERT INTO shared_dictionary_words (shared_dict_id, word_id, added_by, added_at)
+        INSERT INTO shared_dictionary_words (shared_dict_id, word_id, added_by, added_at)
             VALUES (?, ?, ?, ?)
         """, (shared_dict_id, word_id, chat_id, datetime.datetime.now()))
         
