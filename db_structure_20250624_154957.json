@@ -1,0 +1,986 @@
+{
+  "timestamp": "2025-06-24T15:49:57.419195",
+  "database_path": "C:\\Users\\Test\\Downloads\\Quick Share\\2025-05-27_15-35-46\\database\\german_words.db",
+  "tables": {
+    "article": {
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "article",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        }
+      ],
+      "row_count": 4,
+      "sample_data": [
+        {
+          "id": 1,
+          "article": "der"
+        },
+        {
+          "id": 2,
+          "article": "die"
+        },
+        {
+          "id": 3,
+          "article": "das"
+        }
+      ]
+    },
+    "possessive_articles": {
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "pronoun",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "case_name",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 3,
+          "name": "gender",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 4,
+          "name": "number",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 5,
+          "name": "form",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        }
+      ],
+      "row_count": 216,
+      "sample_data": [
+        {
+          "id": 1,
+          "pronoun": "ich",
+          "case_name": "Nominativ",
+          "gender": "maskulin",
+          "number": "singular",
+          "form": "mein"
+        },
+        {
+          "id": 2,
+          "pronoun": "ich",
+          "case_name": "Nominativ",
+          "gender": "maskulin",
+          "number": "plural",
+          "form": "meine"
+        },
+        {
+          "id": 3,
+          "pronoun": "ich",
+          "case_name": "Nominativ",
+          "gender": "feminin",
+          "number": "singular",
+          "form": "meine"
+        }
+      ]
+    },
+    "shared_dict_1": {
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "word_id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "user_476376623",
+          "type": "REAL",
+          "notnull": false,
+          "default_value": "0.0",
+          "pk": false
+        },
+        {
+          "cid": 3,
+          "name": "user_6930630873",
+          "type": "REAL",
+          "notnull": false,
+          "default_value": "0.0",
+          "pk": false
+        },
+        {
+          "cid": 4,
+          "name": "user_651697453",
+          "type": "REAL",
+          "notnull": false,
+          "default_value": "0.0",
+          "pk": false
+        },
+        {
+          "cid": 5,
+          "name": "user_871307030",
+          "type": "REAL",
+          "notnull": false,
+          "default_value": "0.0",
+          "pk": false
+        }
+      ],
+      "row_count": 332,
+      "sample_data": [
+        {
+          "id": 1,
+          "word_id": 1,
+          "user_476376623": 0.0,
+          "user_6930630873": 0.0,
+          "user_651697453": 0.0,
+          "user_871307030": 0.0
+        },
+        {
+          "id": 2,
+          "word_id": 2,
+          "user_476376623": 0.0,
+          "user_6930630873": 0.4,
+          "user_651697453": 0.0,
+          "user_871307030": 0.0
+        },
+        {
+          "id": 3,
+          "word_id": 3,
+          "user_476376623": 0.0,
+          "user_6930630873": 0.0,
+          "user_651697453": 0.0,
+          "user_871307030": 0.0
+        }
+      ]
+    },
+    "shared_dict_2": {
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "word_id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "user_6930630873",
+          "type": "REAL",
+          "notnull": false,
+          "default_value": "0.0",
+          "pk": false
+        },
+        {
+          "cid": 3,
+          "name": "user_476376623",
+          "type": "REAL",
+          "notnull": false,
+          "default_value": "0.0",
+          "pk": false
+        }
+      ],
+      "row_count": 0,
+      "sample_data": []
+    },
+    "shared_dict_3": {
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "word_id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "user_6930630873",
+          "type": "REAL",
+          "notnull": false,
+          "default_value": "0.0",
+          "pk": false
+        },
+        {
+          "cid": 3,
+          "name": "user_476376623",
+          "type": "REAL",
+          "notnull": false,
+          "default_value": "0.0",
+          "pk": false
+        }
+      ],
+      "row_count": 0,
+      "sample_data": []
+    },
+    "shared_dict_4": {
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "word_id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "user_476376623",
+          "type": "REAL",
+          "notnull": false,
+          "default_value": "0.0",
+          "pk": false
+        }
+      ],
+      "row_count": 21,
+      "sample_data": [
+        {
+          "id": 1,
+          "word_id": 393,
+          "user_476376623": 0.0
+        },
+        {
+          "id": 2,
+          "word_id": 394,
+          "user_476376623": 0.0
+        },
+        {
+          "id": 3,
+          "word_id": 395,
+          "user_476376623": 0.0
+        }
+      ]
+    },
+    "shared_dict_users": {
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "user_id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "dict_id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 3,
+          "name": "is_admin",
+          "type": "INTEGER",
+          "notnull": false,
+          "default_value": "0",
+          "pk": false
+        },
+        {
+          "cid": 4,
+          "name": "joined_at",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": "CURRENT_TIMESTAMP",
+          "pk": false
+        }
+      ],
+      "row_count": 10,
+      "sample_data": [
+        {
+          "id": 1,
+          "user_id": 6930630873,
+          "dict_id": 2,
+          "is_admin": 0,
+          "joined_at": "2025-06-02 14:30:20"
+        },
+        {
+          "id": 7,
+          "user_id": 6930630873,
+          "dict_id": 1,
+          "is_admin": 0,
+          "joined_at": "2025-06-02 14:47:09"
+        },
+        {
+          "id": 31,
+          "user_id": 651697453,
+          "dict_id": 1,
+          "is_admin": 0,
+          "joined_at": "2025-06-03 06:24:31"
+        }
+      ]
+    },
+    "shared_dictionaries": {
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "name",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "code",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 3,
+          "name": "created_by",
+          "type": "INTEGER",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 4,
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        }
+      ],
+      "row_count": 4,
+      "sample_data": [
+        {
+          "id": 1,
+          "name": "A1 німецька",
+          "code": "XANOEF",
+          "created_by": 476376623,
+          "created_at": "2025-06-01 23:05:10"
+        },
+        {
+          "id": 2,
+          "name": "Test",
+          "code": "LGW2C8",
+          "created_by": 476376623,
+          "created_at": "2025-06-02 03:01:50"
+        },
+        {
+          "id": 3,
+          "name": "test 2",
+          "code": "5ADW2W",
+          "created_by": 6930630873,
+          "created_at": "2025-06-02 14:34:48"
+        }
+      ]
+    },
+    "user_2077488720": {
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "word_id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "rating",
+          "type": "REAL",
+          "notnull": false,
+          "default_value": "0.0",
+          "pk": false
+        }
+      ],
+      "row_count": 0,
+      "sample_data": []
+    },
+    "user_476376623": {
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "word_id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "rating",
+          "type": "REAL",
+          "notnull": false,
+          "default_value": "0.0",
+          "pk": false
+        }
+      ],
+      "row_count": 85,
+      "sample_data": [
+        {
+          "id": 1,
+          "word_id": 333,
+          "rating": 0.2
+        },
+        {
+          "id": 2,
+          "word_id": 334,
+          "rating": 0.0
+        },
+        {
+          "id": 3,
+          "word_id": 335,
+          "rating": 0.1
+        }
+      ]
+    },
+    "user_651697453": {
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "word_id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "rating",
+          "type": "REAL",
+          "notnull": false,
+          "default_value": "0.0",
+          "pk": false
+        }
+      ],
+      "row_count": 0,
+      "sample_data": []
+    },
+    "user_6930630873": {
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "word_id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "rating",
+          "type": "REAL",
+          "notnull": false,
+          "default_value": "0.0",
+          "pk": false
+        }
+      ],
+      "row_count": 2,
+      "sample_data": [
+        {
+          "id": 4,
+          "word_id": 384,
+          "rating": -0.004
+        },
+        {
+          "id": 5,
+          "word_id": 391,
+          "rating": 0.0
+        }
+      ]
+    },
+    "user_7442557308": {
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "word_id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "rating",
+          "type": "REAL",
+          "notnull": false,
+          "default_value": "0.0",
+          "pk": false
+        }
+      ],
+      "row_count": 0,
+      "sample_data": []
+    },
+    "user_748561546": {
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "word_id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "rating",
+          "type": "REAL",
+          "notnull": false,
+          "default_value": "0.0",
+          "pk": false
+        }
+      ],
+      "row_count": 0,
+      "sample_data": []
+    },
+    "user_754888441": {
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "word_id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "rating",
+          "type": "REAL",
+          "notnull": false,
+          "default_value": "0.0",
+          "pk": false
+        }
+      ],
+      "row_count": 0,
+      "sample_data": []
+    },
+    "user_856479705": {
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "word_id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "rating",
+          "type": "REAL",
+          "notnull": false,
+          "default_value": "0.0",
+          "pk": false
+        }
+      ],
+      "row_count": 2,
+      "sample_data": [
+        {
+          "id": 1,
+          "word_id": 413,
+          "rating": 0.0
+        },
+        {
+          "id": 2,
+          "word_id": 414,
+          "rating": 0.0
+        }
+      ]
+    },
+    "user_871307030": {
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "word_id",
+          "type": "INTEGER",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "rating",
+          "type": "REAL",
+          "notnull": false,
+          "default_value": "0.0",
+          "pk": false
+        },
+        {
+          "cid": 3,
+          "name": "last_practiced",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        }
+      ],
+      "row_count": 0,
+      "sample_data": []
+    },
+    "users": {
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "chat_id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "language",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 3,
+          "name": "last_active",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 4,
+          "name": "streak",
+          "type": "INTEGER",
+          "notnull": false,
+          "default_value": "0",
+          "pk": false
+        },
+        {
+          "cid": 5,
+          "name": "shared_dict_admin",
+          "type": "INTEGER",
+          "notnull": false,
+          "default_value": "0",
+          "pk": false
+        },
+        {
+          "cid": 6,
+          "name": "shared_dict_id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default_value": "NULL",
+          "pk": false
+        },
+        {
+          "cid": 7,
+          "name": "last_activity",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 8,
+          "name": "active_days",
+          "type": "INTEGER",
+          "notnull": false,
+          "default_value": "0",
+          "pk": false
+        },
+        {
+          "cid": 9,
+          "name": "dict_type",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": "\"personal\"",
+          "pk": false
+        }
+      ],
+      "row_count": 9,
+      "sample_data": [
+        {
+          "id": 1,
+          "chat_id": 476376623,
+          "language": "uk",
+          "last_active": "2025-06-24",
+          "streak": 60,
+          "shared_dict_admin": 1,
+          "shared_dict_id": 4,
+          "last_activity": null,
+          "active_days": 57,
+          "dict_type": "shared"
+        },
+        {
+          "id": 2,
+          "chat_id": 651697453,
+          "language": "uk",
+          "last_active": "2025-06-03",
+          "streak": 1,
+          "shared_dict_admin": 0,
+          "shared_dict_id": 1,
+          "last_activity": null,
+          "active_days": 0,
+          "dict_type": "personal"
+        },
+        {
+          "id": 3,
+          "chat_id": 748561546,
+          "language": "uk",
+          "last_active": null,
+          "streak": 0,
+          "shared_dict_admin": 0,
+          "shared_dict_id": null,
+          "last_activity": null,
+          "active_days": 0,
+          "dict_type": "personal"
+        }
+      ]
+    },
+    "words": {
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default_value": null,
+          "pk": true
+        },
+        {
+          "cid": 1,
+          "name": "article_id",
+          "type": "INTEGER",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 2,
+          "name": "word",
+          "type": "TEXT",
+          "notnull": true,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 3,
+          "name": "ru_tran",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 4,
+          "name": "uk_tran",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 5,
+          "name": "tr_tran",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        },
+        {
+          "cid": 6,
+          "name": "ar_tran",
+          "type": "TEXT",
+          "notnull": false,
+          "default_value": null,
+          "pk": false
+        }
+      ],
+      "row_count": 436,
+      "sample_data": [
+        {
+          "id": 1,
+          "article_id": 4,
+          "word": "Keks",
+          "ru_tran": "губчатый торт",
+          "uk_tran": "бісквіт",
+          "tr_tran": "Süngerimsi pasta",
+          "ar_tran": "كعكة إسفنجية"
+        },
+        {
+          "id": 2,
+          "article_id": 2,
+          "word": "Oma",
+          "ru_tran": "Бабушка",
+          "uk_tran": " Бабуся",
+          "tr_tran": "Büyükanne",
+          "ar_tran": "جدة"
+        },
+        {
+          "id": 3,
+          "article_id": 2,
+          "word": "Omas",
+          "ru_tran": "Бабушка",
+          "uk_tran": " Бабусі",
+          "tr_tran": "Büyükanne",
+          "ar_tran": "جدة"
+        }
+      ]
+    }
+  }
+}

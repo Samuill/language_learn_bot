@@ -807,7 +807,7 @@ def handle_do_bulk_delete_selected(call):
 
 # --- Bulk Add Words Functions ---
 
-BULK_ADD_MAX_WORDS = 20
+BULK_ADD_MAX_WORDS = 100  # Increased limit to allow more words
 
 def bulk_add_reply_keyboard(chat_id):
     keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
@@ -868,8 +868,7 @@ def _start_bulk_add_process(chat_id, message):
     """Запускає процес масового додавання слів після перевірки прав."""
     if chat_id not in user_state: 
         user_state[chat_id] = {}
-    
-    # Очищаємо стан, зберігаючи тип словника
+      # Очищаємо стан, зберігаючи тип словника
     clear_state(chat_id, preserve_dict_type=True, preserve_messages=True)
     user_state[chat_id]["step"] = "bulk_add_awaiting_words"
     user_state[chat_id]["bulk_add_words_data"] = [] 
@@ -878,7 +877,7 @@ def _start_bulk_add_process(chat_id, message):
     user_state[chat_id]["bulk_add_confirm_message_id"] = None
 
     prompt_text = get_text("bulk_add_prompt_words", chat_id, 
-                           f"Введіть слова для додавання (кожне з нового рядка, максимум {BULK_ADD_MAX_WORDS} слів).\nКоли закінчите, натисніть кнопку 'Готово' нижче.")
+                           f"Введіть слова для додавання (кожне з нового рядка).\nКоли закінчите, натисніть кнопку 'Готово' нижче.")
     
     sent_msg = bot.send_message(chat_id, prompt_text, reply_markup=bulk_add_reply_keyboard(chat_id))
     safe_next_step_handler(sent_msg, handle_bulk_words_input)
@@ -898,13 +897,12 @@ def handle_bulk_words_input(message):
     if not words_input_list:
         bot.send_message(chat_id, get_text("bulk_add_no_words_entered", chat_id, "Ви не ввели жодного слова. Спробуйте ще раз або натисніть 'Готово'."), reply_markup=bulk_add_reply_keyboard(chat_id))
         safe_next_step_handler(message, handle_bulk_words_input)
-        return
+        return    # Remove artificial word limit - translate all words
+    # if len(words_input_list) > BULK_ADD_MAX_WORDS:
+    #     words_input_list = words_input_list[:BULK_ADD_MAX_WORDS]
+    #     bot.send_message(chat_id, get_text("bulk_add_word_limit_exceeded", chat_id, f"Прийнято перші {BULK_ADD_MAX_WORDS} слів. Інші проігноровано."))
 
-    if len(words_input_list) > BULK_ADD_MAX_WORDS:
-        words_input_list = words_input_list[:BULK_ADD_MAX_WORDS]
-        bot.send_message(chat_id, get_text("bulk_add_word_limit_exceeded", chat_id, f"Прийнято перші {BULK_ADD_MAX_WORDS} слів. Інші проігноровано."))
-
-    processing_msg = bot.send_message(chat_id, get_text("bulk_add_processing", chat_id, "Обробка слів..."))    
+    processing_msg = bot.send_message(chat_id, get_text("bulk_add_processing", chat_id, "Обробка слів..."))
     current_language = db_manager.get_user_language(chat_id)
     if not current_language:
         bot.send_message(chat_id, get_text("language_not_selected", chat_id, "Мова не вибрана. Будь ласка, почніть з /start"))

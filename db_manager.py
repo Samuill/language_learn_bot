@@ -1235,7 +1235,7 @@ def check_database_integrity():
 
 def add_word_to_shared_dictionary(chat_id, word_id, shared_dict_id):
     """
-    Add a word to a shared dictionary by creating a link in shared_dictionary_words table.
+    Add a word to a shared dictionary by creating a link in shared_dict_{id} table.
     
     Args:
         chat_id: User's chat ID
@@ -1248,21 +1248,23 @@ def add_word_to_shared_dictionary(chat_id, word_id, shared_dict_id):
     try:
         conn = get_connection()
         cursor = conn.cursor()
-          # Check if the shared dictionary exists and user has access
-        cursor.execute("""
-            SELECT name FROM shared_dictionaries 
-            WHERE id = ? AND (creator_id = ? OR id IN (
-                SELECT shared_dict_id FROM shared_dictionary_members 
-                WHERE user_id = ?
-            ))
-        """, (shared_dict_id, chat_id, chat_id))
         
+        # Check if the shared dictionary exists and user has access
+        cursor.execute("SELECT name FROM shared_dictionaries WHERE id = ?", (shared_dict_id,))
         dict_info = cursor.fetchone()
         if not dict_info:
             conn.close()
-            return False, "Словник не знайдено або немає доступу"
+            return False, "Словник не знайдено"
         
         dict_name = dict_info[0]
+        
+        # Check if user has admin rights or is a member
+        cursor.execute("SELECT is_admin FROM shared_dict_users WHERE user_id = ? AND dict_id = ?", 
+                      (chat_id, shared_dict_id))
+        user_info = cursor.fetchone()
+        if not user_info:
+            conn.close()
+            return False, "Немає доступу до словника"
         
         # Check if word exists
         cursor.execute("SELECT word FROM words WHERE id = ?", (word_id,))
@@ -1273,21 +1275,20 @@ def add_word_to_shared_dictionary(chat_id, word_id, shared_dict_id):
         
         word = word_info[0]
         
-        # Check if word is already in the shared dictionary
-        cursor.execute("""
-          SELECT id FROM shared_dictionary_words 
-            WHERE shared_dict_id = ? AND word_id = ?
-        """, (shared_dict_id, word_id))
+        # Check if shared_dict_{id} table exists
+        cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='shared_dict_{shared_dict_id}'")
+        if not cursor.fetchone():
+            conn.close()
+            return False, f"Таблиця shared_dict_{shared_dict_id} не існує"
         
+        # Check if word is already in the shared dictionary
+        cursor.execute(f"SELECT id FROM shared_dict_{shared_dict_id} WHERE word_id = ?", (word_id,))
         if cursor.fetchone():
             conn.close()
             return False, f"Слово '{word}' вже є в словнику '{dict_name}'"
         
         # Add word to shared dictionary
-        cursor.execute("""
-        INSERT INTO shared_dictionary_words (shared_dict_id, word_id, added_by, added_at)
-            VALUES (?, ?, ?, ?)
-        """, (shared_dict_id, word_id, chat_id, datetime.datetime.now()))
+        cursor.execute(f"INSERT INTO shared_dict_{shared_dict_id} (word_id) VALUES (?)", (word_id,))
         
         conn.commit()
         conn.close()
@@ -1299,3 +1300,109 @@ def add_word_to_shared_dictionary(chat_id, word_id, shared_dict_id):
         if 'conn' in locals():
             conn.close()
         return False, "Виникла помилка при додаванні слова до словника"
+
+def delete_word_from_shared_dict(chat_id, word_id, shared_dict_id):
+    """Delete a word from a shared dictionary."""
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        
+        # Check admin rights
+        if not is_user_admin_of_shared_dict(chat_id, shared_dict_id):
+            conn.close()
+            return False
+        
+        # Delete from shared_dict_{id} table
+        cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='shared_dict_{shared_dict_id}'")
+        if cursor.fetchone():
+            cursor.execute(f"DELETE FROM shared_dict_{shared_dict_id} WHERE word_id = ?", (word_id,))
+            rows_affected = cursor.rowcount
+        else:
+            print(f"Shared dictionary table shared_dict_{shared_dict_id} not found")
+            conn.close()
+            return False
+        
+        conn.commit()
+        conn.close()
+        return rows_affected > 0
+        
+    except Exception as e:
+        print(f"Error deleting word from shared dictionary: {e}")
+        if 'conn' in locals():
+            conn.close()
+        return False
+
+def delete_word_from_personal_dict(chat_id, word_id):
+    """Delete a word from user's personal dictionary."""
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute(f"DELETE FROM user_{chat_id} WHERE word_id = ?", (word_id,))
+        
+        conn.commit()
+        conn.close()
+        return cursor.rowcount > 0
+        
+    except Exception as e:
+        print(f"Error deleting word from personal dictionary: {e}")
+        if 'conn' in locals():
+            conn.close()
+        return False
+
+def update_word_translation_shared_dict(chat_id, word_id, new_translation, shared_dict_id):
+    """Update word translation in shared dictionary."""
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        
+        # Check admin rights
+        if not is_user_admin_of_shared_dict(chat_id, shared_dict_id):
+            conn.close()
+            return False
+        
+        # Get user language and update translation
+        language = get_user_language(chat_id)
+        if not language:
+            conn.close()
+            return False
+        
+        translation_column = f"{language}_tran"
+        cursor.execute(f"UPDATE words SET {translation_column} = ? WHERE id = ?", 
+                      (new_translation, word_id))
+        
+        conn.commit()
+        conn.close()
+        return cursor.rowcount > 0
+        
+    except Exception as e:
+        print(f"Error updating word translation in shared dictionary: {e}")
+        if 'conn' in locals():
+            conn.close()
+        return False
+
+def update_word_translation_personal_dict(chat_id, word_id, new_translation):
+    """Update word translation in personal dictionary."""
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        
+        # Get user language and update translation
+        language = get_user_language(chat_id)
+        if not language:
+            conn.close()
+            return False
+        
+        translation_column = f"{language}_tran"
+        cursor.execute(f"UPDATE words SET {translation_column} = ? WHERE id = ?", 
+                      (new_translation, word_id))
+        
+        conn.commit()
+        conn.close()
+        return cursor.rowcount > 0
+        
+    except Exception as e:
+        print(f"Error updating word translation in personal dictionary: {e}")
+        if 'conn' in locals():
+            conn.close()
+        return False
