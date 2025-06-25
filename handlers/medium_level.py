@@ -211,7 +211,7 @@ def handle_spelling_choice(call):
             db_manager.update_word_rating_shared_dict(chat_id, word_id, rating_change, shared_dict_id)
             print(f"Updated shared dict rating for word {word_id}: {rating_change}")
         else:
-            db_manager.update_word_rating(chat_id, word_id, rating_change)
+            db_manager.update_word_rating_personal_dict(chat_id, word_id, rating_change)
             print(f"Updated personal dict rating for word {word_id}: {rating_change}")
                 
         if is_correct:
@@ -243,8 +243,17 @@ def handle_spelling_choice(call):
         traceback.print_exc()
     
     # Запускаємо нову гру після паузи
-    import threading
-    threading.Timer(2.0, lambda: spelling_choice_game_new_word(chat_id)).start()
+    def next_word_task():
+        import time
+        time.sleep(2)
+        try:
+            if chat_id in user_state and user_state[chat_id].get("game") == "spelling_choice":
+                bot.send_message(chat_id, get_text("next_word", chat_id))
+                spelling_choice_game(call.message)
+        except Exception as e:
+            print(f"Error starting new spelling game: {e}")
+
+    executor.submit(next_word_task)
 
 def spelling_choice_game_new_word(chat_id):
     """Start a new round of the spelling choice game"""
@@ -378,6 +387,7 @@ def handle_missing_letters_answer(message):
     
     # Check for menu navigation commands first
     if is_menu_navigation_command(message):
+        bot.clear_step_handler_by_chat_id(chat_id)
         handle_exit_from_activity(message)
         return
     
@@ -457,7 +467,7 @@ def handle_missing_letters_answer(message):
             db_manager.update_word_rating_shared_dict(chat_id, word_id, rating_change, shared_dict_id)
             print(f"Updated shared dict rating for word {word_id}: {rating_change}")
         else:
-            db_manager.update_word_rating(chat_id, word_id, rating_change)
+            db_manager.update_word_rating_personal_dict(chat_id, word_id, rating_change)
             print(f"Updated personal dict rating for word {word_id}: {rating_change}")
             
     except Exception as e:

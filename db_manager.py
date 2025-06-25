@@ -608,6 +608,13 @@ def get_user_dictionary_info(user_id):
         print(f"Error retrieving shared dictionary info for user {user_id}: {e}")
         return ("personal", None, False)
 
+def shared_dictionary_exists(shared_dict_id):
+    """Check if a shared dictionary table exists."""
+    table_name = f"shared_dict_{shared_dict_id}"
+    query = "SELECT name FROM sqlite_master WHERE type='table' AND name=?;"
+    result = execute_query(query, (table_name,), fetch_mode='one')
+    return result is not None
+
 def get_shared_dictionary_words_with_articles(chat_id, shared_dict_id=None):
     """Get words with articles from a shared dictionary for a specific user"""
     conn = get_connection()
@@ -1406,3 +1413,35 @@ def update_word_translation_personal_dict(chat_id, word_id, new_translation):
         if 'conn' in locals():
             conn.close()
         return False
+
+def update_word_rating_personal_dict(user_id, word_id, rating_change):
+    """Update the rating of a word in the user's personal dictionary."""
+    table_name = f"user_{user_id}"
+    # Перевіряємо, чи існує колонка 'priority'
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(f"PRAGMA table_info({table_name})")
+    columns = [info[1] for info in cursor.fetchall()]
+    conn.close()
+
+    if 'priority' in columns:
+        query = f"UPDATE {table_name} SET priority = priority + ? WHERE word_id = ?;"
+        execute_query(query, (rating_change, word_id))
+    # Якщо колонки немає, нічого не робимо, або можна додати логування
+
+def update_word_rating_shared_dict(user_id, word_id, rating_change, shared_dict_id):
+    """Update the rating of a word for a user in a shared dictionary."""
+    table_name = f"shared_dict_{shared_dict_id}"
+    user_column = f'"user_{user_id}"'
+    
+    # Перевіряємо, чи існує колонка користувача
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(f"PRAGMA table_info({table_name})")
+    columns = [info[1] for info in cursor.fetchall()]
+    conn.close()
+
+    if user_column.strip('"') in columns:
+        query = f"UPDATE {table_name} SET {user_column} = {user_column} + ? WHERE word_id = ?;"
+        execute_query(query, (rating_change, word_id))
+    # Якщо колонки немає, нічого не робимо, або можна додати логування
