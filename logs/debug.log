@@ -10004,3 +10004,4 @@ Aşağıdaki menüden bir eylem seçin:'
 📚 Текущий словарь: 👥 Общий словарь'
 [2025-06-25 23:34:45.658] SECTION: User 476376623 entered section 'State update: Unknown' | Added message ID: 8273
 [2025-06-25 23:35:19.114] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-25 23:35:19.114", "action": "Bot stopped", "reason": "shutdown_signal"}
+[2025-06-28 23:44:49.337] [INFO] Action 'Bot stopped' | {"timestamp": "2025-06-28 23:44:49.337", "action": "Bot stopped", "reason": "shutdown_signal"}

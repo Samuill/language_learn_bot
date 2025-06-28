@@ -1,105 +1,133 @@
 # German Words Learning Bot
 
-Telegram bot для вивчення німецьких слів з підтримкою спільних словників та різних рівнів складності.
+<p align="center">
+<!-- Project banner or logo -->
+<img align="center" src="https://via.placeholder.com/400x200.png?text=German+Words+Bot" width="400" height="200" alt="Project Banner">
+</p>
 
-## Основні функції
+> **⚠️ Disclaimer:**
+> This bot contains many bugs and unfinished features. The codebase has legacy parts and is under active refactoring. Use with caution and feel free to contribute or report issues!
 
-- 📚 Персональні та спільні словники
-- 🎯 Три рівні складності (легкий, середній, складний)
-- 🏷️ Підтримка артиклів
-- 🌍 Багатомовність (українська, англійська, російська, турецька, арабська)
-- 👥 Спільна робота в групових словниках
-- 📊 Відстеження прогресу
+A Telegram bot designed for the effective learning of German words. It offers a personalized approach to learning, supports collaboration, and has flexible settings for users of all levels.
 
-## Розгортання на сервері
+---
 
-### 1. Підготовка
+## 🌟 Key Features
+
+- **📚 Personal and Shared Dictionaries**: Create your own dictionaries or join existing ones to learn collaboratively with friends or colleagues.
+- **🎯 Three Difficulty Levels**: Choose a level (easy, medium, hard) that matches your knowledge and complete corresponding exercises.
+- **🏷️ Article Learning**: Special exercises to memorize the correct articles (`der`, `die`, `das`).
+- **🧩 Diverse Games**: Exercises for choosing the correct spelling, filling in the blanks, finding pairs, and learning possessive pronouns.
+- **🌍 Multilingual Support**: The interface is translated into Ukrainian, English, Russian, Turkish, and Arabic.
+- **📊 Progress Tracking**: A word rating system helps adapt the learning process by offering more challenging words more frequently.
+- **➕ Bulk Add and Delete**: Easily manage your dictionaries with bulk add and delete functions.
+
+---
+
+## 🖼️ Gallery
+
+<p align="center">
+  <img src="readme_images/main_menu.png" width="250" alt="Main Menu" style="margin-right: 10px;">
+  <img src="readme_images/easy_level.png" width="250" alt="Easy Level Game">
+</p>
+
+---
+
+## 🚀 Deployment & Setup
+
+### 1. Environment Preparation
+
+Ensure you have Python 3.6+ and all necessary dependencies installed.
 
 ```bash
-# Перевірка готовності до розгортання
-python check_deployment.py
-
-# Створення резервної копії бази даних
-python backup_database.py
-
-# Діагностика бази даних
-python diagnose_database.py
-```
-
-### 2. Встановлення залежностей
-
-```bash
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-### 3. Конфігурація
+### 2. Configuration
 
-1. Налаштуйте `config.py`:
-   - `BOT_TOKEN` - токен вашого Telegram бота
-   - `ADMIN_ID` - ваш Telegram ID
+Create a `.env` file in the root directory and add the following variables:
 
-2. Переконайтеся, що база даних перенесена правильно:
-   - Файл `database/german_words.db` повинен існувати
-   - Перевірте розмір файлу (не повинен бути 0 байт)
+- `BOT_TOKEN` - Your Telegram bot token.
+- `ADMIN_ID` - Your Telegram ID for access to administrative functions.
 
-### 4. Запуск
+### 3. Initialization and Diagnostics
+
+Before the first launch, it is recommended to check the project and database status.
+
+```bash
+# Check deployment readiness
+python check_deployment.py
+
+# Diagnose the database
+python diagnose_database.py
+
+# Create a backup (recommended)
+python backup_database.py
+```
+
+### 4. Running the Bot
 
 ```bash
 python main.py
 ```
 
-### 5. Для продакшену
+### 5. Server Deployment (Production)
 
-Рекомендується використовувати:
-- PM2 або systemd для автоматичного перезапуску
-- Nginx як зворотний проксі (якщо потрібно)
-- Регулярне резервне копіювання бази даних
+For stable operation on a server, it is recommended to use a process manager like `PM2` or `systemd`.
 
 ```bash
-# Приклад з PM2
-pm2 start main.py --name "german-bot"
+# Example of running with PM2
+pm2 start main.py --name "german-bot" --interpreter python3
 pm2 save
 pm2 startup
 ```
 
-## Усунення проблем
+---
 
-### База даних скидається при переносі
+## 🗃️ Database
 
-Якщо база даних створюється заново на сервері:
+The project uses a **SQLite** database (`german_words.db`), which contains:
+- **`words`**: The main table with words, translations, and links to articles.
+- **`article`**: A table with articles (`der`, `die`, `das`).
+- **`users`**: Information about users, their settings, and progress.
+- **`possessive_articles`**: A table with possessive pronouns for exercises.
+- **`shared_dictionaries`**: Information about shared dictionaries.
+- **`shared_dict_*`**: Tables with words for each shared dictionary.
+- **`user_*`**: Personal dictionaries for each user.
 
-1. Перевірте, чи файл `database/german_words.db` існує
-2. Перевірте права доступу до файлу
-3. Запустіть `python diagnose_database.py` для діагностики
-4. Переконайтеся, що робочий каталог правильний
+---
 
-### Помилка "get_shared_dictionary_words not found"
-
-Ця помилка виправлена в останній версії. Переконайтеся, що у вас найновіша версія `db_manager.py`.
-
-### Меню спільних словників не відображається
-
-Переконайтеся, що:
-1. Функція `create_shared_dictionary_tables()` існує в `db_manager.py`
-2. Функції `create_shared_dictionary()` та `join_shared_dictionary()` реалізовані
-3. Таблиці спільних словників створені в базі даних
-
-## Структура проекту
+## 🛠️ Project Structure
 
 ```
-├── main.py                 # Головний файл бота
-├── config.py              # Конфігурація
-├── db_manager.py          # Робота з базою даних
-├── db_init.py             # Ініціалізація БД
-├── handlers/              # Обробники команд
-├── utils/                 # Допоміжні функції
-├── locales/              # Переклади
-├── database/             # База даних
-└── logs/                 # Логи
+├── main.py                 # Main file to run the bot
+├── config.py               # Configuration and settings
+├── db_manager.py           # Functions for interacting with the database
+├── handlers/               # Handlers for user commands and messages
+│   ├── easy_level.py
+│   ├── medium_level.py
+│   └── hard_level.py
+├── utils/                  # Helper functions (keyboards, validation, etc.)
+├── locales/                # Localization files for multilingual support
+├── database/               # SQLite database file
+└── logs/                   # Bot operation logs
 ```
 
-## Додаткові скрипти
+---
 
-- `diagnose_database.py` - діагностика бази даних
-- `backup_database.py` - резервне копіювання
-- `check_deployment.py` - перевірка готовності до розгортання
+## 🤝 Contributing
+
+We welcome any contributions to the project's development. If you have ideas for improvement, feel free to create a fork and submit a pull request.
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License. See the `LICENSE` file for details.
+
+---
+
+## 👨‍💻 Developer
+
+- **Samuill**: [GitHub Profile](https://github.com/Samuill)

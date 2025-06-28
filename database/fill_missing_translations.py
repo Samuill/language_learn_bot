@@ -1,9 +1,12 @@
 import sqlite3
 import openai
+import os
 import logging
-
+from dotenv import load_dotenv
+load_dotenv()
+print("Using environment variables from .env file")
 # Hard-coded API key
-API_KEY = "sk-SpWlMm4+RGebOMmK0q7abgy9e94CTBHA1yGye5GNJSvoD6VRRkNGK+4uKhhjiaaA1kpEB74YLHJ0lPmbVvGaIjuX3rOtJOhJka3d4Vl3/wc="
+API_KEY = os.getenv("API_KEY")
 ENDPOINT = "https://router.requesty.ai/v1/chat/completions"
 HEADERS = {"Authorization": f"Bearer {API_KEY}"}
 
