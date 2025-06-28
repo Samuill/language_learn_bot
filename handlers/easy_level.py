@@ -186,7 +186,8 @@ def handle_pairs(call):
                         word_id = db_manager.get_word_id_by_german(de)
                         if word_id:
                             rating_change = -0.1 if correct else 0.1
-                            db_manager.update_word_rating(chat_id, word_id, rating_change)
+                            db_manager.update_word_rating_personal_dict(
+                                chat_id, word_id, rating_change)
                             break
             
             if correct:
@@ -220,7 +221,7 @@ def handle_pairs(call):
                                 del user_state[chat_id]["shared_dict_id"]
                     learn_words(call.message)
             else:
-                bot.answer_callback_query(call.id, get_text("correct",chat_id))
+                bot.answer_callback_query(call.id, get_text("incorrect",chat_id))
             
             state['selected_tr'] = None
         except Exception as e:

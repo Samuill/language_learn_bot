@@ -106,20 +106,16 @@ def generate_possessive_exercise(chat_id):
     # Query depends on dictionary type
     try:
         if dict_type == "shared" and shared_dict_id:
-            # Check if shared dictionary table exists
-            cursor.execute(f"""
-            SELECT name FROM sqlite_master 
-            WHERE type='table' AND name='shared_dict_{shared_dict_id}'
-            """)
-            if not cursor.fetchone():                bot.send_message(
-                    chat_id, 
+            cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='shared_dict_{shared_dict_id}'")
+            if not cursor.fetchone():
+                bot.send_message(
+                    chat_id,
                     "❌ Помилка: спільний словник не знайдено.",
                     reply_markup=easy_level_keyboard(chat_id)
                 )
-            clear_state(chat_id)
-            conn.close()
-            return
-                
+                clear_state(chat_id)
+                conn.close()
+                return
             cursor.execute(f'''
             SELECT w.id, w.word, a.article, w.{language}_tran 
             FROM shared_dict_{shared_dict_id} sd
