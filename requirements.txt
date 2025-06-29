@@ -1,0 +1,7 @@
+apscheduler
+python-dotenv
+googletrans==4.0.0rc1
+pandas
+requests
+pyTelegramBotAPI
+urllib3
