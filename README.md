@@ -2,7 +2,7 @@
 
 <p align="center">
 <!-- Project banner or logo -->
-<img align="center" src="readme_images/bot.jpg" width="400" height="200" alt="Project Banner">
+<img align="center" src="readme_images/bot.jpg" width="200" alt="Project Banner">
 </p>
 
 > **⚠️ Disclaimer:**
