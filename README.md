@@ -2,7 +2,7 @@
 
 <p align="center">
 <!-- Project banner or logo -->
-<img align="center" src="https://via.placeholder.com/400x200.png?text=German+Words+Bot" width="400" height="200" alt="Project Banner">
+<img align="center" src="readme_images/bot.jpg" width="400" height="200" alt="Project Banner">
 </p>
 
 > **⚠️ Disclaimer:**
@@ -27,8 +27,8 @@ A Telegram bot designed for the effective learning of German words. It offers a 
 ## 🖼️ Gallery
 
 <p align="center">
-  <img src="readme_images/main_menu.png" width="250" alt="Main Menu" style="margin-right: 10px;">
-  <img src="readme_images/easy_level.png" width="250" alt="Easy Level Game">
+  <img src="readme_images/start.jpg" width="250" alt="Main Menu" style="margin-right: 10px;">
+  <img src="readme_images/view_level.jpg" width="250" alt="Easy Level Game">
 </p>
 
 ---
